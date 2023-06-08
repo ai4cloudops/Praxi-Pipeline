@@ -16,13 +16,13 @@ spec:
       securityContext:
         runAsUser: 0
       containers:
-        - name: fake-vwserver
+        - name: snapshot-fake
           image: andrejschioppa/vw_serving_flask:ubuntu_v1
           imagePullPolicy: "IfNotPresent"
           command: [ "/bin/bash", "-c", "--" ]
           args: [ "while true; do sleep 30; done;" ]
           volumeMounts:
-            - mountPath: /snapshot-pv
+            - mountPath: /fake-snapshot
               name: snapshot-vol1
       volumes:
         - name: snapshot-vol1
