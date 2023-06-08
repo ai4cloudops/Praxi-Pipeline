@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snapshot-fake-deployment
+  namespace: kubeflow 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: snapshot
+  template:
+    metadata:
+      labels:
+        app: snapshot
+    spec:
+      securityContext:
+        runAsUser: 0
+      containers:
+        - name: fake-vwserver
+          image: andrejschioppa/vw_serving_flask:ubuntu_v1
+          imagePullPolicy: "IfNotPresent"
+          command: [ "/bin/bash", "-c", "--" ]
+          args: [ "while true; do sleep 30; done;" ]
+          volumeMounts:
+            - mountPath: /snapshot-pv
+              name: snapshot-vol1
+      volumes:
+        - name: snapshot-vol1
+          persistentVolumeClaim:
+            claimName: snapshot-claim-0
+
+
+
+
+
