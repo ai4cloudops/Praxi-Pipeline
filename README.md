@@ -10,13 +10,14 @@ There are two components are under development, i.e., `taggen` and `prediction`.
 
 We have to define the container images for `taggen` and `prediction` components, as there are serveral dependancies cannot be installed with pip, i.e., `columbus` and `vw`. The correponding files are in the two directories, i.e., `taggen_base_image` and `prediciton_base_image`.
 
-![Design Diagram](https://github.com/[username]/[reponame]/blob/[branch]/image.jpg?raw=true)
+![Design Diagram](https://github.com/Zongshun96/Praxi-Pipeline/blob/main/Figures/Praxi-Kubeflow-agentless-PoC.drawio.png?raw=true)
 
 
 ## Running
 - Install kubeflow and sdk.
 
 Some helpful tutorials.
+
 https://docs.google.com/document/d/1LHMrcQJQWiq1pLyEHZPJScovWNdLJduE9e6BU-F_J_Y/edit
 
 https://www.kubeflow.org/docs/components/pipelines/v1/sdk/install-sdk/
