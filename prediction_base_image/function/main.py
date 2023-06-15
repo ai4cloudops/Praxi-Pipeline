@@ -43,6 +43,9 @@ import pickle
 import copy
 import argparse
 
+import sys
+sys.path.insert(0, '../')
+
 from sklearn.base import BaseEstimator
 from tqdm import tqdm
 
@@ -66,9 +69,10 @@ def parse_ts(tagset_names, ts_dir):
     #          - labels: application name corresponding to each tagset
     tags = []
     labels = []
-    for ts_name in tqdm(tagset_names):
-            ts_path = ts_dir + '/' + ts_name
-            tagset = get_tagset(ts_path)
+    #for ts_name in tqdm(tagset_names):
+    for tagset in ts_dir:
+            #ts_path = ts_dir + '/' + ts_name
+            #tagset = get_tagset(ts_path)
             if 'labels' in tagset:
                 # Multilabel changeset
                 labels.append(tagset['labels'])
@@ -167,19 +171,30 @@ def iterative_experiment(train_path, test_path, resfile_name,
         clf = pickle.load(open(initial_model, "rb"))
 
     if not just_test:
-        train_names = [f for f in listdir(train_path) if (isfile(join(train_path, f))and f[-3:]=='tag')]
+        train_dat = train_path
+        #train_names = [f for f in train_dat if list(f)[2]=='tag']
+        train_names = []
+        for f in train_dat:
+            if list(f)[2] == 'tags':
+                train_names.append(f[list(f)[0]])
+        #train_names = [f for f in listdir(train_path) if (isfile(join(train_path, f))and f[-3:]=='tag')]
         if(len(train_names) == 0):
             logging.error("No tagsets found in provided training directory")
             raise ValueError("No tagsets in training directory!")
         train_tags, train_labels = parse_ts(train_names, train_path)
-        print("train_labels", set(train_labels))
+        #print("train_labels", set(train_labels))
     if not just_train:
-        test_names = [f for f in listdir(test_path) if (isfile(join(test_path, f)) and f[-3:]=='tag')]
+        test_dat = test_path
+        test_names = []
+        for f in test_dat:
+            if list(f)[2] == 'tags':
+                test_names.append(f[list(f)[0]])
+        #test_names = [f for f in listdir(test_path) if (isfile(join(test_path, f)) and f[-3:]=='tag')]
         if(len(test_names) == 0):
             logging.error("No tagsets found in provided testing directory")
             raise ValueError("No tagsets in testing directory!")
         test_tags, test_labels = parse_ts(test_names, test_path)
-        print("test_labels", set(test_labels))
+        #print("test_labels", set(test_labels))
 
     resfile = open(resfile_name, 'wb')
     results = []
@@ -221,7 +236,10 @@ def iterative_experiment(train_path, test_path, resfile_name,
         #just train
         clf.fit(train_tags, train_labels)
         save_name = clf.vw_modelfile[:-2] + 'p'
-        pickle.dump(clf, open(save_name, "wb"))
+        #if not os.path.exists('model'):
+         #   os.makedirs('model')
+        with open(save_name, "wb") as f:
+            pickle.dump(clf, f)
 
 #################################
 #### SINGLE LABEL EXPERIMENT ####
@@ -306,6 +324,7 @@ def get_scores(clf, train_tags, train_labels, test_tags, test_labels,
         logging.info("Fitting model:")
         clf.fit(train_tags, train_labels) # train model
         logging.info("Generating predictions:")
+        #print('model',clf)
         preds = clf.predict(test_tags) # predict labels for test set
     return copy.deepcopy(test_labels), preds
 
@@ -559,44 +578,23 @@ def print_multilabel_results(resfile, outdir, result_type, args=None, n_strats=1
             comments='')
 
 
-if __name__ == '__main__':
+def run(tags_data):
     prog_start = time.time()
 
-    parser = argparse.ArgumentParser(description='Arguments for Praxi software discovery algorithm.')
-    parser.add_argument('-t','--traindir', help='Path to training tagset directory.', default=None)
-    parser.add_argument('-s', '--testdir', help='Path to testing tagset directoy.', default=None)
-    parser.add_argument('-o', '--outdir', help='Path to desired result directory', default='.')
-    # run a single label experiment by default, if --multi flag is added, run a multilabel experiment!
-    parser.add_argument('-m','--multi', dest='experiment', action='store_const', const='multi',
-                        default='single', help="Type of experiment to run (single-label default).")
-    parser.add_argument('-w','--vwargs', dest='vw_args', default='-b 26 --learning_rate 1.5 --passes 30',
-                        help="custom arguments for VW.")
-    parser.add_argument('-n', '--nfolds', help='number of folds to use in cross validation', default=1) # make default 1?
-    parser.add_argument('-f', '--fullres', help='generate full result file.', dest='result',
-                        action='store_const', const='full', default='summary')
-    parser.add_argument('-v', '--verbosity', dest='loglevel', action='store_const', const='DEBUG',
-                        default='INFO',help='specify level of detail for log file')
-    # IMPLEMENT THIS!
-    parser.add_argument('-l' '--labels', dest='print_labels', action='store_const', const=True, default=False,
-                        help='Print missed labels')
-    # DEFAULT: NO FOLDS
-    #   - will expect TWO directories as arguments
-    # iterative options
-    parser.add_argument('-i', '--iterative', default=None, help='Run iterative experiment (provide name)')
-    parser.add_argument('-p', '--previous', default=None, help='Optional: previous model name')
-    # THE FOLLOWING OPTIONS CAN ONLY BE USED WITH ITERATIVE TRAINING
-    parser.add_argument('-r', '--jtrain', dest='justtrain', action='store_const', const=True, default=False, help='Just train and save the model')
-    parser.add_argument('-e', '--jtest', dest='justtest', action='store_const', const=True, default=False, help='Just test against previously trained model')
-
-    args = vars(parser.parse_args())
-
-    outdir = os.path.abspath(args['outdir'])
-    nfolds = int(args['nfolds'])
-    ts_train_path = args['traindir']
-    ts_test_path = args['testdir']
+    #args = vars(parser.parse_args())
+    od = 'results'
+    outdir = os.path.abspath(od)
+    os.mkdir(outdir)
+    nfolds = 1
+    ts_train_path = tags_data
+    ts_test_path = tags_data
+    #nfolds = int(args['nfolds'])
+    #ts_train_path = args['traindir']
+    #ts_test_path = args['testdir']
 
     # SET UP LOGGING
-    loglevel = args['loglevel']
+    loglevel = 'INFO'
+    #loglevel = args['loglevel']
     stub = 'praxi_exp'
     logfile_name = get_free_filename(stub, outdir, '.log')
     print("main", logfile_name)
@@ -605,22 +603,30 @@ if __name__ == '__main__':
     logging.basicConfig(filename=logfile_name,level=numeric_level)
 
     # Log command line args
-    result_type = args['result'] # full or summary
+    result_type = 'summary'
+    #result_type = args['result'] # full or summary
     logging.info("Result type: %s", result_type)
 
-    exp_type = args['experiment'] # single or multi
+    exp_type = 'single'
+    #exp_type = args['experiment'] # single or multi
     logging.info("Experiment type: %s", exp_type)
 
-    print_misses = args['print_labels']
+    print_misses = True
+    #print_misses = args['print_labels']
 
-    vwargs = args['vw_args']
+    vwargs = '-b 26 --learning_rate 1.5 --passes 30'
+    #vwargs = args['vw_args']
     logging.info("Arguments for Vowpal Wabbit: %s", vwargs)
 
     ####################
-    iterative = args['iterative']
-    initial_model = args['previous']
-    j_tr = args['justtrain']
-    j_ts = args['justtest']
+    iterative = '/pipelines/component/src/model/iter_model.vw'
+    initial_model = None
+    j_tr = False
+    j_ts = False
+    #iterative = args['iterative']
+    #initial_model = args['previous']
+    #j_tr = args['justtrain']
+    #j_ts = args['justtest']
 
     if(iterative is None and initial_model is not None):
         iterative = initial_model
@@ -641,8 +647,8 @@ if __name__ == '__main__':
                 new_model_name = iterative
                 logging.info("Will save new model to %s", new_model_name)
             # Might not need training/testing directory! (later add "just testing" and "just training" option)
-            logging.info("Training directory: %s", ts_train_path)
-            logging.info("Testing directory: %s", ts_test_path)
+            #logging.info("Training directory: %s", ts_train_path)
+            #logging.info("Testing directory: %s", ts_test_path)
             resfile_name = get_free_filename('iterative_test', outdir, '.p') # add arg to set stub?
             iterative_experiment(ts_train_path, ts_test_path, resfile_name, outdir, vwargs, result_type,
                                  initial_model=initial_model, print_misses=print_misses, new_model_name=new_model_name,
@@ -651,26 +657,28 @@ if __name__ == '__main__':
             if exp_type == 'single':
                 if(nfolds == 1):
                     logging.info("Starting single label experiment")
-                    logging.info("Training directory: %s", ts_train_path)
-                    logging.info("Testing directory: %s", ts_test_path)
+                    #logging.info("Training directory: %s", ts_train_path)
+                    #logging.info("Testing directory: %s", ts_test_path)
                 else:
                     # CROSS VALIDATION
                     logging.info("Starting cross validation single label experiment with %s folds", str(nfolds))
-                    logging.info("Tagset directory: %s", ts_train_path)
+                    #logging.info("Tagset directory: %s", ts_train_path)
                 resfile_name = get_free_filename('single_test', outdir, '.p') # add arg to set stub?
                 single_label_experiment(nfolds, ts_train_path, resfile_name, outdir, vwargs, result_type,
                                         ts_path=ts_test_path, print_misses=print_misses) # no train directory
             else: # multi
                 if(nfolds == 1):
                     logging.info("Starting multi label experiment")
-                    logging.info("Training directory: %s", ts_train_path)
-                    logging.info("Testing directory: %s", ts_test_path)
+                    #logging.info("Training directory: %s", ts_train_path)
+                    #logging.info("Testing directory: %s", ts_test_path)
                 else:
                     # CROSS VALIDATION
                     logging.info("Starting cross validation multi label experiment with %s folds", str(nfolds))
-                    logging.info("Tagset directory: %s", ts_train_path)
+                    #logging.info("Tagset directory: %s", ts_train_path)
                 resfile_name = get_free_filename('multi_test', outdir, '.p')
                 multi_label_experiment(nfolds, ts_train_path, resfile_name, outdir, vwargs,
                                        result_type, ts_path=ts_test_path) #, print_misses=print_misses)
 
     logging.info("Program runtime: %s", str(time.time()-prog_start))
+
+    return resfile_name

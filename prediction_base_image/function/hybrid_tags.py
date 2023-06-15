@@ -13,7 +13,8 @@ import time
 import yaml
 
 #add this
-from columbus import columbus
+#from columbus import columbus
+
 
 import envoy
 from sklearn.base import BaseEstimator
@@ -71,7 +72,7 @@ class Hybrid(BaseEstimator):
             self.all_labels = set()
             self.label_counter = 1
         self.trained = False
-        columbus.refresh_columbus()
+        #columbus.refresh_columbus()
 
     def fit(self, X, y): # X = TAGsets, y = labels
         """ Trains classifier
@@ -164,7 +165,7 @@ class Hybrid(BaseEstimator):
             vw_binary=self.vw_binary, vw_input=repr(f.name),
             vw_args=self.vw_args_, vw_modelfile=repr(self.vw_modelfile))
         #logging.info('vw input written to %s, starting training', f.name)
-        #logging.info('vw command: %s', command)
+        logging.info('vw command: %s', command)
         vw_start = time.time()
         c = envoy.run(command)
         ##########################################################
@@ -277,22 +278,25 @@ class Hybrid(BaseEstimator):
         start = time.time()
         if not self.trained:
             raise ValueError("Need to train the classifier first")
-        if self.use_temp_files:
+        if not self.use_temp_files:
             f = tempfile.NamedTemporaryFile('w', delete=False)
             outfobj = tempfile.NamedTemporaryFile('w', delete=False)
             outf = outfobj.name
             outfobj.close()
         else:
             f = open('./pred_input-%s.txt' % self.suffix, 'w')
-            outf = './pred_output-%s.txt' % self.suffix
+            outf = '/pred_output-%s.txt' % self.suffix
+            # test = open(outf, 'w')
         for tag in X:
             f.write('| {}\n'.format(' '.join(tag)))
         f.close()
+        # test.close()
         #logging.info('vw input written to %s, starting testing', f.name)
         command = '{vw_binary} {vw_input} -t -p {outf} -i {vw_modelfile}'.format(
             vw_binary=self.vw_binary, vw_input=repr(f.name), outf=repr(outf),
             vw_modelfile=repr(self.vw_modelfile))
-        #logging.info('vw command: %s', command)
+        logging.info('vw command: %s', command)
+        #print('vw command: %s', command)
         vw_start = time.time()
         c = envoy.run(command)
         logging.info("vw took %f secs." % (time.time() - vw_start))
@@ -313,7 +317,9 @@ class Hybrid(BaseEstimator):
                 except KeyError:
                     logging.critical("Got label %s predicted!?", int(line))
                     all_preds.append('??')
-        if self.use_temp_files:
+        if (os.path.getsize(outf) == 0):
+            print("file is empty")
+        if not self.use_temp_files:
             safe_unlink(f.name)
             if not self.iterative:
                 safe_unlink(self.vw_modelfile)
