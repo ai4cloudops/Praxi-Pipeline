@@ -77,16 +77,18 @@ def parse_ts(tagset_names, ts_dir):
                 # Multilabel changeset
                 labels.append(tagset['labels'])
             else:
-                labels.append(tagset['label'])
+                labels.append([tagset['label']])
             tags.append(tagset['tags'])
+            
     return tags, labels
-
-def get_tagset(ts_path): # combine with parse_ts
-    # Argument: - complete path to a tagset .yaml file
-    # Returns:  - tagset dictionary contained in file (tags, labels)
-    with open(ts_path, 'r') as stream:
-        data_loaded = yaml.full_load(stream)
-    return data_loaded
+#
+    
+# def get_tagset(ts_path): # combine with parse_ts
+#     # Argument: - complete path to a tagset .yaml file
+#     # Returns:  - tagset dictionary contained in file (tags, labels)
+#     with open(ts_path, 'r') as stream:
+#         data_loaded = yaml.full_load(stream)
+#     return data_loaded
 
 #######################################
 #     MISCELLANEOUS                   #
@@ -145,10 +147,7 @@ def fold_partitioning(ts_names, n=3):
 ################################
 ##### ITERATIVE TRAINING #######
 ################################
-def iterative_experiment(train_path, test_path, resfile_name,
-                        outdir, vwargs, result_type,
-                        initial_model=None, print_misses=False, new_model_name=None,
-                        just_train=False, just_test=False):
+def iterative_train(train_dat, args):
     """ This function is for running iterative experiments. The model data for
         iterative experiments will be saved to the working directory, and the
         function has the option of building on an existing model.
@@ -160,6 +159,37 @@ def iterative_experiment(train_path, test_path, resfile_name,
         pickle file with label predictions and text file with experiment
         performance statistics (written to result directory)
     """
+    outdir = os.path.abspath(args['outdir'])
+
+    # SET UP LOGGING
+    loglevel = args['loglevel']
+    stub = 'praxi_exp'
+    logfile_name = get_free_filename(stub, outdir, '.log')
+
+    numeric_level = getattr(logging, loglevel, None)
+    logging.basicConfig(filename=logfile_name,level=numeric_level)
+
+    # Log command line args
+    result_type = args['result'] # full or summary
+    logging.info("Result type: %s", result_type)
+
+    exp_type = args['experiment'] # single or multi
+    logging.info("Experiment type: %s", exp_type)
+
+    print_misses = args['print_labels']
+
+    vwargs = args['vw_args']
+    logging.info("Arguments for Vowpal Wabbit: %s", vwargs)
+
+    ####################
+    new_model_name = args['iterative']
+    initial_model = args['previous']
+    j_tr = args['justtrain']
+    j_ts = args['justtest']
+
+    if(new_model_name is None and initial_model is not None):
+        new_model_name = initial_model
+        
     if initial_model is None:
         suffix = 'iterative'
         iterative = True
@@ -169,146 +199,68 @@ def iterative_experiment(train_path, test_path, resfile_name,
                      use_temp_files=True, vw_modelfile=modfile)
     else:
         clf = pickle.load(open(initial_model, "rb"))
+    #clf.probability = True                                                            ###
+    train_names = []
+    for f in train_dat:
+        if list(f)[2] == 'tags':
+            train_names.append(f[list(f)[0]])
+    if(len(train_names) == 0):
+        logging.error("No tagsets found in provided training directory")
+        raise ValueError("No tagsets in training directory!")
+    train_tags, train_labels = parse_ts(train_names, train_dat)
+    #train and save model
+    clf.fit(train_tags, train_labels)
+    save_name = clf.vw_modelfile[:-2] + 'p'
+    with open(save_name, "wb") as f:
+        pickle.dump(clf, f)
 
-    if not just_test:
-        train_dat = train_path
-        #train_names = [f for f in train_dat if list(f)[2]=='tag']
-        train_names = []
-        for f in train_dat:
-            if list(f)[2] == 'tags':
-                train_names.append(f[list(f)[0]])
-        #train_names = [f for f in listdir(train_path) if (isfile(join(train_path, f))and f[-3:]=='tag')]
-        if(len(train_names) == 0):
-            logging.error("No tagsets found in provided training directory")
-            raise ValueError("No tagsets in training directory!")
-        train_tags, train_labels = parse_ts(train_names, train_path)
-        #print("train_labels", set(train_labels))
-    if not just_train:
-        test_dat = test_path
-        test_names = []
-        for f in test_dat:
-            if list(f)[2] == 'tags':
-                test_names.append(f[list(f)[0]])
-        #test_names = [f for f in listdir(test_path) if (isfile(join(test_path, f)) and f[-3:]=='tag')]
-        if(len(test_names) == 0):
-            logging.error("No tagsets found in provided testing directory")
-            raise ValueError("No tagsets in testing directory!")
-        test_tags, test_labels = parse_ts(test_names, test_path)
-        #print("test_labels", set(test_labels))
+    return clf  
 
+def test(clf, test_data, args):
+    outdir = os.path.abspath(args['outdir'])
+    nfolds = int(args['nfolds'])
+    resfile_name = get_free_filename('iterative_test', outdir, '.p')
+    result_type = args['result'] # full or summary
+
+    test_names = []
+    for f in test_data:
+        if list(f)[2] == 'tags':
+            test_names.append(f[list(f)[0]])
+    if(len(test_names) == 0):
+        logging.error("No tagsets found in provided testing directory")
+        raise ValueError("No tagsets in testing directory!")
+    test_tags, test_labels = parse_ts(test_names, test_data)
+    print("test_labels", test_labels)
+    
     resfile = open(resfile_name, 'wb')
     results = []
 
-    # Now train iteratively! (just fit and predict)
-    if not (just_test or just_train):
-        labels, preds = get_scores(clf, train_tags, train_labels, test_tags, test_labels)
-        results.append((labels, preds))
-        
-        # Print always misses because accuracy cannot be determined because the label is the timestamp
-        # May not be needed in the future because prediction may occur on ML as a service server
-        if print_misses:
-            print("Predicting labels:")
-            # # hard coded prediction for when ML as a service is integrated to Praxi magic
-            # print("label: <timestamp> prediction: <prediction>")
-            # original code for predicting label from within local device
-            for label, pred in zip(labels, preds):
-                if label != pred:
-                    print('label:',label,'prediction:',pred)
-
-        # save and print results
-        pickle.dump(results, resfile)
-        resfile.close()
-        logging.info("Printing results:")
-        print_results(resfile_name, outdir, result_type, iterative=True)
-
-        # save model
-        save_name = clf.vw_modelfile[:-2] + 'p'
-        pickle.dump(clf, open(save_name, "wb" ))
-    elif just_test:
-        preds = clf.predict(test_tags)
-        # so results are in test_labels, preds
+    #preds = clf.predict(test_tags)
+    ntags = [len(y) if isinstance(y, list) else 1 for y in test_labels]
+    preds, th = clf.top_k_tags(test_tags, test_labels, ntags)
+    max_f1 = 0
+    best_res = 0
+    hold = preds
+    for ind, thresh in enumerate(th):
+        print("thresh: ",thresh)
+        results = []
+        preds = hold[ind]
+        resfile = open(resfile_name, 'wb')
         results.append((test_labels, preds))
         pickle.dump(results, resfile)
         resfile.close()
-        logging.info("Printing results:")
-        print_results(resfile_name, outdir, result_type, iterative=True)
-    else:
-        #just train
-        clf.fit(train_tags, train_labels)
-        save_name = clf.vw_modelfile[:-2] + 'p'
-        #if not os.path.exists('model'):
-         #   os.makedirs('model')
-        with open(save_name, "wb") as f:
-            pickle.dump(clf, f)
-
-#################################
-#### SINGLE LABEL EXPERIMENT ####
-#################################
-def single_label_experiment(nfolds, tr_path, resfile_name, outdir, vwargs, result_type, ts_path=None, print_misses=False):
-    # instantiate hybrid object
-    suffix = 'single'
-    clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=False,
-                 vw_args=vwargs, suffix=suffix, iterative=False,
-                 use_temp_files=True)
+        f1 = get_metrics(resfile_name, outdir, result_type)
+        if (f1 > max_f1):
+            max_f1 = f1
+            best_res = ind
+    preds = hold[best_res]
+    print("best threshold is: ", th[best_res])
+    print("best f1 score is: {0}".format(max_f1))
+    # so results are in test_labels, preds
     resfile = open(resfile_name, 'wb')
     results = []
-    if(ts_path==None): # folds!
-        tr_names = [f for f in listdir(tr_path) if (isfile(join(tr_path, f))and f[-3:]=='tag')]
-        random.shuffle(tr_names)
-        logging.info("Partitioning into %d folds", nfolds)
-        folds = fold_partitioning(tr_names, n=nfolds)
-        logging.info("Starting cross validation folds: ")
-        #
-        tags = []
-        labels = []
-        for fold in folds:
-            curtags, curlabels = parse_ts(fold, tr_path)
-            tags.append(curtags)
-            labels.append(curlabels)
-
-        for idx in range(len(folds)):
-            # take current fold to be the "test", use the rest as training
-            logging.info("Test fold is: %d", idx)
-            #test_tagset_names = fold
-            test_tags = tags[idx]
-            test_labels = labels[idx]
-            train_idx_list = list(range(len(folds)))
-            train_idx_list.remove(idx)
-            logging.info("Training folds: %s", str(train_idx_list))
-            train_tags = []
-            train_labels = []
-            for i in train_idx_list:
-                train_tags += tags[i]
-                train_labels += labels[i]
-
-            true_labels, preds = get_scores(clf, train_tags, train_labels, test_tags, test_labels)
-            results.append((true_labels, preds))
-            if print_misses:
-                print("Misclassified labels for fold:", idx)
-                for label, pred in zip(true_labels, preds):
-                    if label != pred:
-                        print('label:',label,'prediction:',pred)
-
-    else: # no folds/crossvalidation
-        # get traintags, trainlabels, etc from ts_path, tr_path
-        ts_train_names = [f for f in listdir(tr_path) if (isfile(join(tr_path, f))and f[-3:]=='tag')]
-        ts_test_names = [f for f in listdir(ts_path) if (isfile(join(ts_path, f)) and f[-3:]=='tag')]
-
-        train_tags, train_labels = parse_ts(ts_train_names, ts_train_path)
-        test_tags, test_labels = parse_ts(ts_test_names, ts_test_path)
-
-        logging.info("Getting single label scores:")
-        labels, preds = get_scores(clf, train_tags, train_labels, test_tags, test_labels)
-        results.append((labels, preds))
-
-        if print_misses:
-            print("Misclassified labels:")
-            for label, pred in zip(labels, preds):
-                if label != pred:
-                    print('label:',label,'prediction:',pred)
-
+    results.append((test_labels, preds))
     pickle.dump(results, resfile)
-    # results is a list of tuples!!
     resfile.close()
     logging.info("Printing results:")
     print_multilabel_results(resfile_name, outdir, result_type, args=clf.get_args())
@@ -361,7 +313,7 @@ def get_scores(clf, train_tags, train_labels, test_tags, test_labels,
         logging.info("Generating predictions:")
         #print('model',clf)
         preds = clf.predict(test_tags) # predict labels for test set
-    return copy.deepcopy(test_labels), preds
+    return copy.deepcopy(test_labels), preds #
 
 def print_results(resfile, outdir, result_type='summary', n_strats=1, args=None, iterative=False):
     """ Calculate result statistics and print them to result file
@@ -400,7 +352,7 @@ def print_results(resfile, outdir, result_type='summary', n_strats=1, args=None,
     label_counts = []
     x = y_true
     y = y_pred
-
+    
     classifications.append(metrics.classification_report(x, y, labels=labels))
     f1_weighted.append(metrics.f1_score(x, y, labels=labels, average='weighted'))
     f1_micro.append(metrics.f1_score(x, y, labels=labels, average='micro'))
@@ -480,7 +432,32 @@ def print_results(resfile, outdir, result_type='summary', n_strats=1, args=None,
 ###                MULTILABEL EXPERIMENTS                                  ###
 ##############################################################################
 
-def multi_label_experiment(nfolds, tr_path, resfile_name, outdir, vwargs, result_type, ts_path=None):
+#def multilabel_train(train_dat, test_dat, args):
+def multilabel_train(train_dat, args):
+    outdir = os.path.abspath(args['outdir'])
+    nfolds = int(args['nfolds'])
+    resfile_name = get_free_filename('multi_test', outdir, '.p')
+
+    # SET UP LOGGING
+    loglevel = args['loglevel']
+    stub = 'praxi_exp'
+    logfile_name = get_free_filename(stub, outdir, '.log')
+
+    numeric_level = getattr(logging, loglevel, None) 
+    logging.basicConfig(filename=logfile_name,level=numeric_level)
+    
+    # Log command line args
+    result_type = args['result'] # full or summary
+    logging.info("Result type: %s", result_type)
+
+    print_misses = args['print_labels']
+    
+    vwargs = args['vw_args']
+    logging.info("Arguments for Vowpal Wabbit: %s", vwargs)
+
+    j_tr = args['justtrain']
+    j_ts = args['justtest']
+
     suffix = 'multi'
     # VW ARGS SHOULD BE PASSED IN
     clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=True,
@@ -491,8 +468,17 @@ def multi_label_experiment(nfolds, tr_path, resfile_name, outdir, vwargs, result
     #clf.probability = False                                                             ###
     resfile = open(resfile_name, 'wb')
     results = []
-    if (ts_path==None): # CROSS VALIDATION EXPERIMENT!
-        tagset_names = [f for f in listdir(tr_path) if (isfile(join(tr_path, f))and f[-3:]=='tag')]
+    if (nfolds != 1): # CROSS VALIDATION EXPERIMENT!
+        logging.info("Starting cross validation multi label experiment with %s folds", str(nfolds))
+        #tagset_names = [f for f in listdir(tr_path) if (isfile(join(tr_path, f))and f[-3:]=='tag')]
+        tagset_names = []
+        for f in train_dat:
+            if list(f)[2] == 'tags':
+                tagset_names.append(f[list(f)[0]])
+        if(len(tagset_names) == 0):
+            logging.error("No tagsets found in provided training directory")
+            raise ValueError("No tagsets in training directory!")
+        #train_tags, train_labels = parse_ts(tagset_names, train_dat)
         random.shuffle(tagset_names)
         # Partition into folds (random)
         folds = [[] for _ in range(nfolds)]
@@ -502,7 +488,7 @@ def multi_label_experiment(nfolds, tr_path, resfile_name, outdir, vwargs, result
         tags = []
         labels = []
         for fold in folds:
-            curtags, curlabels = parse_ts(fold, tr_path)
+            curtags, curlabels = parse_ts(fold, train_dat)
             tags.append(curtags)
             labels.append(curlabels)
         for idx in range(len(folds)):
@@ -517,21 +503,36 @@ def multi_label_experiment(nfolds, tr_path, resfile_name, outdir, vwargs, result
             train_labels = []
             for i in train_idx_list:
                 train_tags += tags[i]
-                train_labels += labels[i]
+                train_labels += labels[i] 
             results.append(get_multilabel_scores(clf, train_tags, train_labels, test_tags, test_labels))
-    else:
-        ts_train_names = [f for f in listdir(tr_path) if (isfile(join(tr_path, f))and f[-3:]=='tag')]
-        ts_test_names = [f for f in listdir(ts_path) if (isfile(join(ts_path, f)) and f[-3:]=='tag')]
-
-        train_tags, train_labels = parse_ts(ts_train_names, ts_train_path)
-        test_tags, test_labels = parse_ts(ts_test_names, ts_test_path)
-
-        results.append(get_multilabel_scores(clf, train_tags, train_labels, test_tags, test_labels))
-
-    pickle.dump(results, resfile)
-    resfile.close()
-    print_multilabel_results(resfile_name, outdir, result_type, args=clf.get_args(), n_strats=1)
-
+    else: 
+        logging.info("Starting multi label experiment") #
+        train_names = []
+        for f in train_dat:
+            if list(f)[2] == 'tags':
+                train_names.append(f[list(f)[0]])
+        print("train_names",len(train_names))
+        if(len(train_names) == 0):
+            logging.error("No tagsets found in provided training directory")
+            raise ValueError("No tagsets in training directory!")
+        train_tags, train_labels = parse_ts(train_names, train_dat)
+        
+        # test_names = []
+        # for f in test_dat:
+        #     if list(f)[2] == 'tags':
+        #         test_names.append(f[list(f)[0]]) #if that doesn't fit I will actually kill myself
+        # if(len(test_names) == 0):
+        #     logging.error("No tagsets found in provided training directory")
+        #     raise ValueError("No tagsets in training directory!")
+        # test_tags, test_labels = parse_ts(test_names, test_dat)
+    #results.append(get_multilabel_scores(clf, train_tags, train_labels, test_tags, test_labels))
+    
+    clf.fit(train_tags, train_labels)
+    #pickle.dump(results, resfile)
+    #resfile.close()
+    #print_multilabel_results(resfile_name, outdir, result_type, args=clf.get_args(), n_strats=1)
+    return clf
+    
 
 def get_multilabel_scores(clf, train_tags, train_labels, test_tags, test_labels):
     """Gets scores while providing the ntags to clf"""
@@ -543,6 +544,43 @@ def get_multilabel_scores(clf, train_tags, train_labels, test_tags, test_labels)
     ntags = [len(y) if isinstance(y, list) else 1 for y in test_labels]
     preds = clf.top_k_tags(test_tags, ntags)
     return test_labels, preds
+
+def get_metrics(resfile, outdir, result_type, args=None, n_strats=1, summary=False):
+    with open(resfile, 'rb') as f:
+        results = pickle.load(f)
+    numfolds = len(results)
+    y_true = []
+    y_pred = []
+    for result in results:
+        y_true += result[0]
+        y_pred += result[1]
+    print(len(y_true), len(y_pred))
+    bnz = MultiLabelBinarizer()
+    bnz.fit(y_true)
+    all_tags = copy.deepcopy(y_true)
+    for preds in y_pred:
+        for label in preds:
+            if label not in bnz.classes_:
+                all_tags.append([label])
+                bnz.fit(all_tags)
+    print(len(bnz.classes_), bnz.classes_)
+    y_true = bnz.transform(y_true)
+    y_pred = bnz.transform(y_pred)
+
+    labels = bnz.classes_
+    report = metrics.classification_report(y_true, y_pred, target_names=labels)
+    f1w = metrics.f1_score(y_true, y_pred, average='weighted')
+    f1i = metrics.f1_score(y_true, y_pred, average='micro')
+    f1a = metrics.f1_score(y_true, y_pred, average='macro')
+    pw = metrics.precision_score(y_true, y_pred, average='weighted')
+    pi = metrics.precision_score(y_true, y_pred, average='micro')
+    pa = metrics.precision_score(y_true, y_pred, average='macro')
+    rw = metrics.recall_score(y_true, y_pred, average='weighted')
+    ri = metrics.recall_score(y_true, y_pred, average='micro')
+    ra = metrics.recall_score(y_true, y_pred, average='macro')
+
+    return f1w
+
 
 def print_multilabel_results(resfile, outdir, result_type, args=None, n_strats=1, summary=False):
     """ Calculate result statistics and print them to result file
@@ -568,10 +606,13 @@ def print_multilabel_results(resfile, outdir, result_type, args=None, n_strats=1
             if label not in bnz.classes_:
                 all_tags.append([label])
                 bnz.fit(all_tags)
+    print(len(bnz.classes_), bnz.classes_)
     y_true = bnz.transform(y_true)
     y_pred = bnz.transform(y_pred)
 
     labels = bnz.classes_
+    # print(labels)                                                                    #######
+    # print(all_tags)
     report = metrics.classification_report(y_true, y_pred, target_names=labels)
     f1w = metrics.f1_score(y_true, y_pred, average='weighted')
     f1i = metrics.f1_score(y_true, y_pred, average='micro')
@@ -616,107 +657,140 @@ def print_multilabel_results(resfile, outdir, result_type, args=None, n_strats=1
             comments='')
 
 
-def run(tags_data):
+def get_inputs():
     prog_start = time.time()
 
-    #args = vars(parser.parse_args())
-    od = 'results'
-    outdir = os.path.abspath(od)
-    os.mkdir(outdir)
-    nfolds = 1
-    ts_train_path = tags_data
-    ts_test_path = tags_data
-    #nfolds = int(args['nfolds'])
-    #ts_train_path = args['traindir']
-    #ts_test_path = args['testdir']
+    parser = argparse.ArgumentParser(description='Arguments for Praxi software discovery algorithm.')
+    parser.add_argument('-t','--traindir', help='Path to training tagset directory.', default=None)
+    parser.add_argument('-s', '--testdir', help='Path to testing tagset directoy.', default=None)
+    parser.add_argument('-o', '--outdir', help='Path to desired result directory', default='.')
+    # run a single label experiment by default, if --multi flag is added, run a multilabel experiment!
+    parser.add_argument('-m','--multi', dest='experiment', action='store_const', const='multi',
+                        default='single', help="Type of experiment to run (single-label default).")
+    parser.add_argument('-w','--vwargs', dest='vw_args', default='-b 26 --learning_rate 1.5 --passes 30',
+                        help="custom arguments for VW.")
+    parser.add_argument('-n', '--nfolds', help='number of folds to use in cross validation', default=1) # make default 1?
+    parser.add_argument('-f', '--fullres', help='generate full result file.', dest='result',
+                        action='store_const', const='full', default='summary')
+    parser.add_argument('-v', '--verbosity', dest='loglevel', action='store_const', const='DEBUG',
+                        default='WARNING',help='specify level of detail for log file')
+    # IMPLEMENT THIS!
+    parser.add_argument('-l' '--labels', dest='print_labels', action='store_const', const=True, default=False,
+                        help='Print missed labels')
+    # DEFAULT: NO FOLDS
+    #   - will expect TWO directories as arguments
+    # iterative options
+    parser.add_argument('-i', '--iterative', default='/pipelines/component/src/model/iter_model.vw', help='Run iterative experiment (provide name)')
+    parser.add_argument('-p', '--previous', default=None, help='Optional: previous model name')
+    # THE FOLLOWING OPTIONS CAN ONLY BE USED WITH ITERATIVE TRAINING
+    parser.add_argument('-r', '--jtrain', dest='justtrain', action='store_const', const=True, default=False, help='Just train and save the model')
+    parser.add_argument('-e', '--jtest', dest='justtest', action='store_const', const=True, default=False, help='Just test against previously trained model')
+    args, unknown = parser.parse_known_args()
+    args = vars(args)
+    args['result'] = 'full'
+    return args
 
-    # SET UP LOGGING
-    loglevel = 'INFO'
-    #loglevel = args['loglevel']
-    stub = 'praxi_exp'
-    logfile_name = get_free_filename(stub, outdir, '.log')
-    print("main", logfile_name)
+# def run(tags_data):
+#     prog_start = time.time()
 
-    numeric_level = getattr(logging, loglevel, None)
-    logging.basicConfig(filename=logfile_name,level=numeric_level)
+#     #args = vars(parser.parse_args())
+#     od = 'results'
+#     outdir = os.path.abspath(od)
+#     os.mkdir(outdir)
+#     nfolds = 5
+#     ts_train_path = tags_data
+#     ts_test_path = tags_data
+#     #nfolds = int(args['nfolds'])
+#     #ts_train_path = args['traindir']
+#     #ts_test_path = args['testdir']
 
-    # Log command line args
-    result_type = 'summary'
-    #result_type = args['result'] # full or summary
-    logging.info("Result type: %s", result_type)
+#     # SET UP LOGGING
+#     loglevel = 'INFO'
+#     #loglevel = args['loglevel']
+#     stub = 'praxi_exp'
+#     logfile_name = get_free_filename(stub, outdir, '.log')
+#     print("main", logfile_name)
 
-    exp_type = 'single'
-    #exp_type = args['experiment'] # single or multi
-    logging.info("Experiment type: %s", exp_type)
+#     numeric_level = getattr(logging, loglevel, None)
+#     logging.basicConfig(filename=logfile_name,level=numeric_level)
 
-    print_misses = True
-    #print_misses = args['print_labels']
+#     # Log command line args
+#     result_type = 'summary'
+#     #result_type = args['result'] # full or summary
+#     logging.info("Result type: %s", result_type)
 
-    vwargs = '-b 26 --learning_rate 1.5 --passes 30'
-    #vwargs = args['vw_args']
-    logging.info("Arguments for Vowpal Wabbit: %s", vwargs)
+#     exp_type = 'single'
+#     #exp_type = args['experiment'] # single or multi
+#     logging.info("Experiment type: %s", exp_type)
 
-    ####################
-    iterative = '/pipelines/component/src/model/iter_model.vw'
-    initial_model = None
-    j_tr = False
-    j_ts = False
-    #iterative = args['iterative']
-    #initial_model = args['previous']
-    #j_tr = args['justtrain']
-    #j_ts = args['justtest']
+#     print_misses = True
+#     #print_misses = args['print_labels']
 
-    if(iterative is None and initial_model is not None):
-        iterative = initial_model
+#     vwargs = '-b 26 --learning_rate 1.5 --passes 30'
+#     #vwargs = args['vw_args']
+#     logging.info("Arguments for Vowpal Wabbit: %s", vwargs)
 
-    if(nfolds!= 1 and ts_test_path!=None):
-        # ERROR: SHOULDNT HAVE A TEST DIRECTORY IF CROSS VALIDATION IS OCCURRING
-        logging.error("Too many input directories. If performing cross validation, expect just one.")
-        raise ValueError("Too many input directories! Only need one for cross validation.")
-    else:
-        if iterative is not None:
-            # run iterative exp (all single label for now, no cross validation)
-            logging.info("Starting iterative experiment")
-            logging.info("Model files will be saved to working directory")
-            if initial_model is not None:
-                logging.info("Will iteratively train the model: %s", initial_model)
-                new_model_name = None
-            else:
-                new_model_name = iterative
-                logging.info("Will save new model to %s", new_model_name)
-            # Might not need training/testing directory! (later add "just testing" and "just training" option)
-            #logging.info("Training directory: %s", ts_train_path)
-            #logging.info("Testing directory: %s", ts_test_path)
-            resfile_name = get_free_filename('iterative_test', outdir, '.p') # add arg to set stub?
-            iterative_experiment(ts_train_path, ts_test_path, resfile_name, outdir, vwargs, result_type,
-                                 initial_model=initial_model, print_misses=print_misses, new_model_name=new_model_name,
-                                 just_train=j_tr, just_test=j_ts)
-        else:
-            if exp_type == 'single':
-                if(nfolds == 1):
-                    logging.info("Starting single label experiment")
-                    #logging.info("Training directory: %s", ts_train_path)
-                    #logging.info("Testing directory: %s", ts_test_path)
-                else:
-                    # CROSS VALIDATION
-                    logging.info("Starting cross validation single label experiment with %s folds", str(nfolds))
-                    #logging.info("Tagset directory: %s", ts_train_path)
-                resfile_name = get_free_filename('single_test', outdir, '.p') # add arg to set stub?
-                single_label_experiment(nfolds, ts_train_path, resfile_name, outdir, vwargs, result_type,
-                                        ts_path=ts_test_path, print_misses=print_misses) # no train directory
-            else: # multi
-                if(nfolds == 1):
-                    logging.info("Starting multi label experiment")
-                    #logging.info("Training directory: %s", ts_train_path)
-                    #logging.info("Testing directory: %s", ts_test_path)
-                else:
-                    # CROSS VALIDATION
-                    logging.info("Starting cross validation multi label experiment with %s folds", str(nfolds))
-                    #logging.info("Tagset directory: %s", ts_train_path)
-                resfile_name = get_free_filename('multi_test', outdir, '.p')
-                multi_label_experiment(nfolds, ts_train_path, resfile_name, outdir, vwargs,
-                                       result_type, ts_path=ts_test_path) #, print_misses=print_misses)
+#     ####################
+#     iterative = '/pipelines/component/src/model/iter_model.vw'
+#     initial_model = None
+#     j_tr = False
+#     j_ts = False
+#     #iterative = args['iterative']
+#     #initial_model = args['previous']
+#     #j_tr = args['justtrain']
+#     #j_ts = args['justtest']
 
-    logging.info("Program runtime: %s", str(time.time()-prog_start))
+#     if(iterative is None and initial_model is not None):
+#         iterative = initial_model
 
-    return resfile_name
+#     if(nfolds!= 1 and ts_test_path!=None):
+#         # ERROR: SHOULDNT HAVE A TEST DIRECTORY IF CROSS VALIDATION IS OCCURRING
+#         logging.error("Too many input directories. If performing cross validation, expect just one.")
+#         raise ValueError("Too many input directories! Only need one for cross validation.")
+#     else:
+#         if iterative is not None:
+#             # run iterative exp (all single label for now, no cross validation)
+#             logging.info("Starting iterative experiment")
+#             logging.info("Model files will be saved to working directory")
+#             if initial_model is not None:
+#                 logging.info("Will iteratively train the model: %s", initial_model)
+#                 new_model_name = None
+#             else:
+#                 new_model_name = iterative
+#                 logging.info("Will save new model to %s", new_model_name)
+#             # Might not need training/testing directory! (later add "just testing" and "just training" option)
+#             #logging.info("Training directory: %s", ts_train_path)
+#             #logging.info("Testing directory: %s", ts_test_path)
+#             resfile_name = get_free_filename('iterative_test', outdir, '.p') # add arg to set stub?
+#             iterative_experiment(ts_train_path, ts_test_path, resfile_name, outdir, vwargs, result_type,
+#                                  initial_model=initial_model, print_misses=print_misses, new_model_name=new_model_name,
+#                                  just_train=j_tr, just_test=j_ts)
+#         else:
+#             if exp_type == 'single':
+#                 if(nfolds == 1):
+#                     logging.info("Starting single label experiment")
+#                     #logging.info("Training directory: %s", ts_train_path)
+#                     #logging.info("Testing directory: %s", ts_test_path)
+#                 else:
+#                     # CROSS VALIDATION
+#                     logging.info("Starting cross validation single label experiment with %s folds", str(nfolds))
+#                     #logging.info("Tagset directory: %s", ts_train_path)
+#                 resfile_name = get_free_filename('single_test', outdir, '.p') # add arg to set stub?
+#                 single_label_experiment(nfolds, ts_train_path, resfile_name, outdir, vwargs, result_type,
+#                                         ts_path=ts_test_path, print_misses=print_misses) # no train directory
+#             else: # multi
+#                 if(nfolds == 1):
+#                     logging.info("Starting multi label experiment")
+#                     #logging.info("Training directory: %s", ts_train_path)
+#                     #logging.info("Testing directory: %s", ts_test_path)
+#                 else:
+#                     # CROSS VALIDATION
+#                     logging.info("Starting cross validation multi label experiment with %s folds", str(nfolds))
+#                     #logging.info("Tagset directory: %s", ts_train_path)
+#                 resfile_name = get_free_filename('multi_test', outdir, '.p')
+#                 multi_label_experiment(nfolds, ts_train_path, resfile_name, outdir, vwargs,
+#                                        result_type, ts_path=ts_test_path) #, print_misses=print_misses)
+
+#     logging.info("Program runtime: %s", str(time.time()-prog_start))
+
+#     return resfile_name
