@@ -198,7 +198,11 @@ class Hybrid(BaseEstimator):
             raise ValueError("Need to train the classifier first")
         #tags = self._get_tags(X) (X = tags)
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         if self.use_temp_files:
+=======
+        if self.use_temp_files:                                                     ###
+>>>>>>> Stashed changes
 =======
         if self.use_temp_files:                                                     ###
 >>>>>>> Stashed changes
@@ -220,8 +224,11 @@ class Hybrid(BaseEstimator):
         f.close()
         logging.info('vw input written to %s, starting testing', f.name)
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         args = f.name
 =======
+=======
+>>>>>>> Stashed changes
         args = './pred_input-%s.txt' % self.suffix
         #args += ' --loss_function=logistic -p %s' % outf
         # args = '/workspace/pred_input-%s.txt' % self.suffix

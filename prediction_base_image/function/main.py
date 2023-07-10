@@ -312,8 +312,11 @@ def single_label_experiment(nfolds, tr_path, resfile_name, outdir, vwargs, resul
     resfile.close()
     logging.info("Printing results:")
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     print_results(resfile_name, outdir, result_type)
 =======
+=======
+>>>>>>> Stashed changes
     print_multilabel_results(resfile_name, outdir, result_type, args=clf.get_args())
     return preds
 
@@ -489,9 +492,12 @@ def multi_label_experiment(nfolds, tr_path, resfile_name, outdir, vwargs, result
     # VW ARGS SHOULD BE PASSED IN
     clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=True,
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                  vw_args=vwargs, suffix=suffix, use_temp_files=True)
 
 =======
+=======
+>>>>>>> Stashed changes
                  vw_args=vwargs, suffix=suffix, use_temp_files=False, vw_modelfile="./results/model.vw")
     #print(clf.vw_modelfile)
     with open(clf.vw_modelfile, 'wb') as mod_file:
