@@ -311,12 +311,6 @@ def single_label_experiment(nfolds, tr_path, resfile_name, outdir, vwargs, resul
     # results is a list of tuples!!
     resfile.close()
     logging.info("Printing results:")
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    print_results(resfile_name, outdir, result_type)
-=======
-=======
->>>>>>> Stashed changes
     print_multilabel_results(resfile_name, outdir, result_type, args=clf.get_args())
     return preds
 
@@ -353,7 +347,6 @@ def get_accuracy(preds, labels):
         sl_acc = 0
     print("ml acc:", ml_acc, "sl acc:", sl_acc)
     return acc
->>>>>>> Stashed changes
 
 def get_scores(clf, train_tags, train_labels, test_tags, test_labels,
                binarize=False, store_true=False):
@@ -491,19 +484,11 @@ def multi_label_experiment(nfolds, tr_path, resfile_name, outdir, vwargs, result
     suffix = 'multi'
     # VW ARGS SHOULD BE PASSED IN
     clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=True,
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                 vw_args=vwargs, suffix=suffix, use_temp_files=True)
-
-=======
-=======
->>>>>>> Stashed changes
                  vw_args=vwargs, suffix=suffix, use_temp_files=False, vw_modelfile="./results/model.vw")
     #print(clf.vw_modelfile)
     with open(clf.vw_modelfile, 'wb') as mod_file:
         pickle.dump(clf, mod_file)
     #clf.probability = False                                                             ###
->>>>>>> Stashed changes
     resfile = open(resfile_name, 'wb')
     results = []
     if (ts_path==None): # CROSS VALIDATION EXPERIMENT!
