@@ -197,7 +197,11 @@ class Hybrid(BaseEstimator):
         if not self.trained:
             raise ValueError("Need to train the classifier first")
         #tags = self._get_tags(X) (X = tags)
+<<<<<<< Updated upstream
         if self.use_temp_files:
+=======
+        if self.use_temp_files:                                                     ###
+>>>>>>> Stashed changes
             f = tempfile.NamedTemporaryFile('w', delete=False)
             outfobj = tempfile.NamedTemporaryFile('w', delete=False)
             outf = outfobj.name
@@ -215,7 +219,14 @@ class Hybrid(BaseEstimator):
                 f.write('| {}\n'.format(' '.join(tag)))
         f.close()
         logging.info('vw input written to %s, starting testing', f.name)
+<<<<<<< Updated upstream
         args = f.name
+=======
+        args = './pred_input-%s.txt' % self.suffix
+        #args += ' --loss_function=logistic -p %s' % outf
+        # args = '/workspace/pred_input-%s.txt' % self.suffix
+        #args += ' --loss_function=logistic -r %s' % outf
+>>>>>>> Stashed changes
         args += ' -r %s' % outf
         command = '{vw_binary} {args} -t -i {vw_modelfile}'.format(
             vw_binary=self.vw_binary, args=args,

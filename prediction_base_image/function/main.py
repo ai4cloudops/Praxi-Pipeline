@@ -311,7 +311,46 @@ def single_label_experiment(nfolds, tr_path, resfile_name, outdir, vwargs, resul
     # results is a list of tuples!!
     resfile.close()
     logging.info("Printing results:")
+<<<<<<< Updated upstream
     print_results(resfile_name, outdir, result_type)
+=======
+    print_multilabel_results(resfile_name, outdir, result_type, args=clf.get_args())
+    return preds
+
+def get_accuracy(preds, labels):
+    total_count = 0
+    correct_count = 0
+    sl_total_count = 0
+    ml_total_count = 0
+    sl_correct = 0
+    ml_correct = 0
+    acc = 0
+    #print("preds",preds)
+    for pred in preds:
+        #print(sorted(pred), sorted(labels[total_count]))
+        if sorted(pred) == sorted(labels[total_count]):
+            correct_count += 1
+            if (len(pred) ==1):
+                sl_correct += 1
+            else:
+                ml_correct += 1
+        if (len(pred) == 1):
+            sl_total_count += 1
+        else:
+            ml_total_count += 1
+        total_count += 1
+    acc = 100*correct_count/total_count
+    if (ml_total_count != 0):
+        ml_acc = 100*ml_correct/ml_total_count
+    else:
+        ml_acc = 0
+    if (sl_total_count != 0):
+        sl_acc = 100*sl_correct/sl_total_count
+    else:
+        sl_acc = 0
+    print("ml acc:", ml_acc, "sl acc:", sl_acc)
+    return acc
+>>>>>>> Stashed changes
 
 def get_scores(clf, train_tags, train_labels, test_tags, test_labels,
                binarize=False, store_true=False):
@@ -449,8 +488,16 @@ def multi_label_experiment(nfolds, tr_path, resfile_name, outdir, vwargs, result
     suffix = 'multi'
     # VW ARGS SHOULD BE PASSED IN
     clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=True,
+<<<<<<< Updated upstream
                  vw_args=vwargs, suffix=suffix, use_temp_files=True)
 
+=======
+                 vw_args=vwargs, suffix=suffix, use_temp_files=False, vw_modelfile="./results/model.vw")
+    #print(clf.vw_modelfile)
+    with open(clf.vw_modelfile, 'wb') as mod_file:
+        pickle.dump(clf, mod_file)
+    #clf.probability = False                                                             ###
+>>>>>>> Stashed changes
     resfile = open(resfile_name, 'wb')
     results = []
     if (ts_path==None): # CROSS VALIDATION EXPERIMENT!
