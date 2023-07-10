@@ -263,7 +263,7 @@ def test(clf, test_data, args):
     pickle.dump(results, resfile)
     resfile.close()
     logging.info("Printing results:")
-    print_multilabel_results(resfile_name, outdir, result_type)
+    print_multilabel_results(resfile_name, outdir, result_type, args=clf.get_args())
     return preds
 
 def get_accuracy(preds, labels):
@@ -461,7 +461,7 @@ def multilabel_train(train_dat, args):
     suffix = 'multi'
     # VW ARGS SHOULD BE PASSED IN
     clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=True,
-                 vw_args=vwargs, suffix=suffix, use_temp_files=True)
+                 vw_args=vwargs, suffix=suffix, use_temp_files=False, vw_modelfile="./results/model.vw")
     #print(clf.vw_modelfile)
     with open(clf.vw_modelfile, 'wb') as mod_file:
         pickle.dump(clf, mod_file)

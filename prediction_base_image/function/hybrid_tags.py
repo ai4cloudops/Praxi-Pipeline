@@ -215,7 +215,7 @@ class Hybrid(BaseEstimator):
         if not self.trained:
             raise ValueError("Need to train the classifier first")
         #tags = self._get_tags(X) (X = tags)
-        if not self.use_temp_files:                                                     ###
+        if self.use_temp_files:                                                     ###
             f = tempfile.NamedTemporaryFile('w', delete=False)
             outfobj = tempfile.NamedTemporaryFile('w', delete=False)
             outf = outfobj.name
@@ -242,7 +242,7 @@ class Hybrid(BaseEstimator):
         #f_debug.close()
         f.close()
         logging.info('vw input written to %s, starting testing', f.name)
-        args = '/pred_input-%s.txt' % self.suffix
+        args = './pred_input-%s.txt' % self.suffix
         #args += ' --loss_function=logistic -p %s' % outf
         # args = '/workspace/pred_input-%s.txt' % self.suffix
         #args += ' --loss_function=logistic -r %s' % outf
