@@ -41,3 +41,4 @@ dpkg-query -W --admindir='/introspection/tmp/027c8356d7f8a7036070190cdfff69d2708
 # ./demo_main.py -t demo_tagsets/new_tagsets -s demo_tagsets/sl_test_tag -o results -p iter_model.p
 # ./demo_main.py -t demo_tagsets/ml_train_tag -s demo_tagsets/ml_test_tag -o results -m
 # ./demo_main.py -t demo_tagsets/ml_train_tag -s demo_tagsets/mix_test_tag -o results -l -m
+# python3 ./demo_main.py -t demo_tagsets/mix_train_tag -s demo_tagsets/mix_test_tag -o results -l -m
