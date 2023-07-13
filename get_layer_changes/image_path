@@ -1,0 +1,44 @@
+zongshun96/prom-get-layers:0.01
+
+docker save -o image.tar zongshun96/prom-get-layers:0.01 # notice that files added at each layer are in the directory of each layer.
+docker run -v $PWD:/workdir -it orisano/dlayer -f workdir/image.tar
+
+docker inspect zongshun96/prom-get-layers:0.01
+docker pull zongshun96/prom-get-layers:0.01
+docker history zongshun96/prom-get-layers:0.01
+
+tar -tvf '/home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/get_layer_changes/image/image.tar'   # list content
+tar -xvf '/home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/get_layer_changes/image/image.tar'   # extract content
+
+
+
+sudo docker rmi -f $(sudo docker images -f "dangling=true" -q)
+
+
+more 'var/lib/dpkg/info'
+more 'var/lib/dpkg/status'
+(zcat $(ls -tr var/log/apt/history.log*.gz); cat var/log/apt/history.log) 2>/dev/null |
+  egrep '^(Start-Date:|Commandline:)' |
+  grep -v aptdaemon |
+  egrep '^Commandline:'
+
+
+
+kubectl cp '/home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/get_layer_changes/image/image.tar' introspected-deployment-7ffbfbd7f4-hzqw7:/introspection
+
+makir tmp
+tar -xvf image.tar -C tmp
+mkdir layer
+tar -xvf layer.tar -C layer
+
+
+dpkg-query -W --admindir='/introspection/tmp/027c8356d7f8a7036070190cdfff69d2708ac551a663ec186bc7ae6f89f86ebf/layer/var/lib/dpkg' -f='${Package}|${Version}|${Architecture}|${Installed-Size}\n'
+
+
+
+
+
+# ./demo_main.py -t demo_tagsets/new_tagsets -s demo_tagsets/sl_test_tag -o results -p iter_model.p
+# ./demo_main.py -t demo_tagsets/ml_train_tag -s demo_tagsets/ml_test_tag -o results -m
+# ./demo_main.py -t demo_tagsets/ml_train_tag -s demo_tagsets/mix_test_tag -o results -l -m
+# python3 ./demo_main.py -t demo_tagsets/mix_train_tag -s demo_tagsets/mix_test_tag -o results -l -m

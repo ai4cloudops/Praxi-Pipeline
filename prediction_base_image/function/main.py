@@ -55,7 +55,7 @@ from sklearn import metrics
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.preprocessing import MultiLabelBinarizer
 
-from hybrid_tags import Hybrid
+from function.hybrid_tags import Hybrid
 
 LOCK = Lock()
 
@@ -196,7 +196,7 @@ def iterative_train(train_dat, args):
         modfile = new_model_name
         clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=False,
                      vw_args= vwargs, suffix=suffix, iterative=iterative,
-                     use_temp_files=True, vw_modelfile=modfile)
+                     use_temp_files=True, vw_modelfile=modfile, outdir = outdir)
     else:
         clf = pickle.load(open(initial_model, "rb"))
     #clf.probability = True                                                            ###
@@ -236,8 +236,9 @@ def test(clf, test_data, args):
     results = []
 
     #preds = clf.predict(test_tags)
-    ntags = [len(y) if isinstance(y, list) else 1 for y in test_labels]
-    preds, th = clf.top_k_tags(test_tags, test_labels, ntags)
+    # ntags = [len(y) if isinstance(y, list) else 1 for y in test_labels]
+    # preds, th = clf.top_k_tags(test_tags, test_labels, ntags)
+    preds, th = clf.cost_density(test_tags, test_labels)
     max_f1 = 0
     best_res = 0
     hold = preds
@@ -267,7 +268,7 @@ def test(clf, test_data, args):
     pickle.dump(results, resfile)
     resfile.close()
     logging.info("Printing results:")
-    print_multilabel_results(resfile_name, outdir, result_type)
+    print_multilabel_results(resfile_name, outdir, result_type, args=clf.get_args())
     return preds
 
 def get_accuracy(preds, labels):
@@ -465,7 +466,7 @@ def multilabel_train(train_dat, args):
     suffix = 'multi'
     # VW ARGS SHOULD BE PASSED IN
     clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=True,
-                 vw_args=vwargs, suffix=suffix, use_temp_files=True)
+                 vw_args=vwargs, suffix=suffix, use_temp_files=False, vw_modelfile="./results/model.vw", outdir = outdir)
     #print(clf.vw_modelfile)
     with open(clf.vw_modelfile, 'wb') as mod_file:
         pickle.dump(clf, mod_file)
@@ -667,7 +668,7 @@ def get_inputs():
     parser = argparse.ArgumentParser(description='Arguments for Praxi software discovery algorithm.')
     parser.add_argument('-t','--traindir', help='Path to training tagset directory.', default=None)
     parser.add_argument('-s', '--testdir', help='Path to testing tagset directoy.', default=None)
-    parser.add_argument('-o', '--outdir', help='Path to desired result directory', default='.')
+    parser.add_argument('-o', '--outdir', help='Path to desired result directory', default='./results/')
     # run a single label experiment by default, if --multi flag is added, run a multilabel experiment!
     parser.add_argument('-m','--multi', dest='experiment', action='store_const', const='multi',
                         default='single', help="Type of experiment to run (single-label default).")
