@@ -28,7 +28,7 @@ https://github.com/adrien-legros/rhods-mnist/blob/main/docs/lab-instructions.md#
 https://github.com/OCP-on-NERC/operations/issues/156
 
 ### Inference Pipeline
-![Inference Diagram](https://github.com/Zongshun96/Praxi-Pipeline/blob/main/Figures/Praxi-Kubeflow-Image-layers-inference.drawi.drawio.png?raw=true)
+![Inference Diagram](https://github.com/Zongshun96/Praxi-Pipeline/blob/use-layer-changeset/Figures/Praxi-Kubeflow-Image-layers-inference.drawi.drawio.png?raw=true)
 
 For this inference pipeline, the processing begins from left to right.
 
@@ -63,7 +63,7 @@ https://docs.google.com/presentation/d/1InksmODphuhfZm3hjezXCkQiLWdlsklHmpmNMjWt
 https://docs.google.com/presentation/d/1qg1_n8iY0Jmk4pz7u-X0WI6kAqsivDHC492v0ii-fDI/edit?usp=sharing
 
 ### Train Pipeline
-![Train Diagram](https://github.com/Zongshun96/Praxi-Pipeline/blob/main/Figures/Praxi-Kubeflow-train.drawi.drawio.png?raw=true)
+![Train Diagram](https://github.com/Zongshun96/Praxi-Pipeline/blob/use-layer-changeset/Figures/Praxi-Kubeflow-train.drawi.drawio.png?raw=true)
 
 Training step is more original to `Praxi`.
 We still have the three components (changeset generator, tagset generator, VW model) in Kubeflow Pipeline.
