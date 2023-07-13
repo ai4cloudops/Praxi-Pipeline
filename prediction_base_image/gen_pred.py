@@ -10,11 +10,11 @@ args = main.get_inputs()
 
 
 train_tags_path = "/home/cc/Praxi-study/praxi/demos/ic2e_demo/demo_tagsets/mix_train_tag/"
-test_tags_path = "/home/cc/Praxi-study/praxi/demos/ic2e_demo/demo_tagsets/large_mix_test_tag/"
+test_tags_path = "/home/cc/Praxi-study/praxi/demos/ic2e_demo/demo_tagsets/mix_test_tag/"
 # test_tags_path = "/home/cc/Praxi-study/praxi/demos/ic2e_demo/demo_tagsets/mix_test_tag/"
-model_path = "/home/cc/Praxi-study/praxi_vw_debug/Praxi-Pipeline/prediction_base_image/results/pred_model.p"
-modfile_path = "/home/cc/Praxi-study/praxi_vw_debug/Praxi-Pipeline/prediction_base_image/results/model.vw"
-prediction_path = "/home/cc/Praxi-study/praxi_vw_debug/Praxi-Pipeline/prediction_base_image/results/test_result.txt"
+model_path = "/home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/prediction_base_image/results/pred_model.p"
+modfile_path = "/home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/prediction_base_image/results/model.vw"
+prediction_path = "/home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/prediction_base_image/results/test_result.txt"
 
 
 
@@ -59,7 +59,7 @@ for tag_file in tqdm(os.listdir(test_tags_path)):
 
 with open(model_path, 'rb') as reader:
     model = pickle.load(reader)
-# model.vw_binary = 'docker run -v /home/cc/Praxi-study/praxi_vw_debug/Praxi-Pipeline/prediction_base_image:/workspace --rm vowpalwabbit/vw-rel-alpine:9.8.0'
+# model.vw_binary = 'docker run -v /home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/prediction_base_image:/workspace --rm vowpalwabbit/vw-rel-alpine:9.8.0'
 model.vw_modelfile = modfile_path
 print("labs",model.all_labels)
 pred = main.test(model, test_tags, args)
