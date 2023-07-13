@@ -1,0 +1,61 @@
+name: Generate changesets
+inputs:
+- {name: user_in}
+- {name: single}
+- {name: multi}
+outputs:
+- {name: cs, type: String}
+- {name: args, type: String}
+implementation:
+  container:
+    image: lkorver/praxi-columbus-base:0.067
+    command:
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - |
+      def _make_parent_dirs_and_return_path(file_path: str):
+          import os
+          os.makedirs(os.path.dirname(file_path), exist_ok=True)
+          return file_path
+
+      def generate_changesets(user_in, single, multi, cs_path, args_path):
+          from function import changeset_gen
+          import pickle
+          import os
+          import json
+          print(user_in)
+          packages = []
+          for package in user_in.split():
+              packages.append(package)
+          changesets = changeset_gen.run(packages, single, multi)
+          print(changesets)
+          os.popen('cp -r {0} {1}'.format("/changesets", cs_path))
+          with open(args_path, 'wb') as argfile:
+              pickle.dump(user_in, argfile)
+          print(os.listdir("/changesets"))
+
+      import argparse
+      _parser = argparse.ArgumentParser(prog='Generate changesets', description='')
+      _parser.add_argument("--user-in", dest="user_in", type=str, required=True, default=argparse.SUPPRESS)
+      _parser.add_argument("--single", dest="single", type=str, required=True, default=argparse.SUPPRESS)
+      _parser.add_argument("--multi", dest="multi", type=str, required=True, default=argparse.SUPPRESS)
+      _parser.add_argument("--cs", dest="cs_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+      _parser.add_argument("--args", dest="args_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+      _parsed_args = vars(_parser.parse_args())
+
+      _outputs = generate_changesets(**_parsed_args)
+    args:
+    - --user-in
+    - {inputValue: user_in}
+    - --single
+    - {inputValue: single}
+    - --multi
+    - {inputValue: multi}
+    - --cs
+    - {outputPath: cs}
+    - --args
+    - {outputPath: args}

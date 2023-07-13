@@ -1,0 +1,55 @@
+name: Generate prediction
+description: generate prediction with tagset
+inputs:
+- {name: tagset, type: String}
+outputs:
+- {name: prediction, type: String}
+implementation:
+  container:
+    image: lkorver/praxi-vw-base:0.052
+    command:
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - |
+      def _make_parent_dirs_and_return_path(file_path: str):
+          import os
+          os.makedirs(os.path.dirname(file_path), exist_ok=True)
+          return file_path
+
+      def generate_prediction(tagset_path, prediction_path):
+          '''generate prediction with tagset'''
+          import main
+          import os
+          import json
+          import pickle
+          import time
+          data_loaded = []
+          with open(tagset_path, 'r') as stream:
+              for line in stream:
+                  temp = json.loads(line)
+                  if (type(temp) != None):
+                      data_loaded.append(temp)
+          pred_path = main.run(data_loaded)
+          print("output", pred_path)
+          with open(prediction_path, 'w') as writer:
+              with open(pred_path, 'rb') as reader:
+                  pickle.load(reader)
+                      #writer.write(line + '\n')
+          time.sleep(5000)
+
+      import argparse
+      _parser = argparse.ArgumentParser(prog='Generate prediction', description='generate prediction with tagset')
+      _parser.add_argument("--tagset", dest="tagset_path", type=str, required=True, default=argparse.SUPPRESS)
+      _parser.add_argument("--prediction", dest="prediction_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+      _parsed_args = vars(_parser.parse_args())
+
+      _outputs = generate_prediction(**_parsed_args)
+    args:
+    - --tagset
+    - {inputPath: tagset}
+    - --prediction
+    - {outputPath: prediction}

@@ -1,0 +1,54 @@
+name: Gen prediction
+description: generate prediction given model
+inputs:
+- {name: model, type: String}
+- {name: modfile, type: String}
+- {name: test_tags, type: String}
+- {name: created_tags, type: String}
+outputs:
+- {name: prediction, type: String}
+implementation:
+  container:
+    image: lkorver/praxi-vw-base:0.320
+    command:
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n   \
+      \ os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return file_path\n\
+      \ndef gen_prediction(model_path, modfile_path, test_tags_path, created_tags_path,\
+      \ prediction_path):\n    '''generate prediction given model'''\n    import main\n\
+      \    import os\n    import json\n    import pickle\n    import time\n    from\
+      \ hybrid_tags import Hybrid\n    args = main.get_inputs()\n    data_loaded =\
+      \ []\n\n    with open(test_tags_path, 'rb') as reader:\n        data_loaded\
+      \ = pickle.load(reader)\n\n    # with open(created_tags_path, 'r') as stream:\n\
+      \    #     for line in stream:\n    #         temp = json.loads(line)\n    #\
+      \         if (type(temp) != None):\n    #             data_loaded.append(temp)\n\
+      \n    with open(model_path, 'rb') as reader:\n        model = pickle.load(reader)\n\
+      \    model.vw_modelfile = modfile_path\n    print(\"labs\",model.all_labels)\n\
+      \    pred = main.test(model, data_loaded, args)\n    print(\"output\", pred)\n\
+      \    with open(prediction_path, 'wb') as writer:\n        pickle.dump(pred,\
+      \ writer) \n    time.sleep(5000)\n\nimport argparse\n_parser = argparse.ArgumentParser(prog='Gen\
+      \ prediction', description='generate prediction given model')\n_parser.add_argument(\"\
+      --model\", dest=\"model_path\", type=str, required=True, default=argparse.SUPPRESS)\n\
+      _parser.add_argument(\"--modfile\", dest=\"modfile_path\", type=str, required=True,\
+      \ default=argparse.SUPPRESS)\n_parser.add_argument(\"--test-tags\", dest=\"\
+      test_tags_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
+      --created-tags\", dest=\"created_tags_path\", type=str, required=True, default=argparse.SUPPRESS)\n\
+      _parser.add_argument(\"--prediction\", dest=\"prediction_path\", type=_make_parent_dirs_and_return_path,\
+      \ required=True, default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\
+      \n_outputs = gen_prediction(**_parsed_args)\n"
+    args:
+    - --model
+    - {inputPath: model}
+    - --modfile
+    - {inputPath: modfile}
+    - --test-tags
+    - {inputPath: test_tags}
+    - --created-tags
+    - {inputPath: created_tags}
+    - --prediction
+    - {outputPath: prediction}

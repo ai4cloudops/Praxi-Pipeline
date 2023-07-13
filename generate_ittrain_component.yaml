@@ -1,0 +1,42 @@
+name: Iterative training
+inputs:
+- {name: tagset, type: String}
+outputs:
+- {name: modfile, type: String}
+- {name: model, type: String}
+implementation:
+  container:
+    image: lkorver/praxi-vw-base:0.212
+    command:
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n   \
+      \ os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return file_path\n\
+      \ndef iterative_training(tagset_path, modfile_path, model_path):\n    ''''''\n\
+      \    import main\n    import os\n    import json\n    import pickle\n    import\
+      \ time\n    args = main.get_inputs() \n    data_loaded = []\n\n    with open(tagset_path,\
+      \ 'r') as stream:\n        for line in stream:\n            temp = json.loads(line)\n\
+      \            if (type(temp) != None):\n                data_loaded.append(temp)\n\
+      \n    model = main.iterative_train(data_loaded, args)\n    modfile = model.vw_modelfile\n\
+      \    #print(\"modfile\",modfile)\n    os.popen('cp {0} {1}'.format(modfile,\
+      \ modfile_path))\n    with open(model_path, 'wb') as modelfile:\n        pickle.dump(model,\
+      \ modelfile)    \n\n    # with open(test_tags_path, 'wb') as testfile:\n   \
+      \ #     pickle.dump(testdat, testfile)\n\nimport argparse\n_parser = argparse.ArgumentParser(prog='Iterative\
+      \ training', description='')\n_parser.add_argument(\"--tagset\", dest=\"tagset_path\"\
+      , type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
+      --modfile\", dest=\"modfile_path\", type=_make_parent_dirs_and_return_path,\
+      \ required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--model\"\
+      , dest=\"model_path\", type=_make_parent_dirs_and_return_path, required=True,\
+      \ default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n\
+      _outputs = iterative_training(**_parsed_args)\n"
+    args:
+    - --tagset
+    - {inputPath: tagset}
+    - --modfile
+    - {outputPath: modfile}
+    - --model
+    - {outputPath: model}

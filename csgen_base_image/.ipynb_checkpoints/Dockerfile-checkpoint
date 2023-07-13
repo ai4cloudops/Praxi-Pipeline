@@ -9,14 +9,12 @@ ENV PYTHONPATH="/pipelines/component/src/:$PYTHONPATH"
 
 # Autoclean does not really reduce the image size
 # Probably due to a lot of dependencies
-RUN apt-get update && apt-get install -y \
-        python3-pip vowpal-wabbit && \
+RUN apt-get update && apt-get install -y &&\
 	apt-get clean && apt-get autoclean
-
+ 
 # Python dependencies
 COPY requirements.txt .
 RUN  pip3 install --upgrade pip && pip3 install -r requirements.txt
 
-# Copy model and files into container image
-COPY model /pipelines/component/src/model
+# Copy files into container image
 COPY function /pipelines/component/src

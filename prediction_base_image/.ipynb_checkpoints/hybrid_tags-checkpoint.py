@@ -11,30 +11,19 @@ import random
 import tempfile
 import time
 import yaml
-import math
 
 #add this
 #from columbus import columbus
-
 
 import envoy
 from sklearn.base import BaseEstimator
 from tqdm import tqdm
 
-from sklearn.cluster import DBSCAN
-import numpy as np
-import matplotlib.pyplot as plt
-from collections import defaultdict
-
 LOCK = Lock()
-
-def sigmoid(x):
-  return 1 / (1 + math.exp(-x))
 
 class Hybrid(BaseEstimator):
     """ scikit style class for hybrid method """
-    def __init__(self, freq_threshold=1,# vw_binary="pathtovw",
-                 vw_binary='docker run -v /pipelines/component/src/ --rm vowpalwabbit/vw-rel-alpine:9.8.0',
+    def __init__(self, freq_threshold=1, vw_binary="pathtovw",
                  pass_freq_to_vw=False, pass_files_to_vw=False,
                  vw_args='-b 26 --passes=20 -l 50',
                  probability=False, tqdm=True,
@@ -82,9 +71,9 @@ class Hybrid(BaseEstimator):
             self.all_labels = set()
             self.label_counter = 1
         self.trained = False
-        #columbus.refresh_columbus()
-        
-    def fit(self, X, y): #X = TAGsets, y = labels
+        columbus.refresh_columbus()
+
+    def fit(self, X, y): # X = TAGsets, y = labels
         """ Trains classifier
         input: list of tags [list] and labels [list] for ALL training tagsets
         output: trained model
@@ -114,7 +103,6 @@ class Hybrid(BaseEstimator):
             # already have a trained model
             self.vw_args_ += ' -i {}'.format(self.vw_modelfile)
         # add labels in y to all_labels
-
         for labels in y:
             if isinstance(labels, list):
                 for l in labels:
@@ -128,20 +116,12 @@ class Hybrid(BaseEstimator):
                 self.label_counter += 1
         ################################################
         ## Create VW arg string ########################
-        if self.probability:                                                 #########
-            print("labels", self.all_labels)
+        if self.probability:
             self.vw_args_ += ' --csoaa {}'.format(len(self.all_labels))
-            #
-            #self.loss_function = 'logistic'
-            #self.vw_args_ += ' --loss_function={}'.format(self.loss_function)
-            #self.vw_args_ += ' --link=logistic'
-            #self.vw_args_ += ' --multilabel_oaa {} --loss_function=logistic'.format(len(self.all_labels))
         else:
             self.vw_args_ += ' --probabilities'
             self.loss_function = 'logistic'
             self.vw_args_ += ' --loss_function={}'.format(self.loss_function)
-            self.vw_args_ += ' --link=logistic'
-            #self.vw_args_ += ' --link=glf1'
             if self.iterative:
                 self.vw_args_ += ' --oaa 80'
             else:
@@ -154,7 +134,7 @@ class Hybrid(BaseEstimator):
         random.shuffle(train_set)
         if self.use_temp_files:
             f = tempfile.NamedTemporaryFile('w', delete=False)
-        else: 
+        else:
             with open('./label_table-%s.yaml' % self.suffix, 'w') as f:
                 yaml.dump(self.reverse_labels, f)
             f = open('./fit_input-%s.txt' % self.suffix, 'w')
@@ -183,10 +163,8 @@ class Hybrid(BaseEstimator):
         command = '{vw_binary} {vw_input} {vw_args} -f {vw_modelfile}'.format(
             vw_binary=self.vw_binary, vw_input=repr(f.name),
             vw_args=self.vw_args_, vw_modelfile=repr(self.vw_modelfile))
-
         #logging.info('vw input written to %s, starting training', f.name)
-        logging.info('vw command: %s', command)
-        print(command)
+        #logging.info('vw command: %s', command)
         vw_start = time.time()
         c = envoy.run(command)
         ##########################################################
@@ -208,9 +186,7 @@ class Hybrid(BaseEstimator):
         self.trained = True # once the fit function has been run, model has been trained!
         logging.info("Training took %f secs." % (time.time() - start))
 
-    
-    
-    def predict_proba(self, X, y): # X = tagsets
+    def predict_proba(self, X): # X = tagsets
         """Calculates probability of any of the labels that the model has been
             trained on belonging to each tagset in X
         input: list of tagsets
@@ -220,23 +196,15 @@ class Hybrid(BaseEstimator):
         if not self.trained:
             raise ValueError("Need to train the classifier first")
         #tags = self._get_tags(X) (X = tags)
-        if not self.use_temp_files:                                                     ###
+        if self.use_temp_files:
             f = tempfile.NamedTemporaryFile('w', delete=False)
             outfobj = tempfile.NamedTemporaryFile('w', delete=False)
             outf = outfobj.name
             outfobj.close()
         else:
-            f_debug = open('./pred_input-explicit-label-%s.txt' % self.suffix, 'w')
             f = open('./pred_input-%s.txt' % self.suffix, 'w')
-            outf = '/pred_output-%s.txt' % self.suffix
+            outf = './pred_output-%s.txt' % self.suffix
         if self.probability:
-            
-            # for tag, true_labels in zip(X, y):
-            #     input_string = ""
-            #     for label in true_labels:
-            #         input_string += '{},'.format(self.indexed_labels[label])
-            #     input_string = input_string[:-1] + " "
-            #     f.write('{} | {}\n'.format(input_string, ' '.join(tag)))
             for tag in X:
                 f.write('{} | {}\n'.format(
                     ' '.join([str(x) for x in self.reverse_labels.keys()]),
@@ -244,18 +212,13 @@ class Hybrid(BaseEstimator):
         else:
             for tag in X:
                 f.write('| {}\n'.format(' '.join(tag)))
-        #f_debug.close()
         f.close()
         logging.info('vw input written to %s, starting testing', f.name)
-        args = '/pred_input-%s.txt' % self.suffix
-        #args += ' --loss_function=logistic -p %s' % outf
-        # args = '/workspace/pred_input-%s.txt' % self.suffix
-        #args += ' --loss_function=logistic -r %s' % outf
+        args = f.name
         args += ' -r %s' % outf
         command = '{vw_binary} {args} -t -i {vw_modelfile}'.format(
             vw_binary=self.vw_binary, args=args,
             vw_modelfile=self.vw_modelfile)
-        print(command)
         logging.info('vw command: %s', command)
         vw_start = time.time()
         c = envoy.run(command)
@@ -269,87 +232,42 @@ class Hybrid(BaseEstimator):
             logging.info(
                 'vw ran sucessfully. out: %s, err: %s',
                 c.std_out, c.std_err)
-        all_probas, all_probas_sigmoid = [], []
+        all_probas = []
         with open(outf, 'r') as f:
             for line in f:
                 probas = {}
                 for word in line.split(' '):
                     tag, p = word.split(':')
                     probas[tag] = float(p)
-                #all_probas.append(probas)
-                # total_weight = sum(probas.values())
-                # for tag in probas:
-                #     probas[tag] = probas[tag]/total_weight
-                
-                probas = {k: v for k, v in sorted(probas.items(), key=lambda item: item[1], reverse=True)}
-                # #probas_sigmoid = {k: sigmoid(v) for k, v in sorted(probas.items(), key=lambda item: item[1], reverse=True)}
                 all_probas.append(probas)
-                #all_probas_sigmoid.append(probas_sigmoid)
         if self.use_temp_files:
             safe_unlink(f.name)
             safe_unlink(outf)
             if not self.iterative:
                 safe_unlink(self.vw_modelfile)
         logging.info("Testing took %f secs." % (time.time() - start))
-        #return all_probas, all_probas_sigmoid 
         return all_probas
 
-
-    
-    def top_k_tags(self, X, y, ntags):
+    def top_k_tags(self, X, ntags):
         """ Given a list of multilabel tagsets and the number of predicted labels
             for each, returns predicted labels for each tagset
         input: list of multilabel tagsets, corresponding list containing the
                number of labels expected for each
         output: list of lists containing the predicted labels for each tagset
         """
-        probas = self.predict_proba(X, y)
-        #print("probas", probas)
+        probas = self.predict_proba(X)
         result = []
-        # for ntag, proba in zip(ntags, probas):
-        #     cur_top_k = []
-        #     for i in range(ntag):
-        #         if self.probability:
-        #             tag = min(proba.keys(), key=lambda key: proba[key])
-        #             print(proba)
-        #             #tag = max(proba.keys(), key=lambda key: proba[key])
-        #         else:
-        #             tag = max(proba.keys(), key=lambda key: proba[key])
-        #             #print(tag, self.reverse_labels[int(tag)])
-        #             #print(self.reverse_labels)
-        #         proba.pop(tag)
-        #         cur_top_k.append(self.reverse_labels[int(tag)])
-        #     result.append(cur_top_k)
-        result = []
-        thresholds = [1.6, 1.5, 1.4, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2]
-        for th in thresholds:
-            temp_res = []
-            isdone = False
-            probas = self.predict_proba(X,y)
-            for ntag, proba in zip(ntags, probas):
-                cur_top = [] 
-                #print(proba[tag])
-                print("prob",len(proba), proba)
-                if (len(proba) == 0):
-                    break
-                tag = min(proba.keys(), key=lambda key: proba[key])
-                val = proba[tag]
-                norm = val
-                print("norm",norm)
-                while ((val - norm) < th):
-                #while (val < th):
-                    proba.pop(tag)
-                    cur_top.append(self.reverse_labels[int(tag)])
-                    #print("here!", cur_top)
-                    if (len(proba) > 0):
-                        tag = min(proba.keys(), key=lambda key:proba[key])
-                        val = proba[tag]
-                    else:
-                        break
-                temp_res.append(cur_top)
-            result.append(temp_res)
-        
-        return result, thresholds
+        for ntag, proba in zip(ntags, probas):
+            cur_top_k = []
+            for i in range(ntag):
+                if self.probability:
+                    tag = min(proba.keys(), key=lambda key: proba[key])
+                else:
+                    tag = max(proba.keys(), key=lambda key: proba[key])
+                proba.pop(tag)
+                cur_top_k.append(self.reverse_labels[int(tag)])
+            result.append(cur_top_k)
+        return result
 
     def predict(self, X):
         """ Make label predictions for a list of tagsets
@@ -366,19 +284,15 @@ class Hybrid(BaseEstimator):
             outfobj.close()
         else:
             f = open('./pred_input-%s.txt' % self.suffix, 'w')
-            outf = '/pred_output-%s.txt' % self.suffix
-            # test = open(outf, 'w')
+            outf = './pred_output-%s.txt' % self.suffix
         for tag in X:
             f.write('| {}\n'.format(' '.join(tag)))
         f.close()
-        # test.close()
         #logging.info('vw input written to %s, starting testing', f.name)
         command = '{vw_binary} {vw_input} -t -p {outf} -i {vw_modelfile}'.format(
             vw_binary=self.vw_binary, vw_input=repr(f.name), outf=repr(outf),
             vw_modelfile=repr(self.vw_modelfile))
-        logging.info('vw command: %s', command)
-        #print('vw command: %s', command)
-        print(command)
+        #logging.info('vw command: %s', command)
         vw_start = time.time()
         c = envoy.run(command)
         logging.info("vw took %f secs." % (time.time() - vw_start))
@@ -399,9 +313,7 @@ class Hybrid(BaseEstimator):
                 except KeyError:
                     logging.critical("Got label %s predicted!?", int(line))
                     all_preds.append('??')
-        if (os.path.getsize(outf) == 0):
-            print("file is empty")
-        if not self.use_temp_files:
+        if self.use_temp_files:
             safe_unlink(f.name)
             if not self.iterative:
                 safe_unlink(self.vw_modelfile)

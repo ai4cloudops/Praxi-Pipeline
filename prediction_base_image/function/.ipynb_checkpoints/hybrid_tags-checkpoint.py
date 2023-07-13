@@ -21,11 +21,6 @@ import envoy
 from sklearn.base import BaseEstimator
 from tqdm import tqdm
 
-from sklearn.cluster import DBSCAN
-import numpy as np
-import matplotlib.pyplot as plt
-from collections import defaultdict
-
 LOCK = Lock()
 
 def sigmoid(x):
@@ -329,15 +324,13 @@ class Hybrid(BaseEstimator):
             for ntag, proba in zip(ntags, probas):
                 cur_top = [] 
                 #print(proba[tag])
-                print("prob",len(proba), proba)
+                #print("prob",len(proba), proba)
                 if (len(proba) == 0):
                     break
                 tag = min(proba.keys(), key=lambda key: proba[key])
                 val = proba[tag]
-                norm = val
-                print("norm",norm)
-                while ((val - norm) < th):
-                #while (val < th):
+                print(val, th)
+                while (val < th):
                     proba.pop(tag)
                     cur_top.append(self.reverse_labels[int(tag)])
                     #print("here!", cur_top)
@@ -348,7 +341,6 @@ class Hybrid(BaseEstimator):
                         break
                 temp_res.append(cur_top)
             result.append(temp_res)
-        
         return result, thresholds
 
     def predict(self, X):
