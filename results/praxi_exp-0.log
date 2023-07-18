@@ -1,0 +1,8 @@
+INFO:root:Result type: summary
+INFO:root:Experiment type: single
+INFO:root:Arguments for Vowpal Wabbit: -b 26 --learning_rate 1.5 --passes 30
+INFO:root:Starting iterative experiment
+INFO:root:Model files will be saved to working directory
+INFO:root:Will save new model to /model/iter_model.vw
+INFO:root:Training directory: 
+INFO:root:Testing directory: /tagset

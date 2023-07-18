@@ -13,9 +13,6 @@ import time
 import yaml
 import math
 
-from sklearn.cluster import DBSCAN
-import numpy as np
-
 #add this
 #from columbus import columbus
 
@@ -23,11 +20,6 @@ import numpy as np
 import envoy
 from sklearn.base import BaseEstimator
 from tqdm import tqdm
-
-from sklearn.cluster import DBSCAN
-import numpy as np
-import matplotlib.pyplot as plt
-from collections import defaultdict
 
 LOCK = Lock()
 
@@ -44,8 +36,7 @@ class Hybrid(BaseEstimator):
                  suffix='', iterative=False,
                  loss_function='hinge',
                  use_temp_files=False,
-                 vw_modelfile='model.vw',
-                 outdir='/results/'): # if this is set true it will delete everything after end of runtime?
+                 vw_modelfile='model.vw'): # if this is set true it will delete everything after end of runtime?
         """ Initializer for Hybrid method. Do not use multiple instances
         simultaneously.
         """
@@ -67,7 +58,6 @@ class Hybrid(BaseEstimator):
         self.iterative = iterative
         self.use_temp_files = use_temp_files # (not self.iterative) and
         self.vw_modelfile = vw_modelfile
-        self.outdir = outdir
         self.trained = False # model is always instantiated untrained
 
     def get_args(self):
@@ -160,9 +150,9 @@ class Hybrid(BaseEstimator):
         if self.use_temp_files:
             f = tempfile.NamedTemporaryFile('w', delete=False)
         else: 
-            with open(self.outdir+'/label_table-%s.yaml' % self.suffix, 'w') as f:
+            with open('./label_table-%s.yaml' % self.suffix, 'w') as f:
                 yaml.dump(self.reverse_labels, f)
-            f = open(self.outdir+'/fit_input-%s.txt' % self.suffix, 'w')
+            f = open('./fit_input-%s.txt' % self.suffix, 'w')
         for tag, labels in train_set:
             if isinstance(labels, str):
                 labels = [labels]
@@ -225,15 +215,15 @@ class Hybrid(BaseEstimator):
         if not self.trained:
             raise ValueError("Need to train the classifier first")
         #tags = self._get_tags(X) (X = tags)
-        if self.use_temp_files:                                                     ###
+        if not self.use_temp_files:                                                     ###
             f = tempfile.NamedTemporaryFile('w', delete=False)
             outfobj = tempfile.NamedTemporaryFile('w', delete=False)
             outf = outfobj.name
             outfobj.close()
         else:
-            f_debug = open(self.outdir+'/pred_input-explicit-label-%s.txt' % self.suffix, 'w')
-            f = open(self.outdir+'/pred_input-%s.txt' % self.suffix, 'w')
-            outf = self.outdir+'/pred_output-%s.txt' % self.suffix
+            f_debug = open('./pred_input-explicit-label-%s.txt' % self.suffix, 'w')
+            f = open('./pred_input-%s.txt' % self.suffix, 'w')
+            outf = '/pred_output-%s.txt' % self.suffix
         if self.probability:
             
             # for tag, true_labels in zip(X, y):
@@ -252,7 +242,7 @@ class Hybrid(BaseEstimator):
         #f_debug.close()
         f.close()
         logging.info('vw input written to %s, starting testing', f.name)
-        args = self.outdir+'/pred_input-%s.txt' % self.suffix
+        args = '/pred_input-%s.txt' % self.suffix
         #args += ' --loss_function=logistic -p %s' % outf
         # args = '/workspace/pred_input-%s.txt' % self.suffix
         #args += ' --loss_function=logistic -r %s' % outf
@@ -286,7 +276,7 @@ class Hybrid(BaseEstimator):
                 # for tag in probas:
                 #     probas[tag] = probas[tag]/total_weight
                 
-                probas = {k: v for k, v in sorted(probas.items(), key=lambda item: item[1], reverse=False)}
+                probas = {k: v for k, v in sorted(probas.items(), key=lambda item: item[1], reverse=True)}
                 # #probas_sigmoid = {k: sigmoid(v) for k, v in sorted(probas.items(), key=lambda item: item[1], reverse=True)}
                 all_probas.append(probas)
                 #all_probas_sigmoid.append(probas_sigmoid)
@@ -299,63 +289,7 @@ class Hybrid(BaseEstimator):
         #return all_probas, all_probas_sigmoid 
         return all_probas
 
-    def cost_density(self, X, y):
-        probas = self.predict_proba(X, y)
-        # result = defaultdict(list)
-        result = []
 
-        # =====================================
-        # # find the biggest output prob clustering (-multilabels_oaa)(-csoaa)
-        # =====================================
-        clustering_model_name = "DBSCAN"
-        # set_eps = 0.005
-        params_l = [0.005, 0.01, 0.05, 0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
-        for set_eps in params_l:
-            model = DBSCAN(eps=set_eps, min_samples=1)
-            temp_res = []
-            for input_idx, proba in enumerate(probas):
-                tag_list = list(proba.keys())
-                proba_array = np.array(list(proba.values())).reshape(-1,1)
-                yhats = model.fit_predict(proba_array)
-                clusters = set(yhats)
-                
-                # can be further tuned if number of clusterings is within a domain, i.e., too small or too big.
-                cur_top_k = []
-                # # tag = min(yhat)
-                # yhats_counter = Counter(yhats)
-
-                biggest_clusters_idx = max(clusters)
-                count = -1
-                for i in range(biggest_clusters_idx, -1, -1):
-                    count_i = sum(yhats[yhats == i])
-                    if count_i > count:
-                        count = count_i
-                        biggest_clusters_idx = i
-
-                for biggest_yhat_idx, yhat in enumerate(yhats):
-                    if yhat == biggest_clusters_idx:
-                        break
-                    cur_top_k.append(self.reverse_labels[int(tag_list[biggest_yhat_idx])])
-                temp_res.append(cur_top_k)
-                # else:
-                    # fig, ax = plt.subplots(1, 1, figsize=(26, 6), dpi=600)
-                    # proba_array = proba_array.reshape(-1)
-                    # c_l = [color_l[cluster_idx] for cluster_idx in yhats]
-                    # bar_plots = ax.bar(list(range(len(proba_array))), proba_array, color=c_l)
-                    # ax.set_xlim(-2, len(proba_array)+1)
-                    # ax.set_xticks(list(range(len(proba_array))))
-                    # ax.set_xticklabels([self.reverse_labels[int(tag_list[idx])]+"*" if self.reverse_labels[int(tag_list[idx])] in y[input_idx] else self.reverse_labels[int(tag_list[idx])] for idx in range(len(yhats))], rotation=90)
-                    # # ax.set_title('Probability Plot', fontdict={'fontsize': 30, 'fontweight': 'medium'})
-                    # ax.set_xlabel("label idx", fontdict={'fontsize': 26})
-                    # ax.set_ylabel("Probability", fontdict={'fontsize': 26})
-                    # ax.tick_params(axis='both', which='major', labelsize=12)
-                    # ax.tick_params(axis='both', which='minor', labelsize=10)
-                    # ax.bar_label(bar_plots, labels=yhats, fontsize=10)
-                    # ax.vlines(x=biggest_yhat_idx-0.5, ymin=min(proba_array), ymax=max(proba_array), color='black')
-                    # plt.savefig('./results/figs/'+clustering_model_name+'_eps_'+str(set_eps)+'_proba_'+str(input_idx)+'_'+"-".join(y[input_idx])+'.png', bbox_inches='tight')
-                    # plt.close()
-            result.append(temp_res)
-        return result, params_l
     
     def top_k_tags(self, X, y, ntags):
         """ Given a list of multilabel tagsets and the number of predicted labels
@@ -390,15 +324,13 @@ class Hybrid(BaseEstimator):
             for ntag, proba in zip(ntags, probas):
                 cur_top = [] 
                 #print(proba[tag])
-                print("prob",len(proba), proba)
+                #print("prob",len(proba), proba)
                 if (len(proba) == 0):
                     break
                 tag = min(proba.keys(), key=lambda key: proba[key])
                 val = proba[tag]
-                norm = val
-                print("norm",norm)
-                while ((val - norm) < th):
-                #while (val < th):
+                print(val, th)
+                while (val < th):
                     proba.pop(tag)
                     cur_top.append(self.reverse_labels[int(tag)])
                     #print("here!", cur_top)
@@ -409,7 +341,6 @@ class Hybrid(BaseEstimator):
                         break
                 temp_res.append(cur_top)
             result.append(temp_res)
-        
         return result, thresholds
 
     def predict(self, X):
@@ -426,8 +357,8 @@ class Hybrid(BaseEstimator):
             outf = outfobj.name
             outfobj.close()
         else:
-            f = open(self.outdir+'/pred_input-%s.txt' % self.suffix, 'w')
-            outf = self.outdir+'/pred_output-%s.txt' % self.suffix
+            f = open('./pred_input-%s.txt' % self.suffix, 'w')
+            outf = '/pred_output-%s.txt' % self.suffix
             # test = open(outf, 'w')
         for tag in X:
             f.write('| {}\n'.format(' '.join(tag)))
