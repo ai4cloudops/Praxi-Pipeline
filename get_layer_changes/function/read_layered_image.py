@@ -12,7 +12,7 @@ def get_free_filename(stub, directory, suffix=''):
     """
     counter = 0
     while True:
-        file_candidate = '{}/{}-{}{}'.format(
+        file_candidate = '{}{}-{}{}'.format(
             str(directory), stub, counter, suffix)
         if Path(file_candidate).exists():
             counter += 1
@@ -24,9 +24,14 @@ def get_free_filename(stub, directory, suffix=''):
 def run():
     # homed = "/home/ubuntu/Praxi-Pipeline/get_layer_changes/"
     homed = "/pipelines/component/"
+    src = homed+"src/"
+    # if not Path(src).exists():
+    #     Path(src).mkdir()
+    #     os.chmod(src, 777)
     cwd = homed+"cwd/"
-    if not Path(cwd).exists():
-        Path(cwd).mkdir()
+    # if not Path(cwd).exists():
+    #     Path(cwd).mkdir()
+    #     os.chmod(cwd, 777)
 
     # LOKI_TOKEN=$(oc whoami -t)
     # curl -H "Authorization: Bearer $LOKI_TOKEN" "https://grafana-open-cluster-management-observability.apps.nerc-ocp-infra.rc.fas.harvard.edu/api/datasources/proxy/1/api/v1/query" --data-urlencode 'query=kube_pod_container_info{namespace="ai4cloudops-f7f10d9"}' | jq
@@ -34,7 +39,7 @@ def run():
     grafana_addr = 'https://grafana-open-cluster-management-observability.apps.nerc-ocp-infra.rc.fas.harvard.edu/api/datasources/proxy/1/api/v1/query'
 
     headers={
-        'Authorization': 'Bearer sha256~hksqgDsmm81A5n9Pxpb9DVXY_R3mIUdF-gcjy9aLaT8',
+        'Authorization': 'Bearer sha256~6qRDv08phFx7mpcxDmVS14do1KsKUXVbFo0Olu5k0kQ',
         'Content-Type': 'application/x-www-form-urlencoded'
         }
 
@@ -47,7 +52,7 @@ def run():
     image_name = "/".join(kube_pod_container_info.json()['data']['result'][0]['metric']['image'].split("/")[1:])
 
 
-    cmd1 = "bash "+homed+"function/download-frozen-image-v2.sh "+cwd+"introspected_container "+image_name
+    cmd1 = "bash "+src+"download-frozen-image-v2.sh "+cwd+"introspected_container "+image_name
     p_cmd1 = subprocess.Popen(cmd1.split(" "), stdin=subprocess.PIPE)
     p_cmd1.communicate()
 
@@ -99,6 +104,10 @@ def run():
 
 
     changesets_l = []             
+    changesets_dir = cwd+"changesets/"
+    # if not Path(changesets_dir).exists():
+    #     Path(changesets_dir).mkdir()
+    #     os.chmod(changesets_dir, 777)
     with open(cwd+"logfile_changeset_gen_introspected.log", "w") as log_file:
         # pprint(image_d)
         # pprint(image_meta_d)
@@ -125,7 +134,7 @@ def run():
 
                 # yaml_in = {'open_time': open_time, 'close_time': close_time, 'label': label, 'changes': changes}
                 yaml_in = {'labels': ['unknown'], 'changes': image_d[layer.split("/")[0]]}
-                changeset_filename = get_free_filename("unknown", cwd+"changesets", ".yaml")
+                changeset_filename = get_free_filename("unknown", changesets_dir, ".yaml")
                 with open(changeset_filename, 'w') as outfile:
                     print("gen_changeset", os.path.dirname(outfile.name))
                     print("gen_changeset", changeset_filename)
@@ -133,3 +142,6 @@ def run():
                 changesets_l.append(yaml_in)
                 
     return changesets_l
+
+if __name__ == "__main__":
+    run()

@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1
 # Autoclean does not really reduce the image size
 # Probably due to a lot of dependencies
 RUN apt-get update && apt-get install -y \
-        python3-pip && \
+        curl jq python3-pip && \
 	apt-get clean && apt-get autoclean
 
 # # Python dependencies
@@ -19,5 +19,8 @@ RUN  pip3 install --upgrade pip && pip3 install -r requirements.txt
 ENV PYTHONPATH="/pipelines/component/src/:$PYTHONPATH"
 
 # Copy into container image
-COPY function /pipelines/component/src/function
-RUN mkdir /pipelines/component/src/cwd
+COPY function /pipelines/component/src
+RUN mkdir /pipelines/component/cwd
+RUN chmod 777 /pipelines/component/cwd
+RUN mkdir /pipelines/component/cwd/changesets
+RUN chmod 777 /pipelines/component/cwd/changesets

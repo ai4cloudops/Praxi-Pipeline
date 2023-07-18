@@ -1,5 +1,5 @@
 #!/bin/bash -e
-image_name=zongshun96/prom-get-layers
+image_name=zongshun96/load_model_s3
 image_tag=0.01
 full_image_name=${image_name}:${image_tag}
 
