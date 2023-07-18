@@ -4,4 +4,20 @@ FROM ubuntu:20.04
 
 ENV PYTHONUNBUFFERED=1
 
-# This is the introspecter Dockerfile
+# Autoclean does not really reduce the image size
+# Probably due to a lot of dependencies
+RUN apt-get update && apt-get install -y \
+        python3-pip && \
+	apt-get clean && apt-get autoclean
+
+# # Python dependencies
+COPY requirements.txt .
+RUN  pip3 install --upgrade pip && pip3 install -r requirements.txt
+
+
+# Allow python script to import packages at "/pipelines/component/src/"
+ENV PYTHONPATH="/pipelines/component/src/:$PYTHONPATH"
+
+# Copy into container image
+COPY function /pipelines/component/src/function
+RUN mkdir /pipelines/component/src/cwd

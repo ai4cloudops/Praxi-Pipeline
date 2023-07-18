@@ -1,3 +1,6 @@
 __pycache__/
 get_layer_changes/image/
 prediction_base_image/a.cache
+venv
+get_layer_changes/cwd/
+cert/
