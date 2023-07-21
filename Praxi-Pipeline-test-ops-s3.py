@@ -36,50 +36,113 @@ os.environ["DEFAULT_ACCESSMODES"] = "ReadWriteOnce"
 # generate_loadmod_op = kfp.components.create_component_from_func(load_model, output_component_file='generate_loadmod_op.yaml', base_image="zongshun96/load_model_s3:0.01")
 
 
-def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: OutputPath(str)):
+# def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: OutputPath(str)):
+#     import read_layered_image
+#     import pickle
+#     import time
+#     import yaml
+#     # import os
+#     # import json
+    
+#     changesets_l = read_layered_image.run()
+#     # time.sleep(5000)
+#     with open("/pipelines/component/cwd/changesets_l", 'w') as argfile:
+#         # yaml.dump(changesets_l, argfile)
+#         for changeset in changesets_l:
+#             yaml.dump(changeset, argfile, default_flow_style=False)
+#     with open(cs_path, 'wb') as argfile:
+#         pickle.dump(changesets_l, argfile)
+#     with open(args_path, 'wb') as argfile:
+#         pickle.dump(user_in, argfile)
+#     # time.sleep(5000)
+# generate_changeset_op = kfp.components.create_component_from_func(generate_changesets, output_component_file='generate_changeset_component.yaml', base_image="zongshun96/prom-get-layers:0.01")
+
+def generate_changesets():
     import read_layered_image
     import pickle
     import time
     import yaml
+    import boto3
     # import os
     # import json
     
     changesets_l = read_layered_image.run()
     # time.sleep(5000)
+    s3 = boto3.resource(service_name='s3', 
+                        region_name='us-east-1', 
+                        aws_access_key_id="AKIAXECNQISLO5332P6S", 
+                        aws_secret_access_key="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",)
     with open("/pipelines/component/cwd/changesets_l", 'w') as argfile:
         # yaml.dump(changesets_l, argfile)
         for changeset in changesets_l:
             yaml.dump(changeset, argfile, default_flow_style=False)
-    with open(cs_path, 'wb') as argfile:
+    with open("/pipelines/component/cwd/changesets_l_dump", 'wb') as argfile:
         pickle.dump(changesets_l, argfile)
-    with open(args_path, 'wb') as argfile:
-        pickle.dump(user_in, argfile)
+        s3.Bucket('praxi-model-1').upload_file(argfile, "changesets_l_dump")
+    # with open("/pipelines/component/cwd/user_in_dump", 'wb') as argfile:
+    #     pickle.dump(user_in, argfile)
+    #     s3.Bucket('praxi-model-1').upload_file(argfile, "user_in_dump")
     # time.sleep(5000)
 generate_changeset_op = kfp.components.create_component_from_func(generate_changesets, output_component_file='generate_changeset_component.yaml', base_image="zongshun96/prom-get-layers:0.01")
 
-def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(str), output_text_path: OutputPath(str), output_args_path: OutputPath(str)):
+# def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(str), output_text_path: OutputPath(str), output_args_path: OutputPath(str)):
+#     '''generate tagset from the changeset'''
+#     import tagset_gen
+#     import json
+#     import pickle
+#     import os
+#     import time
+#     from function import changeset_gen
+#     change_dir = changeset_path
+#     tag_dict_gen = tagset_gen.run(change_dir)
+
+#     with open(input_args_path, 'rb') as in_argfile:
+#         user_in = pickle.load(in_argfile)
+    
+#     with open(output_text_path, 'w') as writer:
+#          for tag_dict in tag_dict_gen:
+#              writer.write(json.dumps(tag_dict) + '\n')
+#     with open("/pipelines/component/cwd/tagsets_logging", 'w') as writer:
+#          for tag_dict in tag_dict_gen:
+#              writer.write(json.dumps(tag_dict) + '\n')
+#     time.sleep(5000)
+#     with open(output_args_path, 'wb') as argfile:
+#         pickle.dump(user_in, argfile)
+# generate_tagset_op = kfp.components.create_component_from_func(generate_tagset, output_component_file='generate_tagset_component.yaml', base_image="zongshun96/taggen_base:0.01")
+def generate_tagset():
     '''generate tagset from the changeset'''
     import tagset_gen
     import json
     import pickle
     import os
     import time
+    import boto3
     from function import changeset_gen
+
+    changeset_path = "/pipelines/component/cwd/changesets_l_dump"
+    s3 = boto3.resource(service_name='s3', 
+                        region_name='us-east-1', 
+                        aws_access_key_id="AKIAXECNQISLO5332P6S", 
+                        aws_secret_access_key="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",)
+    s3.Bucket('praxi-model-1').download_file(Key='changesets_l_dump', Filename=changeset_path)
+
     change_dir = changeset_path
     tag_dict_gen = tagset_gen.run(change_dir)
 
-    with open(input_args_path, 'rb') as in_argfile:
-        user_in = pickle.load(in_argfile)
+    # with open(input_args_path, 'rb') as in_argfile:
+    #     user_in = pickle.load(in_argfile)
     
-    with open(output_text_path, 'w') as writer:
+    with open("/pipelines/component/cwd/tagsets_l_dump", 'w') as writer:
          for tag_dict in tag_dict_gen:
              writer.write(json.dumps(tag_dict) + '\n')
+             s3.Bucket('praxi-model-1').upload_file("/pipelines/component/cwd/tagsets_l_dump", "tagsets/changesets_l_dump")
+
     with open("/pipelines/component/cwd/tagsets_logging", 'w') as writer:
          for tag_dict in tag_dict_gen:
              writer.write(json.dumps(tag_dict) + '\n')
-    time.sleep(5000)
-    with open(output_args_path, 'wb') as argfile:
-        pickle.dump(user_in, argfile)
+    # time.sleep(5000)
+    # with open(output_args_path, 'wb') as argfile:
+    #     pickle.dump(user_in, argfile)
 generate_tagset_op = kfp.components.create_component_from_func(generate_tagset, output_component_file='generate_tagset_component.yaml', base_image="zongshun96/taggen_base:0.01")
 
 
@@ -131,6 +194,10 @@ def use_image_pull_policy(image_pull_policy='Always'):
         return task
     return _use_image_pull_policy
     
+
+
+
+
 
 @kfp.dsl.pipeline(
     name="Submitted Pipeline",

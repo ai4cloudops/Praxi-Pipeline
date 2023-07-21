@@ -15,11 +15,13 @@ RUN  pip3 install --upgrade pip && pip3 install -r requirements.txt
 
 COPY columbus /pipelines/component/src/columbus
 COPY tagset_gen.py /pipelines/component/src
-COPY function /pipelines/component/src/function
+RUN mkdir /pipelines/component/cwd
+RUN chmod 777 /pipelines/component/cwd
+# COPY function /pipelines/component/src/function
 
-COPY mix_test_tag/mix_test_tag /pipelines/component/src/mix_test_tag
-COPY ml_train_tag/ml_train_tag /pipelines/component/src/ml_train_tag 
-COPY demo_tagsets_mostly_single_label/demo_tagsets /pipelines/component/src/demo_tagsets
+# COPY mix_test_tag/mix_test_tag /pipelines/component/src/mix_test_tag
+# COPY ml_train_tag/ml_train_tag /pipelines/component/src/ml_train_tag 
+# COPY demo_tagsets_mostly_single_label/demo_tagsets /pipelines/component/src/demo_tagsets
 
 # # Add the vwserver user
 # RUN mkdir /home/vwserver

@@ -4,3 +4,5 @@ prediction_base_image/a.cache
 venv
 get_layer_changes/cwd/
 cert/
+data/
+prediction_base_image/model_testing_scripts/cwd*
