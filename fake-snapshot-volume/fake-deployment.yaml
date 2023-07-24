@@ -13,12 +13,24 @@ spec:
       labels:
         app: snapshot
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values:
+                - wrk-10
+                - wrk-11
       containers:
         - name: snapshot-fake
           image: busybox:latest
           imagePullPolicy: "IfNotPresent"
-          command: [ "/bin/bash", "-c", "--" ]
-          args: [ "while true; do sleep 30; done;" ]
+          command: 
+            - /bin/sh
+            - -c
+            - sleep 36000
           volumeMounts:
             - mountPath: /fake-snapshot
               name: snapshot-vol1

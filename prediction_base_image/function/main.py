@@ -44,7 +44,8 @@ import copy
 import argparse
 
 import sys
-sys.path.insert(0, '../')
+# sys.path.insert(0, '../')
+sys.path.insert(1, '/home/ubuntu/Praxi-Pipeline/prediction_base_image')
 
 from sklearn.base import BaseEstimator
 from tqdm import tqdm

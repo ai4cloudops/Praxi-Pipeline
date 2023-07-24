@@ -5,11 +5,12 @@ from tqdm import tqdm
 from collections import defaultdict
 from sklearn.datasets import make_multilabel_classification
 import sklearn.metrics as metrics
+from pathlib import Path
 
 import xgboost as xgb
 
 
-def tagsets_to_matrix(tags_path, cwd="/home/ubuntu/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/", feature_mapping_path=None, label_mapping_path=None):
+def tagsets_to_matrix(tags_path, cwd="/home/ubuntu/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/", train_flag=True):
     all_tags_set, all_label_set = set(), set()
     tags_by_instance_l, labels_by_instance_l = [], []
     tagset_files = []
@@ -23,8 +24,8 @@ def tagsets_to_matrix(tags_path, cwd="/home/ubuntu/Praxi-Pipeline/prediction_bas
                 tagset = yaml.load(tf, Loader=yaml.Loader)   
 
                 # feature 
-                for tag_count in tagset['tags']:
-                    k,v = tag_count.split(":")
+                for tag_vs_count in tagset['tags']:
+                    k,v = tag_vs_count.split(":")
                     all_tags_set.add(k)
                     instance_feature_tags_d[k] += int(v)
                 tags_by_instance_l.append(instance_feature_tags_d)
@@ -43,7 +44,7 @@ def tagsets_to_matrix(tags_path, cwd="/home/ubuntu/Praxi-Pipeline/prediction_bas
 
     # Feature Matrix Generation
     removed_tags_l = []
-    if feature_mapping_path == None:
+    if train_flag:  # generate initial mapping.
         all_tags_l = list(all_tags_set)
         tag_index_mapping = {}
         for idx, tag in enumerate(all_tags_l):
@@ -52,7 +53,7 @@ def tagsets_to_matrix(tags_path, cwd="/home/ubuntu/Praxi-Pipeline/prediction_bas
             pickle.dump(all_tags_l, fp)
         with open(cwd+'tag_index_mapping', 'wb') as fp:
             pickle.dump(tag_index_mapping, fp)
-    else:
+    else:  # load initial mapping.
         with open(cwd+'index_tag_mapping', 'rb') as fp:
             all_tags_l = pickle.load(fp)
         with open(cwd+'tag_index_mapping', 'rb') as fp:
@@ -60,11 +61,11 @@ def tagsets_to_matrix(tags_path, cwd="/home/ubuntu/Praxi-Pipeline/prediction_bas
     feature_matrix = np.zeros(len(all_tags_l))
     for instance_tags_d in tags_by_instance_l:
         instance_row = np.zeros(len(all_tags_l))
-        for k,v in instance_tags_d.items():
-            if k in tag_index_mapping:  # remove new tags
-                instance_row[tag_index_mapping[k]] = v
+        for tag_name,tag_count in instance_tags_d.items():
+            if tag_name in tag_index_mapping:  # remove new tags unseen in mapping.
+                instance_row[tag_index_mapping[tag_name]] = tag_count
             else:
-                removed_tags_l.append(k)
+                removed_tags_l.append(tag_name)
         feature_matrix = np.vstack([feature_matrix, instance_row])
     feature_matrix = np.delete(feature_matrix, (0), axis=0)
     with open(cwd+'removed_tags_l', 'wb') as fp:
@@ -76,7 +77,7 @@ def tagsets_to_matrix(tags_path, cwd="/home/ubuntu/Praxi-Pipeline/prediction_bas
 
 
     # Label Matrix Generation
-    if label_mapping_path == None:
+    if train_flag:  # generate initial mapping.
         all_label_l = list(all_label_set)
         label_index_mapping = {}
         for idx, tag in enumerate(all_label_l):
@@ -88,7 +89,7 @@ def tagsets_to_matrix(tags_path, cwd="/home/ubuntu/Praxi-Pipeline/prediction_bas
         with open(cwd+'removed_tags_l.txt', 'w') as f:
             for line in all_label_l:
                 f.write(f"{line}\n")
-    else:
+    else:  # load initial mapping.
         with open(cwd+'index_label_mapping', 'rb') as fp:
             all_label_l = pickle.load(fp)
         with open(cwd+'label_index_mapping', 'rb') as fp:
@@ -111,7 +112,9 @@ def tagsets_to_matrix(tags_path, cwd="/home/ubuntu/Praxi-Pipeline/prediction_bas
 
 
 def print_metrics(cwd, y_true, y_pred):
-    # report = metrics.classification_report(y_true, y_pred, target_names=labels)
+    with open(cwd+'index_label_mapping', 'rb') as fp:
+        labels = np.array(pickle.load(fp))
+    report = metrics.classification_report(y_true, y_pred, target_names=labels)
     f1w = metrics.f1_score(y_true, y_pred, average='weighted')
     f1i = metrics.f1_score(y_true, y_pred, average='micro')
     f1a = metrics.f1_score(y_true, y_pred, average='macro')
@@ -152,6 +155,7 @@ def print_metrics(cwd, y_true, y_pred):
     file_header = ("F1 SCORE : {:.3f} weighted, {:.3f} micro-avg'd, {:.3f} macro-avg'd\n".format(f1w, f1i, f1a) +
             "PRECISION: {:.3f} weighted, {:.3f} micro-avg'd, {:.3f} macro-avg'd\n".format(pw, pi, pa) +
             "RECALL   : {:.3f} weighted, {:.3f} micro-avg'd, {:.3f} macro-avg'd\n\n".format(rw, ri, ra))
+    file_header += (" {:-^55}\n".format("CLASSIFICATION REPORT") + report.replace('\n', "\n"))
     
     np.savetxt("{}".format(cwd+'metrics.out'),
             np.array([]), fmt='%d', header=file_header, delimiter=',',
@@ -168,20 +172,22 @@ if __name__ == "__main__":
     train_tags_path = "/home/ubuntu/Praxi-Pipeline/data/demo_tagsets_mostly_multi_label/mix_train_tag/"
     test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/demo_tagsets_mostly_multi_label/mix_test_tag/"
     cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/"
-    feature_mapping_path = "/home/ubuntu/"
-    label_mapping_path = "/home/ubuntu/"
+    Path(cwd).mkdir(parents=True, exist_ok=True)
+    
 
     train_tagset_files, train_feature_matrix, train_label_matrix = tagsets_to_matrix(train_tags_path)
-    test_tagset_files, test_feature_matrix, test_label_matrix = tagsets_to_matrix(test_tags_path, cwd=cwd, feature_mapping_path=feature_mapping_path, label_mapping_path=label_mapping_path)
+    test_tagset_files, test_feature_matrix, test_label_matrix = tagsets_to_matrix(test_tags_path, cwd=cwd, train_flag=False)
 
-    BOW_XGB = xgb.XGBClassifier(max_depth=6, learning_rate=0.1,silent=False, objective='binary:logistic', \
+    BOW_XGB = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
                       booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
-                      subsample=0.8, colsample_bytree=0.8, colsample_bylevel=1, reg_alpha=0, reg_lambda=1)
+                      subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
     BOW_XGB.fit(train_feature_matrix, train_label_matrix)
     pred_label_matrix = BOW_XGB.predict(test_feature_matrix)
+    pred_label_prob_matrix = BOW_XGB.predict_proba(test_feature_matrix)
 
     np.savetxt(cwd+'pred_label_matrix.out', pred_label_matrix, delimiter=',')
     np.savetxt(cwd+'test_label_matrix.out', test_label_matrix, delimiter=',')
+    np.savetxt(cwd+'pred_label_prob_matrix.out', pred_label_prob_matrix, delimiter=',')
 
     print_metrics(cwd, test_label_matrix, pred_label_matrix)
 

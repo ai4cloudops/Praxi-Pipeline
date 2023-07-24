@@ -1,20 +1,21 @@
-import function.main as main
-import os
+import os, sys
+sys.path.insert(1, '/home/ubuntu/Praxi-Pipeline/prediction_base_image')
 import json
 import pickle
 import time
 import yaml
 from tqdm import tqdm
+import function.main as main
 from function.hybrid_tags import Hybrid
 args = main.get_inputs()
 
 
-train_tags_path = "/home/cc/Praxi-study/praxi/demos/ic2e_demo/demo_tagsets/mix_train_tag/"
-test_tags_path = "/home/cc/Praxi-study/praxi/demos/ic2e_demo/demo_tagsets/mix_test_tag/"
+train_tags_path = "/home/ubuntu/Praxi-Pipeline/data/demo_tagsets_mostly_multi_label/mix_train_tag/"
+test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/demo_tagsets_mostly_multi_label/mix_test_tag/"
 # test_tags_path = "/home/cc/Praxi-study/praxi/demos/ic2e_demo/demo_tagsets/mix_test_tag/"
-model_path = "/home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/prediction_base_image/results/pred_model.p"
-modfile_path = "/home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/prediction_base_image/results/model.vw"
-prediction_path = "/home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/prediction_base_image/results/test_result.txt"
+model_path = "/home/ubuntu/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/pred_model.p"
+modfile_path = "/home/ubuntu/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/model.vw"
+prediction_path = "/home/ubuntu/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/test_result.txt"
 
 
 
