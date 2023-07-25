@@ -19,7 +19,7 @@ RUN  pip3 install --upgrade pip && pip3 install -r requirements.txt
 ENV PYTHONPATH="/pipelines/component/src/:$PYTHONPATH"
 
 # Copy into container image
-COPY function /pipelines/component/src
+COPY src /pipelines/component/src
 RUN mkdir /pipelines/component/cwd
 RUN chmod 777 /pipelines/component/cwd
 RUN mkdir /pipelines/component/cwd/changesets

@@ -6,3 +6,7 @@ get_layer_changes/cwd/
 cert/
 data/
 prediction_base_image/model_testing_scripts/cwd*
+taggen_openshift_image/columbus/systags/
+taggen_openshift_image/.ipynb_checkpoints/
+taggen_openshift_image/columbus/.ipynb_checkpoints/
+taggen_openshift_image/cwd/

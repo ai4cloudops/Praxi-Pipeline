@@ -1,4 +1,4 @@
-import tarfile, sys, io, json, os, tempfile, subprocess, yaml
+import tarfile, sys, io, json, os, tempfile, subprocess, yaml, pickle
 import requests
 from pathlib import Path
 from pprint import pprint
@@ -144,4 +144,11 @@ def run():
     return changesets_l
 
 if __name__ == "__main__":
-    run()
+    changesets_l = run()
+    cs_dump_path = "/home/ubuntu/Praxi-Pipeline/get_layer_changes/cwd/changesets_l_dump"
+    cs_path = "/home/ubuntu/Praxi-Pipeline/get_layer_changes/cwd/changesets_l.txt"
+    with open(cs_dump_path, 'wb') as writer:
+        pickle.dump(changesets_l, writer)
+    with open(cs_path, 'w') as writer:
+        for changeset in changesets_l:
+            yaml.dump(changeset, writer, default_flow_style=False)

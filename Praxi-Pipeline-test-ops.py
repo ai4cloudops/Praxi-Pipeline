@@ -46,12 +46,14 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
     
     changesets_l = read_layered_image.run()
     # time.sleep(5000)
-    with open("/pipelines/component/cwd/changesets_l", 'w') as argfile:
-        # yaml.dump(changesets_l, argfile)
+    # debug
+    with open("/pipelines/component/cwd/changesets_l", 'w') as writer:
+        # yaml.dump(changesets_l, writer)
         for changeset in changesets_l:
-            yaml.dump(changeset, argfile, default_flow_style=False)
-    with open(cs_path, 'wb') as argfile:
-        pickle.dump(changesets_l, argfile)
+            yaml.dump(changeset, writer, default_flow_style=False)
+    # pass data to next component
+    with open(cs_path, 'wb') as writer:
+        pickle.dump(changesets_l, writer)
     with open(args_path, 'wb') as argfile:
         pickle.dump(user_in, argfile)
     # time.sleep(5000)
@@ -59,28 +61,46 @@ generate_changeset_op = kfp.components.create_component_from_func(generate_chang
 
 def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(str), output_text_path: OutputPath(str), output_args_path: OutputPath(str)):
     '''generate tagset from the changeset'''
-    import tagset_gen
+    # import tagset_gen
+    from columbus.columbus import columbus
     import json
     import pickle
     import os
     import time
     # from function import changeset_gen
-    change_dir = changeset_path
-    tag_dict_gen = tagset_gen.run(change_dir)
 
+    # Load data from previous component
     with open(input_args_path, 'rb') as in_argfile:
         user_in = pickle.load(in_argfile)
-    
-    with open(output_text_path, 'w') as writer:
-         for tag_dict in tag_dict_gen:
-             writer.write(json.dumps(tag_dict) + '\n')
+    with open(changeset_path, 'rb') as in_changesets_l:
+        changesets_l = pickle.load(in_changesets_l)
+                              
+    # Tagset Generator
+    tagsets_l = []
+    for changeset in changesets_l:
+        # tags = tagset_gen.get_columbus_tags(changeset['changes'])
+        tag_dict = columbus(changeset['changes'], freq_threshold=2)
+        tags = ['{}:{}'.format(tag, freq) for tag, freq in tag_dict.items()]
+        cur_dict = {'labels': changeset['labels'], 'tags': tags}
+        tagsets_l.append(cur_dict)
+
+    # Debug
+    with open("/pipelines/component/cwd/changesets_logging", 'w') as writer:
+        for change_dict in changesets_l:
+            writer.write(json.dumps(change_dict) + '\n')
     with open("/pipelines/component/cwd/tagsets_logging", 'w') as writer:
-         for tag_dict in tag_dict_gen:
-             writer.write(json.dumps(tag_dict) + '\n')
+        for tag_dict in tagsets_l:
+            writer.write(json.dumps(tag_dict) + '\n')
     # time.sleep(5000)
+
+    # Pass data to next component
+    with open(output_text_path, 'wb') as writer:
+        # for tag_dict in tag_dict_gen:
+        #     writer.write(json.dumps(tag_dict) + '\n')
+        pickle.dump(tagsets_l, writer)
     with open(output_args_path, 'wb') as argfile:
         pickle.dump(user_in, argfile)
-generate_tagset_op = kfp.components.create_component_from_func(generate_tagset, output_component_file='generate_tagset_component.yaml', base_image="zongshun96/taggen_base:0.01")
+generate_tagset_op = kfp.components.create_component_from_func(generate_tagset, output_component_file='generate_tagset_component.yaml', base_image="zongshun96/taggen_openshift:0.01")
 
 
 def gen_prediction(model_path: InputPath(str), modfile_path: InputPath(str), test_tags_path: InputPath(str), prediction_path: OutputPath(str)):
