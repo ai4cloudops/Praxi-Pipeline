@@ -113,10 +113,10 @@ def gen_prediction(model_path: InputPath(str), modfile_path: InputPath(str), tes
     import time
     from hybrid_tags import Hybrid
     args = main.get_inputs()
-    data_loaded = []
+    # data_loaded = []
 
     with open(test_tags_path, 'rb') as reader:
-        data_loaded = pickle.load(reader)
+        tagsets_l = pickle.load(reader)
 
     # with open(created_tags_path, 'r') as stream:
     #     for line in stream:
@@ -128,7 +128,7 @@ def gen_prediction(model_path: InputPath(str), modfile_path: InputPath(str), tes
         model = pickle.load(reader)
     model.vw_modelfile = modfile_path
     print("labs",model.all_labels)
-    pred = main.test(model, data_loaded, args)
+    pred = main.test(model, tagsets_l, args)
     print("output", pred)
     with open(prediction_path, 'wb') as writer:
         pickle.dump(pred, writer) 
