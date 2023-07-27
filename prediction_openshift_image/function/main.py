@@ -45,7 +45,8 @@ import argparse
 
 import sys
 # sys.path.insert(0, '../')
-sys.path.insert(1, '/home/ubuntu/Praxi-Pipeline/prediction_base_image')
+sys.path.insert(1, '/home/ubuntu/Praxi-Pipeline/prediction_openshift_image')
+sys.path.insert(1, '/home/ubuntu/Praxi-Pipeline/prediction_openshift_image/function')
 
 from sklearn.base import BaseEstimator
 from tqdm import tqdm
@@ -56,7 +57,7 @@ from sklearn import metrics
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.preprocessing import MultiLabelBinarizer
 
-from function.hybrid_tags import Hybrid
+from hybrid_tags import Hybrid
 
 LOCK = Lock()
 
@@ -217,60 +218,81 @@ def iterative_train(train_dat, args):
 
     return clf  
 
-def test(clf, test_data, args):
-    outdir = os.path.abspath(args['outdir'])
-    nfolds = int(args['nfolds'])
-    resfile_name = get_free_filename('iterative_test', outdir, '.p')
-    result_type = args['result'] # full or summary
+def predict(clf, test_data, params_l=[0.05]):
+    test_tags = []
+    test_labels = []
+    for tagset in test_data:
+        test_labels.append(tagset['labels'])
+        test_tags.append(tagset['tags'])
+    print("test_labels", test_labels)
 
-    test_names = []
-    for f in test_data:
-        if list(f)[2] == 'tags':
-            test_names.append(f[list(f)[0]])
-    if(len(test_names) == 0):
-        logging.error("No tagsets found in provided testing directory")
-        raise ValueError("No tagsets in testing directory!")
-    test_tags, test_labels = parse_ts(test_names, test_data)
+    #preds = clf.predict(test_tags)
+    # ntags = [len(y) if isinstance(y, list) else 1 for y in test_labels]
+    # preds, th = clf.top_k_tags(test_tags, test_labels, ntags)
+    preds, th = clf.cost_density(test_tags, test_labels, params_l=params_l)
+    return preds[0]
+
+def test(clf, test_data, args):
+    # outdir = os.path.abspath(args['outdir'])
+    # nfolds = int(args['nfolds'])
+    # resfile_name = get_free_filename('iterative_test', outdir, '.p')
+    # result_type = args['result'] # full or summary
+
+    # test_names = []
+    # for f in test_data:
+    #     if list(f)[2] == 'tags':
+    #         test_names.append(f[list(f)[0]])
+    # if(len(test_names) == 0):
+    #     logging.error("No tagsets found in provided testing directory")
+    #     raise ValueError("No tagsets in testing directory!")
+    # test_tags, test_labels = parse_ts(test_names, test_data)
+    test_tags = []
+    test_labels = []
+    #for ts_name in tqdm(tagset_names):
+    for tagset in test_data:
+        test_labels.append(tagset['labels'])
+        test_tags.append(tagset['tags'])
     print("test_labels", test_labels)
     
-    resfile = open(resfile_name, 'wb')
-    results = []
+    # resfile = open(resfile_name, 'wb')
+    # results = []
 
     #preds = clf.predict(test_tags)
     # ntags = [len(y) if isinstance(y, list) else 1 for y in test_labels]
     # preds, th = clf.top_k_tags(test_tags, test_labels, ntags)
     preds, th = clf.cost_density(test_tags, test_labels)
-    max_f1 = 0
-    best_res = 0
-    hold = preds
+    max_f1 = -1
+    best_res = -1
+    # hold = preds
     for ind, thresh in enumerate(th):
         print("thresh: ",thresh)
         results = []
-        preds = hold[ind]
-        resfile = open(resfile_name, 'wb')
-        results.append((test_labels, preds))
-        pickle.dump(results, resfile)
-        resfile.close()
-        f1 = get_metrics(resfile_name, outdir, result_type)
+        # preds = hold[ind]
+        # resfile = open(resfile_name, 'wb')
+        results.append((test_labels, preds[ind]))
+        # pickle.dump(results, resfile)
+        # resfile.close()
+        f1 = get_metrics(results)
         print("thresh, f1 score", thresh, f1)
         if (f1 > max_f1):
             max_f1 = f1
             best_res = ind
-    preds = hold[best_res]
+    preds = preds[best_res]
     print("best threshold is: ", th[best_res])
     print("best f1 score is: {0}".format(max_f1))
 
     acc = get_accuracy(preds, test_labels)
     
     # so results are in test_labels, preds
-    resfile = open(resfile_name, 'wb')
+    # resfile = open(resfile_name, 'wb')
     results = []
     results.append((test_labels, preds))
-    pickle.dump(results, resfile)
-    resfile.close()
-    logging.info("Printing results:")
-    print_multilabel_results(resfile_name, outdir, result_type, args=clf.get_args())
-    return preds
+    # pickle.dump(results, resfile)
+    # resfile.close()
+    # logging.info("Printing results:")
+    # with open(resfile_name, 'wb') as writer:
+    #     print_multilabel_results(results, writer, args=clf.get_args())
+    return results
 
 def get_accuracy(preds, labels):
     total_count = 0
@@ -469,8 +491,8 @@ def multilabel_train(train_dat, args):
     clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=True,
                  vw_args=vwargs, suffix=suffix, use_temp_files=False, vw_modelfile="./results/model.vw", outdir = outdir)
     #print(clf.vw_modelfile)
-    # with open(clf.vw_modelfile, 'wb') as mod_file:
-    #     pickle.dump(clf, mod_file)
+    with open(clf.vw_modelfile, 'wb') as mod_file:
+        pickle.dump(clf, mod_file)
     #clf.probability = False                                                             ###
     resfile = open(resfile_name, 'wb')
     results = []
@@ -551,9 +573,9 @@ def get_multilabel_scores(clf, train_tags, train_labels, test_tags, test_labels)
     preds = clf.top_k_tags(test_tags, ntags)
     return test_labels, preds
 
-def get_metrics(resfile, outdir, result_type, args=None, n_strats=1, summary=False):
-    with open(resfile, 'rb') as f:
-        results = pickle.load(f)
+def get_metrics(results):
+    # with open(resfile, 'rb') as f:
+    #     results = pickle.load(f)
     numfolds = len(results)
     y_true = []
     y_pred = []
@@ -588,15 +610,15 @@ def get_metrics(resfile, outdir, result_type, args=None, n_strats=1, summary=Fal
     return f1w
 
 
-def print_multilabel_results(resfile, outdir, result_type, args=None, n_strats=1, summary=False):
+def print_multilabel_results(results, retfile, result_type="", args=None, n_strats=1, summary=False):
     """ Calculate result statistics and print them to result file
     input: name of result pickle file, path to result directory, type of result
            desired
     output: text file with experiment result statistics
     """
     #logging.info('Writing scores to %s', str(outdir))
-    with open(resfile, 'rb') as f:
-        results = pickle.load(f)
+    # with open(resfile, 'rb') as f:
+    #     results = pickle.load(f)
     numfolds = len(results)
     y_true = []
     y_pred = []
@@ -630,7 +652,7 @@ def print_multilabel_results(resfile, outdir, result_type, args=None, n_strats=1
     ri = metrics.recall_score(y_true, y_pred, average='micro')
     ra = metrics.recall_score(y_true, y_pred, average='macro')
 
-    os.makedirs(str(outdir), exist_ok=True)
+    # os.makedirs(str(outdir), exist_ok=True)
 
     if numfolds == 1:
         file_header = ("MULTILABEL EXPERIMENT REPORT\n" +
@@ -655,10 +677,10 @@ def print_multilabel_results(resfile, outdir, result_type, args=None, n_strats=1
             "PRECISION: {:.3f} weighted, {:.3f} micro-avg'd, {:.3f} macro-avg'd\n".format(pw, pi, pa) +
             "RECALL   : {:.3f} weighted, {:.3f} micro-avg'd, {:.3f} macro-avg'd\n\n".format(rw, ri, ra))
         file_header += (" {:-^55}\n".format("CLASSIFICATION REPORT") + report.replace('\n', "\n"))
-    fname = get_free_filename(fstub, outdir, '.txt')
+    # fname = get_free_filename(fstub, outdir, '.txt')
 
 
-    savetxt("{}".format(fname),
+    savetxt(retfile,
             np.array([]), fmt='%d', header=file_header, delimiter=',',
             comments='')
 

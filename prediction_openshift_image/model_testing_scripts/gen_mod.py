@@ -1,11 +1,10 @@
-import os, sys
-sys.path.insert(1, '/home/ubuntu/Praxi-Pipeline/prediction_base_image')
+import function.main as main
+import os
 import json
 import pickle
 import time
 import yaml
 from tqdm import tqdm
-import function.main as main
 from function.hybrid_tags import Hybrid
 args = main.get_inputs()
 

@@ -10,3 +10,14 @@ taggen_openshift_image/columbus/systags/
 taggen_openshift_image/.ipynb_checkpoints/
 taggen_openshift_image/columbus/.ipynb_checkpoints/
 taggen_openshift_image/cwd/
+load_model_s3/test_scripts/cwd/
+prediction_openshift_image/model/
+prediction_openshift_image/model_testing_scripts/cwd/
+prediction_openshift_image/model_testing_scripts/cwd_mnist/
+prediction_openshift_image/model_testing_scripts/cwd_mostly_ml/
+prediction_openshift_image/model_testing_scripts/cwd_mostly_ml_2/
+prediction_openshift_image/model_testing_scripts/cwd_mostly_ml_3/
+prediction_openshift_image/model_testing_scripts/cwd_mostly_ml_4/
+prediction_openshift_image/model_testing_scripts/cwd_mostly_sl/
+prediction_openshift_image/.ipynb_checkpoints/
+prediction_openshift_image/.vscode/
