@@ -7,4 +7,6 @@ scipy
 scikit-learn 
 tqdm 
 envoy
+matplotlib
 boto3
+xgboost

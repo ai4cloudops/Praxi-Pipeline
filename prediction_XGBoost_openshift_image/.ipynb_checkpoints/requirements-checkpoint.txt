@@ -7,4 +7,3 @@ scipy
 scikit-learn 
 tqdm 
 envoy
-boto3

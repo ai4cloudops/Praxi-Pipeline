@@ -1,7 +1,7 @@
 
 
 kubeflow_endpoint="https://praxi-kfp-endpoint-praxi.apps.nerc-ocp-test.rc.fas.harvard.edu"
-bearer_token = "sha256~CsP0wgf1WK_fA2ekbvVhUjnUgD3UvusuI7BvT2bu1Xo" # oc whoami --show-token
+bearer_token = "sha256~MvtZ4imC1rfRK8GkSl-uflxA6RQ61brl68aSANgqRaU" # oc whoami --show-token
 
 from typing import NamedTuple
 
@@ -14,24 +14,34 @@ from kfp.components import func_to_container_op
 os.environ["DEFAULT_STORAGE_CLASS"] = "ocs-external-storagecluster-ceph-rbd"
 os.environ["DEFAULT_ACCESSMODES"] = "ReadWriteOnce"
 
-def load_model(vw_model_path: OutputPath(str), clf_path: OutputPath(str)):
+def load_model(clf_path: OutputPath(str), index_tag_mapping_path: OutputPath(str), tag_index_mapping_path: OutputPath(str), index_label_mapping_path: OutputPath(str), label_index_mapping_path: OutputPath(str)):
     '''Loads the vw model file and Hybrid class object '''
     import boto3
     import os
     import time
     # time.sleep(5000)
-    vw_model_localpath = '/pipelines/component/src/vw_model.vw'
+    
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
                         aws_access_key_id="AKIAXECNQISLO5332P6S", 
                         aws_secret_access_key="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",)
-    s3.Bucket('praxi-model-1').download_file(Key='praxi-model.vw', Filename=vw_model_localpath)
-    os.popen('cp {0} {1}'.format(vw_model_localpath, vw_model_path))
+    
+    model_localpath = '/pipelines/component/src/model.json'
+    index_tag_mapping_localpath = '/pipelines/component/src/index_tag_mapping'
+    tag_index_mapping_localpath = '/pipelines/component/src/tag_index_mapping'
+    index_label_mapping_localpath = '/pipelines/component/src/index_label_mapping'
+    label_index_mapping_localpath = '/pipelines/component/src/label_index_mapping'
 
-    clf_localpath = '/pipelines/component/src/clf.p'
-    s3.Bucket('praxi-model-1').download_file(Key='praxi-model.p', Filename=clf_localpath)
-    os.popen('cp {0} {1}'.format(clf_localpath, clf_path))
-    # time.sleep(5000)
+    s3.Bucket('praxi-model-xgb').download_file(Key='model.json', Filename=model_localpath)
+    os.popen('cp {0} {1}'.format(model_localpath, clf_path))
+    s3.Bucket('praxi-model-xgb').download_file(Key='index_tag_mapping', Filename=index_tag_mapping_localpath)
+    os.popen('cp {0} {1}'.format(index_tag_mapping_localpath, index_tag_mapping_path))
+    s3.Bucket('praxi-model-xgb').download_file(Key='tag_index_mapping', Filename=tag_index_mapping_localpath)
+    os.popen('cp {0} {1}'.format(tag_index_mapping_localpath, tag_index_mapping_path))
+    s3.Bucket('praxi-model-xgb').download_file(Key='index_label_mapping', Filename=index_label_mapping_localpath)
+    os.popen('cp {0} {1}'.format(index_label_mapping_localpath, index_label_mapping_path))
+    s3.Bucket('praxi-model-xgb').download_file(Key='label_index_mapping', Filename=label_index_mapping_localpath)
+    os.popen('cp {0} {1}'.format(label_index_mapping_localpath, label_index_mapping_path))
 
 generate_loadmod_op = kfp.components.create_component_from_func(load_model, output_component_file='generate_loadmod_op.yaml', base_image="zongshun96/load_model_s3:0.01")
 
@@ -41,8 +51,13 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
     import pickle
     import time
     import yaml
+    import boto3
     # import os
     # import json
+    s3 = boto3.resource(service_name='s3', 
+                        region_name='us-east-1', 
+                        aws_access_key_id="AKIAXECNQISLO5332P6S", 
+                        aws_secret_access_key="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",)
     
     changesets_l = read_layered_image.run()
     # time.sleep(5000)
@@ -51,6 +66,7 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
         with open("/pipelines/component/cwd/changesets/changesets_l"+str(ind)+".yaml", 'w') as writer:
             # yaml.dump(changesets_l, writer)
             yaml.dump(changeset, writer, default_flow_style=False)
+        s3.Bucket('praxi-interm-1').upload_file("/pipelines/component/cwd/changesets/changesets_l"+str(ind)+".yaml", "changesets_l"+str(ind)+".yaml")
     # pass data to next component
     with open(cs_path, 'wb') as writer:
         pickle.dump(changesets_l, writer)
@@ -67,7 +83,12 @@ def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(s
     import pickle
     import os
     import time
+    import boto3
     # from function import changeset_gen
+    s3 = boto3.resource(service_name='s3', 
+                        region_name='us-east-1', 
+                        aws_access_key_id="AKIAXECNQISLO5332P6S", 
+                        aws_secret_access_key="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",)
 
     # Load data from previous component
     with open(input_args_path, 'rb') as in_argfile:
@@ -85,15 +106,19 @@ def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(s
         tagsets_l.append(cur_dict)
 
     # Debug
-    with open("/pipelines/component/cwd/changesets_logging", 'w') as writer:
+    with open("/pipelines/component/cwd/changesets_l_dump", 'w') as writer:
         for change_dict in changesets_l:
             writer.write(json.dumps(change_dict) + '\n')
-    with open("/pipelines/component/cwd/tagsets_logging", 'w') as writer:
-        for tag_dict in tagsets_l:
+    for ind, tag_dict in enumerate(tagsets_l):
+        with open("/pipelines/component/cwd/tagsets_"+str(ind)+".tag", 'w') as writer:
             writer.write(json.dumps(tag_dict) + '\n')
+        s3.Bucket('praxi-interm-1').upload_file("/pipelines/component/cwd/tagsets_"+str(ind)+".tag", "tagsets_"+str(ind)+".tag")
     # time.sleep(5000)
 
     # Pass data to next component
+    # for ind, tag_dict in enumerate(tagsets_l):
+    #     with open(output_text_path+"/tagsets_"+str(ind)+".tag", 'w') as writer:
+    #         writer.write(json.dumps(tag_dict) + '\n')
     with open(output_text_path, 'wb') as writer:
         # for tag_dict in tag_dict_gen:
         #     writer.write(json.dumps(tag_dict) + '\n')
@@ -103,65 +128,72 @@ def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(s
 generate_tagset_op = kfp.components.create_component_from_func(generate_tagset, output_component_file='generate_tagset_component.yaml', base_image="zongshun96/taggen_openshift:0.01")
 
 
-def gen_prediction(clf_path: InputPath(str), vw_model_path: InputPath(str), test_tags_path: InputPath(str), prediction_path: OutputPath(str)):
+def gen_prediction(clf_path: InputPath(str), index_tag_mapping_path: InputPath(str), tag_index_mapping_path: InputPath(str), index_label_mapping_path: InputPath(str), label_index_mapping_path: InputPath(str), test_tags_path: InputPath(str), prediction_path: OutputPath(str)):
 # def gen_prediction(model_path: InputPath(str), modfile_path: InputPath(str), test_tags_path: InputPath(str), created_tags_path: InputPath(str), prediction_path: OutputPath(str)):
     '''generate prediction given model'''
-    import main
+    # import main
     import os
-    import json
+    import yaml
     import pickle
     import time
-    from hybrid_tags import Hybrid
+    import tagsets_XGBoost
+    import xgboost as xgb
     import boto3
-    args = main.get_inputs()
+    # args = main.get_inputs()
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
                         aws_access_key_id="AKIAXECNQISLO5332P6S", 
                         aws_secret_access_key="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",)
+    cwd = "/pipelines/component/cwd/"
+    # cwd = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
 
     # # load from previous component
-    # data_loaded = []
-    # with open(created_tags_path, 'r') as stream:
-    #     for line in stream:
-    #         temp = json.loads(line)
-    #         if (type(temp) != None):
-    #             data_loaded.append(temp)
-    with open(test_tags_path, 'rb') as reader:
-        tagsets_l = pickle.load(reader)
-    with open(clf_path, 'rb') as reader:
-        clf = pickle.load(reader)
-    os.popen('cp {0} {1}'.format(vw_model_path, "/pipelines/component/cwd/vw_model.vw"))
-    clf.vw_modelfile = "/pipelines/component/cwd/vw_model.vw"
-    clf.use_temp_files = False
-    clf.outdir = "/pipelines/component/cwd/"
+    # with open(test_tags_path, 'rb') as reader:
+    #     tagsets_l = pickle.load(reader)
+    tagset_files, feature_matrix, label_matrix = tagsets_XGBoost.tagsets_to_matrix(test_tags_path, index_tag_mapping_path, tag_index_mapping_path, index_label_mapping_path, label_index_mapping_path, train_flag=False, cwd=cwd)
+    BOW_XGB = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
+                      booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
+                      subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
+    BOW_XGB.load_model(clf_path)
 
-    # debug
-    with open("/pipelines/component/cwd/tagsets.log", 'w') as writer:
-        for tag_dict in tagsets_l:
-            writer.write(json.dumps(tag_dict) + '\n')
+
+    # # debug
+    # with open("/pipelines/component/cwd/tagsets.log", 'w') as writer:
+    #     for tag_dict in tagsets_l:
+    #         writer.write(json.dumps(tag_dict) + '\n')
     # time.sleep(5000)
     # print("labs",clf.all_labels)
 
     # prediction
-    results = main.predict(clf, tagsets_l)
+    pred_label_matrix = BOW_XGB.predict(feature_matrix)
+    results = tagsets_XGBoost.one_hot_to_names(index_label_mapping_path, pred_label_matrix)
     # print("output", results)
 
     # # debug
     # with open("/pipelines/component/cwd/summary.log", 'w') as writer:
     #     main.print_multilabel_results(results, writer, args=clf.get_args())
+    # with open(index_label_mapping_path, 'rb') as fp:
+    #     labels = np.array(pickle.load(fp))
+    # tagsets_XGBoost.print_metrics(cwd, 'metrics_iter.out', test_label_matrix_iter, pred_label_matrix_iter, labels)
 
     # Pass data to next component
     with open(prediction_path, 'wb') as writer:
         pickle.dump(results, writer) 
-    with open("/pipelines/component/cwd/pred_l_dump", 'w') as writer:
+    with open(cwd+"pred_l_dump", 'w') as writer:
         # for pred in results:
-        for pred in results:
+        for pred in results.values():
             writer.write(f"{pred}\n")
-    s3.Bucket('praxi-model-1').upload_file("/pipelines/component/cwd/pred_l_dump", "pred_l_dump")
+    with open(cwd+"pred_d_dump", 'w') as writer:
+        results_d = {}
+        for k,v in results.items():
+            results_d[k] = v
+        yaml.dump(results_d, writer)
+    s3.Bucket('praxi-interm-1').upload_file(cwd+"pred_l_dump", "pred_l_dump")
+    s3.Bucket('praxi-interm-1').upload_file(cwd+"pred_d_dump", "pred_d_dump")
 
     # debug
     # time.sleep(5000)
-gen_prediction_op = kfp.components.create_component_from_func(gen_prediction, output_component_file='generate_pred_component.yaml', base_image="zongshun96/prediction_openshift:0.01") 
+gen_prediction_op = kfp.components.create_component_from_func(gen_prediction, output_component_file='generate_pred_component.yaml', base_image="zongshun96/prediction_xgb_openshift:0.01") 
 
 
 # # Reading bigger data
@@ -228,8 +260,7 @@ def praxi_pipeline():
     model = generate_loadmod_op().apply(use_image_pull_policy()).add_affinity(affinity)
     change_test = generate_changeset_op("test").apply(use_image_pull_policy()).add_affinity(affinity)
     tag_test = generate_tagset_op(change_test.outputs["args"], change_test.outputs["cs"]).apply(use_image_pull_policy()).add_affinity(affinity)
-    prediction = gen_prediction_op(model.outputs["clf"],model.outputs["vw_model"], tag_test.outputs["output_text"]).apply(use_image_pull_policy()).add_affinity(affinity)
-
+    prediction = gen_prediction_op(model.outputs["clf"],model.outputs["index_tag_mapping"],model.outputs["tag_index_mapping"],model.outputs["index_label_mapping"],model.outputs["label_index_mapping"], tag_test.outputs["output_text"]).apply(use_image_pull_policy()).add_affinity(affinity)
 
 if __name__ == "__main__":
 

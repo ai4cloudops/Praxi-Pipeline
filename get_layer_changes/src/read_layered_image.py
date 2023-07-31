@@ -39,7 +39,7 @@ def run():
     grafana_addr = 'https://grafana-open-cluster-management-observability.apps.nerc-ocp-infra.rc.fas.harvard.edu/api/datasources/proxy/1/api/v1/query'
 
     headers={
-        'Authorization': 'Bearer sha256~vEXDnIAzSNGauJJOE8D4dZUj3O6tRIvs6nSnBDPIOBQ',
+        'Authorization': 'Bearer sha256~DMnMpxGqvgGPsraOkshyjlXLCG-L7ena5rZaUWU_R0M',
         'Content-Type': 'application/x-www-form-urlencoded'
         }
 

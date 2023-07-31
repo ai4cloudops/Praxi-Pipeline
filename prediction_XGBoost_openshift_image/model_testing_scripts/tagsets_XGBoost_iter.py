@@ -237,12 +237,12 @@ if __name__ == "__main__":
     test_tagset_files_iter, test_feature_matrix_iter, test_label_matrix_iter = tagsets_to_matrix(test_tags_path, cwd=cwd, train_flag=False, iter_flag=True)
 
     # Init Training & Testing
-    BOW_XGB = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
+    BOW_XGB_init = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
                       booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
                       subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
-    BOW_XGB.fit(train_feature_matrix_init, train_label_matrix_init)
-    pred_label_matrix_init = BOW_XGB.predict(test_feature_matrix_init)
-    pred_label_prob_matrix_init = BOW_XGB.predict_proba(test_feature_matrix_init)
+    BOW_XGB_init.fit(train_feature_matrix_init, train_label_matrix_init)
+    pred_label_matrix_init = BOW_XGB_init.predict(test_feature_matrix_init)
+    pred_label_prob_matrix_init = BOW_XGB_init.predict_proba(test_feature_matrix_init)
 
     # np.savetxt(cwd+'test_feature_matrix.out', test_feature_matrix, delimiter=',')
 
@@ -254,18 +254,21 @@ if __name__ == "__main__":
         labels = np.array(pickle.load(fp))
     print_metrics(cwd, 'metrics_init.out', test_label_matrix_init, pred_label_matrix_init, labels)
 
-    BOW_XGB.save_model(cwd+'model_init.json')
+    BOW_XGB_init.save_model(cwd+'model_init.json')
 
 
     # Iter Training & Testing
-    BOW_XGB = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
+    BOW_XGB_iter = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
                       booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
                       subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
     # BOW_XGB.load_model(cwd+'model_init.model')
     # BOW_XGB.fit(train_feature_matrix_iter, train_label_matrix_iter, xgb_model=BOW_XGB.get_booster())
-    BOW_XGB.fit(train_feature_matrix_iter, train_label_matrix_iter, xgb_model=cwd+'model_init.model')
-    pred_label_matrix_iter = BOW_XGB.predict(test_feature_matrix_iter)
-    pred_label_prob_matrix_iter = BOW_XGB.predict_proba(test_feature_matrix_iter)
+    # BOW_XGB.fit(train_feature_matrix_iter, train_label_matrix_iter, xgb_model=cwd+'model_init.model')
+    BOW_XGB_iter.fit(train_feature_matrix_iter, train_label_matrix_iter)
+    pred_label_matrix_iter = BOW_XGB_init.predict(test_feature_matrix_iter)
+    pred_label_prob_matrix_iter = BOW_XGB_init.predict_proba(test_feature_matrix_iter)
+    pred_label_matrix_iter = pred_label_matrix_iter.add(BOW_XGB_iter.predict(test_feature_matrix_iter))
+    pred_label_prob_matrix_iter = pred_label_prob_matrix_iter.add(BOW_XGB_iter.predict_proba(test_feature_matrix_iter))
 
     # np.savetxt(cwd+'test_feature_matrix.out', test_feature_matrix, delimiter=',')
 
