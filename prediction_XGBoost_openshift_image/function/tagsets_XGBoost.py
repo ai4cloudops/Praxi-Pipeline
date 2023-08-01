@@ -1,5 +1,5 @@
 import os, pickle
-import yaml
+import yaml, json
 import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
@@ -14,49 +14,53 @@ def tagsets_to_matrix(tags_path, index_tag_mapping_path, tag_index_mapping_path,
     all_tags_set, all_label_set = set(), set()
     tags_by_instance_l, labels_by_instance_l = [], []
     tagset_files = []
-    # # print(os.listdir(tags_path))
-    # for tag_file in tqdm(os.listdir(tags_path)):
-    #     if(tag_file[-3:] == 'tag'):
-    #         with open(tags_path + tag_file, 'rb') as tf:
-    #             # print(tag_file)
-    #             tagset_files.append(tag_file)
-    #             instance_feature_tags_d = defaultdict(int)
-    #             tagset = yaml.load(tf, Loader=yaml.Loader)   
 
-    #             # feature 
-    #             for tag_vs_count in tagset['tags']:
-    #                 k,v = tag_vs_count.split(":")
-    #                 all_tags_set.add(k)
-    #                 instance_feature_tags_d[k] += int(v)
-    #             tags_by_instance_l.append(instance_feature_tags_d)
+    # debuging with lcoal tagset files
+    # print(os.listdir(tags_path))
+    for tag_file in tqdm(os.listdir(tags_path)):
+        if(tag_file[-3:] == 'tag'):
+            with open(tags_path + tag_file, 'rb') as tf:
+                # print(tag_file)
+                tagset_files.append(tag_file)
+                instance_feature_tags_d = defaultdict(int)
+                tagset = yaml.load(tf, Loader=yaml.Loader)
+                # tagset = json.load(tf)   
 
-    #             # label
-    #             if not inference_flag:
-    #                 if 'labels' in tagset:
-    #                     all_label_set.update(tagset['labels'])
-    #                     labels_by_instance_l.append(tagset['labels'])
-    #                 else:
-    #                     all_label_set.add(tagset['label'])
-    #                     labels_by_instance_l.append([tagset['label']])
+                # feature 
+                for tag_vs_count in tagset['tags']:
+                    k,v = tag_vs_count.split(":")
+                    all_tags_set.add(k)
+                    instance_feature_tags_d[k] += int(v)
+                tags_by_instance_l.append(instance_feature_tags_d)
 
-    with open(tags_path, 'rb') as reader:
-        tagsets_l = pickle.load(reader)
-        for tagset in tagsets_l:
-            instance_feature_tags_d = defaultdict(int)
-            # feature 
-            for tag_vs_count in tagset['tags']:
-                k,v = tag_vs_count.split(":")
-                all_tags_set.add(k)
-                instance_feature_tags_d[k] += int(v)
-            tags_by_instance_l.append(instance_feature_tags_d)
-            # label
-            if not inference_flag:
-                if 'labels' in tagset:
-                    all_label_set.update(tagset['labels'])
-                    labels_by_instance_l.append(tagset['labels'])
-                else:
-                    all_label_set.add(tagset['label'])
-                    labels_by_instance_l.append([tagset['label']])
+                # label
+                if not inference_flag:
+                    if 'labels' in tagset:
+                        all_label_set.update(tagset['labels'])
+                        labels_by_instance_l.append(tagset['labels'])
+                    else:
+                        all_label_set.add(tagset['label'])
+                        labels_by_instance_l.append([tagset['label']])
+
+    # # kfp with intermediate data as dumps 
+    # with open(tags_path, 'rb') as reader:
+    #     tagsets_l = pickle.load(reader)
+    #     for tagset in tagsets_l:
+    #         instance_feature_tags_d = defaultdict(int)
+    #         # feature 
+    #         for tag_vs_count in tagset['tags']:
+    #             k,v = tag_vs_count.split(":")
+    #             all_tags_set.add(k)
+    #             instance_feature_tags_d[k] += int(v)
+    #         tags_by_instance_l.append(instance_feature_tags_d)
+    #         # label
+    #         if not inference_flag:
+    #             if 'labels' in tagset:
+    #                 all_label_set.update(tagset['labels'])
+    #                 labels_by_instance_l.append(tagset['labels'])
+    #             else:
+    #                 all_label_set.add(tagset['label'])
+    #                 labels_by_instance_l.append([tagset['label']])
         
         
     with open(cwd+'tagset_files.txt', 'w') as f:
@@ -245,20 +249,18 @@ def print_metrics(cwd, outfile, y_true, y_pred, labels):
             np.array([]), fmt='%d', header=file_header, delimiter=',',
             comments='')
 
-if __name__ == "__main__":
-
-
-    train_tags_init_path = "/home/ubuntu/Praxi-Pipeline/data/demo_tagsets_mostly_multi_label/mix_train_tag/"
-    # test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/demo_tagsets_mostly_multi_label/mix_test_tag/"
-    test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/demo_tagsets_mostly_multi_label/small_mix_test_tag/"
+def run_train():
+    train_tags_init_path = "/home/ubuntu/Praxi-Pipeline/data/demo_tagsets_mostly_single_label/mix_train_tag/"
+    test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/demo_tagsets_mostly_single_label/mix_test_tag/"
+    # test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/demo_tagsets_mostly_multi_label/small_mix_test_tag/"
     cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
     Path(cwd).mkdir(parents=True, exist_ok=True)
     
 
     # Data
-    train_tagset_files_init, train_feature_matrix_init, train_label_matrix_init = tagsets_to_matrix(train_tags_init_path, index_tag_mapping_path=cwd+'index_tag_mapping', tag_index_mapping_path=cwd+'tag_index_mapping', index_label_mapping_path=cwd+'index_label_mapping', label_index_mapping_path=cwd+'label_index_mapping', cwd=cwd, train_flag=True)
-    test_tagset_files_init, test_feature_matrix_init, test_label_matrix_init = tagsets_to_matrix(test_tags_path, index_tag_mapping_path=cwd+'index_tag_mapping', tag_index_mapping_path=cwd+'tag_index_mapping', index_label_mapping_path=cwd+'index_label_mapping', label_index_mapping_path=cwd+'label_index_mapping', cwd=cwd, train_flag=False)
-    test_tagset_files, test_feature_matrix, test_label_matrix = tagsets_to_matrix(test_tags_path, index_tag_mapping_path=cwd+'index_tag_mapping', tag_index_mapping_path=cwd+'tag_index_mapping', index_label_mapping_path=cwd+'index_label_mapping', label_index_mapping_path=cwd+'label_index_mapping', cwd=cwd, train_flag=False)
+    train_tagset_files_init, train_feature_matrix_init, train_label_matrix_init = tagsets_to_matrix(train_tags_init_path, index_tag_mapping_path=cwd+'index_tag_mapping', tag_index_mapping_path=cwd+'tag_index_mapping', index_label_mapping_path=cwd+'index_label_mapping', label_index_mapping_path=cwd+'label_index_mapping', cwd=cwd, train_flag=True, inference_flag=False)
+    test_tagset_files_init, test_feature_matrix_init, test_label_matrix_init = tagsets_to_matrix(test_tags_path, index_tag_mapping_path=cwd+'index_tag_mapping', tag_index_mapping_path=cwd+'tag_index_mapping', index_label_mapping_path=cwd+'index_label_mapping', label_index_mapping_path=cwd+'label_index_mapping', cwd=cwd, train_flag=False, inference_flag=False)
+    test_tagset_files, test_feature_matrix, test_label_matrix = tagsets_to_matrix(test_tags_path, index_tag_mapping_path=cwd+'index_tag_mapping', tag_index_mapping_path=cwd+'tag_index_mapping', index_label_mapping_path=cwd+'index_label_mapping', label_index_mapping_path=cwd+'label_index_mapping', cwd=cwd, train_flag=False, inference_flag=False)
 
     # Init Training & Testing
     BOW_XGB_init = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
@@ -278,7 +280,11 @@ if __name__ == "__main__":
     # np.savetxt(cwd+'results.out', results, delimiter=',')
     with open(cwd+'results.out', 'w') as fp:
         labels = yaml.dump(results, fp)
-
+    with open(cwd+"pred_d_dump", 'w') as writer:
+        results_d = {}
+        for k,v in results.items():
+            results_d[int(k)] = v
+        yaml.dump(results_d, writer)
     with open(cwd+'index_label_mapping', 'rb') as fp:
         labels = np.array(pickle.load(fp))
     print_metrics(cwd, 'metrics_init.out', test_label_matrix, pred_label_matrix, labels)
@@ -286,6 +292,46 @@ if __name__ == "__main__":
     BOW_XGB_init.save_model(cwd+'model_init.json')
 
 
+def run_pred():
+    # cwd = "/pipelines/component/cwd/"
+    cwd = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
+    clf_path = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/model_init.json"
+    test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/inference_test/"
+
+    # # load from previous component
+    # with open(test_tags_path, 'rb') as reader:
+    #     tagsets_l = pickle.load(reader)
+    tagset_files, feature_matrix, label_matrix = tagsets_to_matrix(test_tags_path, index_tag_mapping_path=cwd+'index_tag_mapping', tag_index_mapping_path=cwd+'tag_index_mapping', index_label_mapping_path=cwd+'index_label_mapping', label_index_mapping_path=cwd+'label_index_mapping', train_flag=False, cwd=cwd)
+    BOW_XGB = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
+                      booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
+                      subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
+    BOW_XGB.load_model(clf_path)
+
+
+    # # debug
+    # with open("/pipelines/component/cwd/tagsets.log", 'w') as writer:
+    #     for tag_dict in tagsets_l:
+    #         writer.write(json.dumps(tag_dict) + '\n')
+    # time.sleep(5000)
+    # print("labs",clf.all_labels)
+
+    # prediction
+    pred_label_matrix = BOW_XGB.predict(feature_matrix)
+    results = one_hot_to_names(cwd+'index_label_mapping', pred_label_matrix)
+
+    with open(cwd+"pred_l_dump", 'w') as writer:
+        # for pred in results:
+        for pred in results.values():
+            writer.write(f"{pred}\n")
+    with open(cwd+"pred_d_dump", 'w') as writer:
+        results_d = {}
+        for k,v in results.items():
+            results_d[int(k)] = v
+        yaml.dump(results_d, writer)
+
+if __name__ == "__main__":
+    run_train()
+    run_pred()
 
     # verify the init trees are still tehere.
     #   Preconfigure significantly large feature and label spaces

@@ -186,7 +186,7 @@ def gen_prediction(clf_path: InputPath(str), index_tag_mapping_path: InputPath(s
     with open(cwd+"pred_d_dump", 'w') as writer:
         results_d = {}
         for k,v in results.items():
-            results_d[k] = v
+            results_d[int(k)] = v
         yaml.dump(results_d, writer)
     s3.Bucket('praxi-interm-1').upload_file(cwd+"pred_l_dump", "pred_l_dump")
     s3.Bucket('praxi-interm-1').upload_file(cwd+"pred_d_dump", "pred_d_dump")
