@@ -1,6 +1,6 @@
 #!/bin/bash -e
 image_name=zongshun96/prom-get-layers
-image_tag=0.01
+image_tag=0.02
 full_image_name=${image_name}:${image_tag}
 
 # cd "$(dirname "$0")" 

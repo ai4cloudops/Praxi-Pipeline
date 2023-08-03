@@ -1,15 +1,17 @@
 name: Gen prediction
 description: generate prediction given model
 inputs:
-- {name: model, type: String}
-- {name: modfile, type: String}
+- {name: clf, type: String}
+- {name: index_tag_mapping, type: String}
+- {name: tag_index_mapping, type: String}
+- {name: index_label_mapping, type: String}
+- {name: label_index_mapping, type: String}
 - {name: test_tags, type: String}
-- {name: created_tags, type: String}
 outputs:
 - {name: prediction, type: String}
 implementation:
   container:
-    image: lkorver/praxi-vw-base:0.320
+    image: zongshun96/prediction_xgb_openshift:0.01
     command:
     - sh
     - -ec
@@ -19,36 +21,71 @@ implementation:
       python3 -u "$program_path" "$@"
     - "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n   \
       \ os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return file_path\n\
-      \ndef gen_prediction(model_path, modfile_path, test_tags_path, created_tags_path,\
-      \ prediction_path):\n    '''generate prediction given model'''\n    import main\n\
-      \    import os\n    import json\n    import pickle\n    import time\n    from\
-      \ hybrid_tags import Hybrid\n    args = main.get_inputs()\n    data_loaded =\
-      \ []\n\n    with open(test_tags_path, 'rb') as reader:\n        data_loaded\
-      \ = pickle.load(reader)\n\n    # with open(created_tags_path, 'r') as stream:\n\
-      \    #     for line in stream:\n    #         temp = json.loads(line)\n    #\
-      \         if (type(temp) != None):\n    #             data_loaded.append(temp)\n\
-      \n    with open(model_path, 'rb') as reader:\n        model = pickle.load(reader)\n\
-      \    model.vw_modelfile = modfile_path\n    print(\"labs\",model.all_labels)\n\
-      \    pred = main.test(model, data_loaded, args)\n    print(\"output\", pred)\n\
-      \    with open(prediction_path, 'wb') as writer:\n        pickle.dump(pred,\
-      \ writer) \n    time.sleep(5000)\n\nimport argparse\n_parser = argparse.ArgumentParser(prog='Gen\
+      \ndef gen_prediction(clf_path, index_tag_mapping_path, tag_index_mapping_path,\
+      \ index_label_mapping_path, label_index_mapping_path, test_tags_path, prediction_path):\n\
+      # def gen_prediction(model_path: InputPath(str), modfile_path: InputPath(str),\
+      \ test_tags_path: InputPath(str), created_tags_path: InputPath(str), prediction_path:\
+      \ OutputPath(str)):\n    '''generate prediction given model'''\n    # import\
+      \ main\n    import os\n    import yaml\n    import pickle\n    import time\n\
+      \    import tagsets_XGBoost\n    import xgboost as xgb\n    import boto3\n \
+      \   # args = main.get_inputs()\n    s3 = boto3.resource(service_name='s3', \n\
+      \                        region_name='us-east-1', \n                       \
+      \ aws_access_key_id=\"AKIAXECNQISLO5332P6S\", \n                        aws_secret_access_key=\"\
+      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\",)\n    cwd = \"/pipelines/component/cwd/\"\
+      \n    # cwd = \"/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/\"\
+      \n\n    # # load from previous component\n    # with open(test_tags_path, 'rb')\
+      \ as reader:\n    #     tagsets_l = pickle.load(reader)\n    tagset_files, feature_matrix,\
+      \ label_matrix = tagsets_XGBoost.tagsets_to_matrix(test_tags_path, index_tag_mapping_path,\
+      \ tag_index_mapping_path, index_label_mapping_path, label_index_mapping_path,\
+      \ train_flag=False, cwd=cwd)\n    BOW_XGB = xgb.XGBClassifier(max_depth=10,\
+      \ learning_rate=0.1,silent=False, objective='binary:logistic', \\\n        \
+      \              booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1,\
+      \ max_delta_step=0, \\\n                      subsample=0.8, colsample_bytree=0.8,\
+      \ colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)\n    BOW_XGB.load_model(clf_path)\n\
+      \n    # # debug\n    # with open(\"/pipelines/component/cwd/tagsets.log\", 'w')\
+      \ as writer:\n    #     for tag_dict in tagsets_l:\n    #         writer.write(json.dumps(tag_dict)\
+      \ + '\\n')\n    # time.sleep(5000)\n    # print(\"labs\",clf.all_labels)\n\n\
+      \    # prediction\n    pred_label_matrix = BOW_XGB.predict(feature_matrix)\n\
+      \    results = tagsets_XGBoost.one_hot_to_names(index_label_mapping_path, pred_label_matrix)\n\
+      \    # print(\"output\", results)\n\n    # # debug\n    # with open(\"/pipelines/component/cwd/summary.log\"\
+      , 'w') as writer:\n    #     main.print_multilabel_results(results, writer,\
+      \ args=clf.get_args())\n    # with open(index_label_mapping_path, 'rb') as fp:\n\
+      \    #     labels = np.array(pickle.load(fp))\n    # tagsets_XGBoost.print_metrics(cwd,\
+      \ 'metrics_iter.out', test_label_matrix_iter, pred_label_matrix_iter, labels)\n\
+      \n    # Pass data to next component\n    with open(prediction_path, 'wb') as\
+      \ writer:\n        pickle.dump(results, writer) \n    with open(cwd+\"pred_l_dump\"\
+      , 'w') as writer:\n        # for pred in results:\n        for pred in results.values():\n\
+      \            writer.write(f\"{pred}\\n\")\n    with open(cwd+\"pred_d_dump\"\
+      , 'w') as writer:\n        results_d = {}\n        for k,v in results.items():\n\
+      \            results_d[int(k)] = v\n        yaml.dump(results_d, writer)\n \
+      \   s3.Bucket('praxi-interm-1').upload_file(cwd+\"pred_l_dump\", \"pred_l_dump\"\
+      )\n    s3.Bucket('praxi-interm-1').upload_file(cwd+\"pred_d_dump\", \"pred_d_dump\"\
+      )\n\n    # debug\n    # time.sleep(5000)\n\nimport argparse\n_parser = argparse.ArgumentParser(prog='Gen\
       \ prediction', description='generate prediction given model')\n_parser.add_argument(\"\
-      --model\", dest=\"model_path\", type=str, required=True, default=argparse.SUPPRESS)\n\
-      _parser.add_argument(\"--modfile\", dest=\"modfile_path\", type=str, required=True,\
-      \ default=argparse.SUPPRESS)\n_parser.add_argument(\"--test-tags\", dest=\"\
-      test_tags_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
-      --created-tags\", dest=\"created_tags_path\", type=str, required=True, default=argparse.SUPPRESS)\n\
+      --clf\", dest=\"clf_path\", type=str, required=True, default=argparse.SUPPRESS)\n\
+      _parser.add_argument(\"--index-tag-mapping\", dest=\"index_tag_mapping_path\"\
+      , type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
+      --tag-index-mapping\", dest=\"tag_index_mapping_path\", type=str, required=True,\
+      \ default=argparse.SUPPRESS)\n_parser.add_argument(\"--index-label-mapping\"\
+      , dest=\"index_label_mapping_path\", type=str, required=True, default=argparse.SUPPRESS)\n\
+      _parser.add_argument(\"--label-index-mapping\", dest=\"label_index_mapping_path\"\
+      , type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
+      --test-tags\", dest=\"test_tags_path\", type=str, required=True, default=argparse.SUPPRESS)\n\
       _parser.add_argument(\"--prediction\", dest=\"prediction_path\", type=_make_parent_dirs_and_return_path,\
       \ required=True, default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\
       \n_outputs = gen_prediction(**_parsed_args)\n"
     args:
-    - --model
-    - {inputPath: model}
-    - --modfile
-    - {inputPath: modfile}
+    - --clf
+    - {inputPath: clf}
+    - --index-tag-mapping
+    - {inputPath: index_tag_mapping}
+    - --tag-index-mapping
+    - {inputPath: tag_index_mapping}
+    - --index-label-mapping
+    - {inputPath: index_label_mapping}
+    - --label-index-mapping
+    - {inputPath: label_index_mapping}
     - --test-tags
     - {inputPath: test_tags}
-    - --created-tags
-    - {inputPath: created_tags}
     - --prediction
     - {outputPath: prediction}
