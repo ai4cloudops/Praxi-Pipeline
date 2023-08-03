@@ -55,7 +55,8 @@ from sklearn import metrics
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.preprocessing import MultiLabelBinarizer
 
-from function.hybrid_tags import Hybrid
+from hybrid_tags import Hybrid
+import boto3
 
 LOCK = Lock()
 
@@ -100,7 +101,7 @@ def get_free_filename(stub, directory, suffix=''):
         file_candidate = '{}/{}-{}{}'.format(
             str(directory), stub, counter, suffix)
         if Path(file_candidate).exists():
-            print("file exists")
+            # print("file exists")
             counter += 1
         else:  # No match found
             # print("no file")
@@ -179,27 +180,34 @@ def iterative_train(train_dat, args):
     print_misses = args['print_labels']
 
     vwargs = args['vw_args']
+    print(vwargs)
     logging.info("Arguments for Vowpal Wabbit: %s", vwargs)
 
     ####################
     new_model_name = args['iterative']
+    print(new_model_name)
     initial_model = args['previous']
     j_tr = args['justtrain']
     j_ts = args['justtest']
 
-    if(new_model_name is None and initial_model is not None):
-        new_model_name = initial_model
-        
-    if initial_model is None:
-        suffix = 'iterative'
-        iterative = True
-        modfile = new_model_name
-        clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=False,
-                     vw_args= vwargs, suffix=suffix, iterative=iterative,
-                     use_temp_files=True, vw_modelfile=modfile, outdir = outdir)
-    else:
-        clf = pickle.load(open(initial_model, "rb"))
-    #clf.probability = True                                                            ###
+    modfile = '/pipelines/component/src/praxi-model.vw'
+    s3 = boto3.resource(service_name='s3', 
+                        region_name='', 
+                        aws_access_key_id="", 
+                        aws_secret_access_key="",)
+    s3.Bucket('praxi-model').download_file(Key='new-iter.vw', Filename=modfile)
+
+    model_path = '/pipelines/component/src/mod_file.p'
+    s3.Bucket('praxi-model').download_file(Key='new-iter.p', Filename=model_path)
+
+    clf = pickle.load(open(model_path, "rb"))
+    clf.vw_modelfile = modfile
+    clf.iterative = True
+    clf.vw_args = vwargs
+    print(clf)
+    print("all labels", len(clf.all_labels),clf.all_labels)
+
+    
     train_names = []
     for f in train_dat:
         if list(f)[2] == 'tags':
@@ -213,7 +221,6 @@ def iterative_train(train_dat, args):
     save_name = clf.vw_modelfile[:-2] + 'p'
     with open(save_name, "wb") as f:
         pickle.dump(clf, f)
-
     return clf  
 
 def test(clf, test_data, args):
@@ -235,12 +242,13 @@ def test(clf, test_data, args):
     resfile = open(resfile_name, 'wb')
     results = []
 
-    #preds = clf.predict(test_tags)
-    # ntags = [len(y) if isinstance(y, list) else 1 for y in test_labels]
-    # preds, th = clf.top_k_tags(test_tags, test_labels, ntags)
-    preds, th = clf.cost_density(test_tags, test_labels)
+    ntags = [len(y) if isinstance(y, list) else 1 for y in test_labels]
+    preds, th = clf.top_k_tags(test_tags, test_labels, ntags)
+    # preds, th = clf.cost_density(test_tags, test_labels)
+
     max_f1 = 0
     best_res = 0
+    best_thresh = 0.7
     hold = preds
     for ind, thresh in enumerate(th):
         print("thresh: ",thresh)
@@ -255,12 +263,15 @@ def test(clf, test_data, args):
         if (f1 > max_f1):
             max_f1 = f1
             best_res = ind
+            best_thresh = thresh
+
+    clf.threshold = best_thresh
     preds = hold[best_res]
     print("best threshold is: ", th[best_res])
     print("best f1 score is: {0}".format(max_f1))
 
     acc = get_accuracy(preds, test_labels)
-    
+
     # so results are in test_labels, preds
     resfile = open(resfile_name, 'wb')
     results = []
@@ -269,7 +280,36 @@ def test(clf, test_data, args):
     resfile.close()
     logging.info("Printing results:")
     print_multilabel_results(resfile_name, outdir, result_type, args=clf.get_args())
+    return preds, clf
+
+def get_preds(clf, test_data, args):
+    outdir = os.path.abspath(args['outdir'])
+    nfolds = int(args['nfolds'])
+    resfile_name = get_free_filename('iterative_test', outdir, '.p')
+    result_type = args['result'] # full or summary
+
+    test_names = []
+    for f in test_data:
+        if list(f)[2] == 'tags':
+            test_names.append(f[list(f)[0]])
+    if(len(test_names) == 0):
+        logging.error("No tagsets found in provided testing directory")
+        raise ValueError("No tagsets in testing directory!")
+    test_tags, test_labels = parse_ts(test_names, test_data)
+    
+    resfile = open(resfile_name, 'wb')
+    results = []
+
+    #preds = clf.predict(test_tags)
+    ntags = [len(y) if isinstance(y, list) else 1 for y in test_labels]
+    preds, th = clf.inference(test_tags, clf.threshold)
+
+    results.append((test_labels, preds))
+    pickle.dump(results, resfile)
+    resfile.close()
+    
     return preds
+
 
 def get_accuracy(preds, labels):
     total_count = 0
@@ -284,11 +324,11 @@ def get_accuracy(preds, labels):
         print(sorted(pred), sorted(labels[total_count]))
         if sorted(pred) == sorted(labels[total_count]):
             correct_count += 1
-            if (len(pred) ==1):
+            if (len(labels[total_count]) ==1):
                 sl_correct += 1
             else:
                 ml_correct += 1
-        if (len(pred) == 1):
+        if (len(labels[total_count]) == 1):
             sl_total_count += 1
         else:
             ml_total_count += 1
@@ -466,8 +506,8 @@ def multilabel_train(train_dat, args):
     suffix = 'multi'
     # VW ARGS SHOULD BE PASSED IN
     clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=True,
-                 vw_args=vwargs, suffix=suffix, use_temp_files=False, vw_modelfile="./results/model.vw", outdir = outdir)
-    #print(clf.vw_modelfile)
+                 vw_args=vwargs, suffix=suffix, use_temp_files=True, outdir = outdir)
+
     with open(clf.vw_modelfile, 'wb') as mod_file:
         pickle.dump(clf, mod_file)
     #clf.probability = False                                                             ###
@@ -521,21 +561,9 @@ def multilabel_train(train_dat, args):
             logging.error("No tagsets found in provided training directory")
             raise ValueError("No tagsets in training directory!")
         train_tags, train_labels = parse_ts(train_names, train_dat)
-        
-        # test_names = []
-        # for f in test_dat:
-        #     if list(f)[2] == 'tags':
-        #         test_names.append(f[list(f)[0]]) #if that doesn't fit I will actually kill myself
-        # if(len(test_names) == 0):
-        #     logging.error("No tagsets found in provided training directory")
-        #     raise ValueError("No tagsets in training directory!")
-        # test_tags, test_labels = parse_ts(test_names, test_dat)
-    #results.append(get_multilabel_scores(clf, train_tags, train_labels, test_tags, test_labels))
     
     clf.fit(train_tags, train_labels)
-    #pickle.dump(results, resfile)
-    #resfile.close()
-    #print_multilabel_results(resfile_name, outdir, result_type, args=clf.get_args(), n_strats=1)
+    
     return clf
     
 
@@ -668,7 +696,7 @@ def get_inputs():
     parser = argparse.ArgumentParser(description='Arguments for Praxi software discovery algorithm.')
     parser.add_argument('-t','--traindir', help='Path to training tagset directory.', default=None)
     parser.add_argument('-s', '--testdir', help='Path to testing tagset directoy.', default=None)
-    parser.add_argument('-o', '--outdir', help='Path to desired result directory', default='./results/')
+    parser.add_argument('-o', '--outdir', help='Path to desired result directory', default='.')
     # run a single label experiment by default, if --multi flag is added, run a multilabel experiment!
     parser.add_argument('-m','--multi', dest='experiment', action='store_const', const='multi',
                         default='single', help="Type of experiment to run (single-label default).")
@@ -685,7 +713,7 @@ def get_inputs():
     # DEFAULT: NO FOLDS
     #   - will expect TWO directories as arguments
     # iterative options
-    parser.add_argument('-i', '--iterative', default='/pipelines/component/src/model/iter_model.vw', help='Run iterative experiment (provide name)')
+    parser.add_argument('-i', '--iterative', default='/pipelines/component/src/model/praxi-model.vw', help='Run iterative experiment (provide name)')
     parser.add_argument('-p', '--previous', default=None, help='Optional: previous model name')
     # THE FOLLOWING OPTIONS CAN ONLY BE USED WITH ITERATIVE TRAINING
     parser.add_argument('-r', '--jtrain', dest='justtrain', action='store_const', const=True, default=False, help='Just train and save the model')
@@ -694,108 +722,3 @@ def get_inputs():
     args = vars(args)
     args['result'] = 'full'
     return args
-
-# def run(tags_data):
-#     prog_start = time.time()
-
-#     #args = vars(parser.parse_args())
-#     od = 'results'
-#     outdir = os.path.abspath(od)
-#     os.mkdir(outdir)
-#     nfolds = 5
-#     ts_train_path = tags_data
-#     ts_test_path = tags_data
-#     #nfolds = int(args['nfolds'])
-#     #ts_train_path = args['traindir']
-#     #ts_test_path = args['testdir']
-
-#     # SET UP LOGGING
-#     loglevel = 'INFO'
-#     #loglevel = args['loglevel']
-#     stub = 'praxi_exp'
-#     logfile_name = get_free_filename(stub, outdir, '.log')
-#     print("main", logfile_name)
-
-#     numeric_level = getattr(logging, loglevel, None)
-#     logging.basicConfig(filename=logfile_name,level=numeric_level)
-
-#     # Log command line args
-#     result_type = 'summary'
-#     #result_type = args['result'] # full or summary
-#     logging.info("Result type: %s", result_type)
-
-#     exp_type = 'single'
-#     #exp_type = args['experiment'] # single or multi
-#     logging.info("Experiment type: %s", exp_type)
-
-#     print_misses = True
-#     #print_misses = args['print_labels']
-
-#     vwargs = '-b 26 --learning_rate 1.5 --passes 30'
-#     #vwargs = args['vw_args']
-#     logging.info("Arguments for Vowpal Wabbit: %s", vwargs)
-
-#     ####################
-#     iterative = '/pipelines/component/src/model/iter_model.vw'
-#     initial_model = None
-#     j_tr = False
-#     j_ts = False
-#     #iterative = args['iterative']
-#     #initial_model = args['previous']
-#     #j_tr = args['justtrain']
-#     #j_ts = args['justtest']
-
-#     if(iterative is None and initial_model is not None):
-#         iterative = initial_model
-
-#     if(nfolds!= 1 and ts_test_path!=None):
-#         # ERROR: SHOULDNT HAVE A TEST DIRECTORY IF CROSS VALIDATION IS OCCURRING
-#         logging.error("Too many input directories. If performing cross validation, expect just one.")
-#         raise ValueError("Too many input directories! Only need one for cross validation.")
-#     else:
-#         if iterative is not None:
-#             # run iterative exp (all single label for now, no cross validation)
-#             logging.info("Starting iterative experiment")
-#             logging.info("Model files will be saved to working directory")
-#             if initial_model is not None:
-#                 logging.info("Will iteratively train the model: %s", initial_model)
-#                 new_model_name = None
-#             else:
-#                 new_model_name = iterative
-#                 logging.info("Will save new model to %s", new_model_name)
-#             # Might not need training/testing directory! (later add "just testing" and "just training" option)
-#             #logging.info("Training directory: %s", ts_train_path)
-#             #logging.info("Testing directory: %s", ts_test_path)
-#             resfile_name = get_free_filename('iterative_test', outdir, '.p') # add arg to set stub?
-#             iterative_experiment(ts_train_path, ts_test_path, resfile_name, outdir, vwargs, result_type,
-#                                  initial_model=initial_model, print_misses=print_misses, new_model_name=new_model_name,
-#                                  just_train=j_tr, just_test=j_ts)
-#         else:
-#             if exp_type == 'single':
-#                 if(nfolds == 1):
-#                     logging.info("Starting single label experiment")
-#                     #logging.info("Training directory: %s", ts_train_path)
-#                     #logging.info("Testing directory: %s", ts_test_path)
-#                 else:
-#                     # CROSS VALIDATION
-#                     logging.info("Starting cross validation single label experiment with %s folds", str(nfolds))
-#                     #logging.info("Tagset directory: %s", ts_train_path)
-#                 resfile_name = get_free_filename('single_test', outdir, '.p') # add arg to set stub?
-#                 single_label_experiment(nfolds, ts_train_path, resfile_name, outdir, vwargs, result_type,
-#                                         ts_path=ts_test_path, print_misses=print_misses) # no train directory
-#             else: # multi
-#                 if(nfolds == 1):
-#                     logging.info("Starting multi label experiment")
-#                     #logging.info("Training directory: %s", ts_train_path)
-#                     #logging.info("Testing directory: %s", ts_test_path)
-#                 else:
-#                     # CROSS VALIDATION
-#                     logging.info("Starting cross validation multi label experiment with %s folds", str(nfolds))
-#                     #logging.info("Tagset directory: %s", ts_train_path)
-#                 resfile_name = get_free_filename('multi_test', outdir, '.p')
-#                 multi_label_experiment(nfolds, ts_train_path, resfile_name, outdir, vwargs,
-#                                        result_type, ts_path=ts_test_path) #, print_misses=print_misses)
-
-#     logging.info("Program runtime: %s", str(time.time()-prog_start))
-
-#     return resfile_name
