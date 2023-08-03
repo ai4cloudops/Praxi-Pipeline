@@ -1,7 +1,7 @@
 
 
 kubeflow_endpoint="https://praxi-kfp-endpoint-praxi.apps.nerc-ocp-test.rc.fas.harvard.edu"
-bearer_token = "sha256~MvtZ4imC1rfRK8GkSl-uflxA6RQ61brl68aSANgqRaU" # oc whoami --show-token
+bearer_token = "sha256~JQg6F8x0C0BDtVjx_tdOMdkf_S7nk3etC1GoqPeW0hw" # oc whoami --show-token
 
 from typing import NamedTuple
 
@@ -32,15 +32,15 @@ def load_model(clf_path: OutputPath(str), index_tag_mapping_path: OutputPath(str
     index_label_mapping_localpath = '/pipelines/component/src/index_label_mapping'
     label_index_mapping_localpath = '/pipelines/component/src/label_index_mapping'
 
-    s3.Bucket('praxi-model-xgb').download_file(Key='model.json', Filename=model_localpath)
+    s3.Bucket('praxi-model-xgb-0').download_file(Key='model.json', Filename=model_localpath)
     os.popen('cp {0} {1}'.format(model_localpath, clf_path))
-    s3.Bucket('praxi-model-xgb').download_file(Key='index_tag_mapping', Filename=index_tag_mapping_localpath)
+    s3.Bucket('praxi-model-xgb-0').download_file(Key='index_tag_mapping', Filename=index_tag_mapping_localpath)
     os.popen('cp {0} {1}'.format(index_tag_mapping_localpath, index_tag_mapping_path))
-    s3.Bucket('praxi-model-xgb').download_file(Key='tag_index_mapping', Filename=tag_index_mapping_localpath)
+    s3.Bucket('praxi-model-xgb-0').download_file(Key='tag_index_mapping', Filename=tag_index_mapping_localpath)
     os.popen('cp {0} {1}'.format(tag_index_mapping_localpath, tag_index_mapping_path))
-    s3.Bucket('praxi-model-xgb').download_file(Key='index_label_mapping', Filename=index_label_mapping_localpath)
+    s3.Bucket('praxi-model-xgb-0').download_file(Key='index_label_mapping', Filename=index_label_mapping_localpath)
     os.popen('cp {0} {1}'.format(index_label_mapping_localpath, index_label_mapping_path))
-    s3.Bucket('praxi-model-xgb').download_file(Key='label_index_mapping', Filename=label_index_mapping_localpath)
+    s3.Bucket('praxi-model-xgb-0').download_file(Key='label_index_mapping', Filename=label_index_mapping_localpath)
     os.popen('cp {0} {1}'.format(label_index_mapping_localpath, label_index_mapping_path))
 
 generate_loadmod_op = kfp.components.create_component_from_func(load_model, output_component_file='generate_loadmod_op.yaml', base_image="zongshun96/load_model_s3:0.01")
@@ -73,7 +73,7 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
     with open(args_path, 'wb') as argfile:
         pickle.dump(user_in, argfile)
     # time.sleep(5000)
-generate_changeset_op = kfp.components.create_component_from_func(generate_changesets, output_component_file='generate_changeset_component.yaml', base_image="zongshun96/prom-get-layers:0.01")
+generate_changeset_op = kfp.components.create_component_from_func(generate_changesets, output_component_file='generate_changeset_component.yaml', base_image="zongshun96/prom-get-layers:0.02")
 
 def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(str), output_text_path: OutputPath(str), output_args_path: OutputPath(str)):
     '''generate tagset from the changeset'''

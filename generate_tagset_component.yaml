@@ -8,7 +8,7 @@ outputs:
 - {name: output_args, type: String}
 implementation:
   container:
-    image: lkorver/praxi-columbus-base:0.067
+    image: zongshun96/taggen_openshift:0.01
     command:
     - sh
     - -ec
@@ -16,41 +16,45 @@ implementation:
       program_path=$(mktemp)
       printf "%s" "$0" > "$program_path"
       python3 -u "$program_path" "$@"
-    - |
-      def _make_parent_dirs_and_return_path(file_path: str):
-          import os
-          os.makedirs(os.path.dirname(file_path), exist_ok=True)
-          return file_path
-
-      def generate_tagset(input_args_path, changeset_path, output_text_path, output_args_path):
-          '''generate tagset from the changeset'''
-          import tagset_gen
-          import json
-          import pickle
-          import os
-          from function import changeset_gen
-          change_dir = changeset_path
-          tag_dict_gen = tagset_gen.run(change_dir)
-
-          with open(input_args_path, 'rb') as in_argfile:
-              user_in = pickle.load(in_argfile)
-
-          with open(output_text_path, 'w') as writer:
-               for tag_dict in tag_dict_gen:
-                   writer.write(json.dumps(tag_dict) + '\n')
-
-          with open(output_args_path, 'wb') as argfile:
-              pickle.dump(user_in, argfile)
-
-      import argparse
-      _parser = argparse.ArgumentParser(prog='Generate tagset', description='generate tagset from the changeset')
-      _parser.add_argument("--input-args", dest="input_args_path", type=str, required=True, default=argparse.SUPPRESS)
-      _parser.add_argument("--changeset", dest="changeset_path", type=str, required=True, default=argparse.SUPPRESS)
-      _parser.add_argument("--output-text", dest="output_text_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
-      _parser.add_argument("--output-args", dest="output_args_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
-      _parsed_args = vars(_parser.parse_args())
-
-      _outputs = generate_tagset(**_parsed_args)
+    - "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n   \
+      \ os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return file_path\n\
+      \ndef generate_tagset(input_args_path, changeset_path, output_text_path, output_args_path):\n\
+      \    '''generate tagset from the changeset'''\n    # import tagset_gen\n   \
+      \ from columbus.columbus import columbus\n    import json\n    import pickle\n\
+      \    import os\n    import time\n    import boto3\n    # from function import\
+      \ changeset_gen\n    s3 = boto3.resource(service_name='s3', \n             \
+      \           region_name='us-east-1', \n                        aws_access_key_id=\"\
+      AKIAXECNQISLO5332P6S\", \n                        aws_secret_access_key=\"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\"\
+      ,)\n\n    # Load data from previous component\n    with open(input_args_path,\
+      \ 'rb') as in_argfile:\n        user_in = pickle.load(in_argfile)\n    with\
+      \ open(changeset_path, 'rb') as in_changesets_l:\n        changesets_l = pickle.load(in_changesets_l)\n\
+      \n    # Tagset Generator\n    tagsets_l = []\n    for changeset in changesets_l:\n\
+      \        # tags = tagset_gen.get_columbus_tags(changeset['changes'])\n     \
+      \   tag_dict = columbus(changeset['changes'], freq_threshold=2)\n        tags\
+      \ = ['{}:{}'.format(tag, freq) for tag, freq in tag_dict.items()]\n        cur_dict\
+      \ = {'labels': changeset['labels'], 'tags': tags}\n        tagsets_l.append(cur_dict)\n\
+      \n    # Debug\n    with open(\"/pipelines/component/cwd/changesets_l_dump\"\
+      , 'w') as writer:\n        for change_dict in changesets_l:\n            writer.write(json.dumps(change_dict)\
+      \ + '\\n')\n    for ind, tag_dict in enumerate(tagsets_l):\n        with open(\"\
+      /pipelines/component/cwd/tagsets_\"+str(ind)+\".tag\", 'w') as writer:\n   \
+      \         writer.write(json.dumps(tag_dict) + '\\n')\n        s3.Bucket('praxi-interm-1').upload_file(\"\
+      /pipelines/component/cwd/tagsets_\"+str(ind)+\".tag\", \"tagsets_\"+str(ind)+\"\
+      .tag\")\n    # time.sleep(5000)\n\n    # Pass data to next component\n    #\
+      \ for ind, tag_dict in enumerate(tagsets_l):\n    #     with open(output_text_path+\"\
+      /tagsets_\"+str(ind)+\".tag\", 'w') as writer:\n    #         writer.write(json.dumps(tag_dict)\
+      \ + '\\n')\n    with open(output_text_path, 'wb') as writer:\n        # for\
+      \ tag_dict in tag_dict_gen:\n        #     writer.write(json.dumps(tag_dict)\
+      \ + '\\n')\n        pickle.dump(tagsets_l, writer)\n    with open(output_args_path,\
+      \ 'wb') as argfile:\n        pickle.dump(user_in, argfile)\n\nimport argparse\n\
+      _parser = argparse.ArgumentParser(prog='Generate tagset', description='generate\
+      \ tagset from the changeset')\n_parser.add_argument(\"--input-args\", dest=\"\
+      input_args_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
+      --changeset\", dest=\"changeset_path\", type=str, required=True, default=argparse.SUPPRESS)\n\
+      _parser.add_argument(\"--output-text\", dest=\"output_text_path\", type=_make_parent_dirs_and_return_path,\
+      \ required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-args\"\
+      , dest=\"output_args_path\", type=_make_parent_dirs_and_return_path, required=True,\
+      \ default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n\
+      _outputs = generate_tagset(**_parsed_args)\n"
     args:
     - --input-args
     - {inputPath: input_args}
