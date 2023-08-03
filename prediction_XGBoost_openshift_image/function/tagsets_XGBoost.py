@@ -250,33 +250,34 @@ def print_metrics(cwd, outfile, y_true, y_pred, labels):
             comments='')
 
 def run_train():
-    train_tags_init_path = "/home/ubuntu/Praxi-Pipeline/data/demo_tagsets_mostly_single_label/mix_train_tag/"
-    test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/demo_tagsets_mostly_single_label/mix_test_tag/"
+    train_tags_init_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/big_train/"
+    test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/big_ML_biased_test/"
+    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/big_SL_biased_test/"
     # test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/demo_tagsets_mostly_multi_label/small_mix_test_tag/"
-    cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
+    cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML/"
     Path(cwd).mkdir(parents=True, exist_ok=True)
     
 
     # Data
     train_tagset_files_init, train_feature_matrix_init, train_label_matrix_init = tagsets_to_matrix(train_tags_init_path, index_tag_mapping_path=cwd+'index_tag_mapping', tag_index_mapping_path=cwd+'tag_index_mapping', index_label_mapping_path=cwd+'index_label_mapping', label_index_mapping_path=cwd+'label_index_mapping', cwd=cwd, train_flag=True, inference_flag=False)
     test_tagset_files_init, test_feature_matrix_init, test_label_matrix_init = tagsets_to_matrix(test_tags_path, index_tag_mapping_path=cwd+'index_tag_mapping', tag_index_mapping_path=cwd+'tag_index_mapping', index_label_mapping_path=cwd+'index_label_mapping', label_index_mapping_path=cwd+'label_index_mapping', cwd=cwd, train_flag=False, inference_flag=False)
-    test_tagset_files, test_feature_matrix, test_label_matrix = tagsets_to_matrix(test_tags_path, index_tag_mapping_path=cwd+'index_tag_mapping', tag_index_mapping_path=cwd+'tag_index_mapping', index_label_mapping_path=cwd+'index_label_mapping', label_index_mapping_path=cwd+'label_index_mapping', cwd=cwd, train_flag=False, inference_flag=False)
+    # test_tagset_files, test_feature_matrix, test_label_matrix = tagsets_to_matrix(test_tags_path, index_tag_mapping_path=cwd+'index_tag_mapping', tag_index_mapping_path=cwd+'tag_index_mapping', index_label_mapping_path=cwd+'index_label_mapping', label_index_mapping_path=cwd+'label_index_mapping', cwd=cwd, train_flag=False, inference_flag=False)
 
     # Init Training & Testing
     BOW_XGB_init = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
-                      booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
+                      booster='gbtree', n_jobs=64, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
                       subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
     BOW_XGB_init.fit(train_feature_matrix_init, train_label_matrix_init)
-    pred_label_matrix = BOW_XGB_init.predict(test_feature_matrix)
-    pred_label_prob_matrix = BOW_XGB_init.predict_proba(test_feature_matrix)
+    pred_label_matrix_init = BOW_XGB_init.predict(test_feature_matrix_init)
+    pred_label_prob_matrix_init = BOW_XGB_init.predict_proba(test_feature_matrix_init)
 
-    results = one_hot_to_names(cwd+'index_label_mapping', pred_label_matrix)
+    results = one_hot_to_names(cwd+'index_label_mapping', pred_label_matrix_init)
 
     # np.savetxt(cwd+'test_feature_matrix.out', test_feature_matrix, delimiter=',')
 
-    np.savetxt(cwd+'pred_label_matrix_init.out', pred_label_matrix, delimiter=',')
-    np.savetxt(cwd+'test_label_matrix_init.out', test_label_matrix, delimiter=',')
-    np.savetxt(cwd+'pred_label_prob_matrix_init.out', pred_label_prob_matrix, delimiter=',')
+    np.savetxt(cwd+'pred_label_matrix_init.out', pred_label_matrix_init, delimiter=',')
+    np.savetxt(cwd+'test_label_matrix_init.out', test_label_matrix_init, delimiter=',')
+    np.savetxt(cwd+'pred_label_prob_matrix_init.out', pred_label_prob_matrix_init, delimiter=',')
     # np.savetxt(cwd+'results.out', results, delimiter=',')
     with open(cwd+'results.out', 'w') as fp:
         labels = yaml.dump(results, fp)
@@ -287,7 +288,7 @@ def run_train():
         yaml.dump(results_d, writer)
     with open(cwd+'index_label_mapping', 'rb') as fp:
         labels = np.array(pickle.load(fp))
-    print_metrics(cwd, 'metrics_init.out', test_label_matrix, pred_label_matrix, labels)
+    print_metrics(cwd, 'metrics_init.out', test_label_matrix_init, pred_label_matrix_init, labels)
 
     BOW_XGB_init.save_model(cwd+'model_init.json')
 
@@ -331,7 +332,7 @@ def run_pred():
 
 if __name__ == "__main__":
     run_train()
-    run_pred()
+    # run_pred()
 
     # verify the init trees are still tehere.
     #   Preconfigure significantly large feature and label spaces

@@ -29,3 +29,5 @@ prediction_XGBoost_openshift_image/model_testing_scripts/cwd_mostly_ml_3/
 prediction_XGBoost_openshift_image/model_testing_scripts/cwd_mostly_ml_4/
 prediction_XGBoost_openshift_image/model_testing_scripts/cwd_mostly_sl/
 prediction_XGBoost_openshift_image/model_testing_scripts/cwd.zip
+prediction_openshift_image/model_testing_scripts/cwd*/
+prediction_XGBoost_openshift_image/model_testing_scripts/cwd*/

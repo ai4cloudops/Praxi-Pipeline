@@ -11,6 +11,15 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "Python: prediction_openshift_image",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/model_testing_scripts/cwd"
         }
     ]
 }

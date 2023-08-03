@@ -233,9 +233,9 @@ def predict(clf, test_data, params_l=[0.05]):
     return preds[0]
 
 def test(clf, test_data, args):
-    # outdir = os.path.abspath(args['outdir'])
+    outdir = os.path.abspath(args['outdir'])
     # nfolds = int(args['nfolds'])
-    # resfile_name = get_free_filename('iterative_test', outdir, '.p')
+    resfile_name = get_free_filename('iterative_test', outdir, '.p')
     # result_type = args['result'] # full or summary
 
     # test_names = []
@@ -250,7 +250,10 @@ def test(clf, test_data, args):
     test_labels = []
     #for ts_name in tqdm(tagset_names):
     for tagset in test_data:
-        test_labels.append(tagset['labels'])
+        if 'labels' in tagset:
+            test_labels.append(tagset['labels'])
+        else:
+            test_labels.append([tagset['label']])
         test_tags.append(tagset['tags'])
     print("test_labels", test_labels)
     
@@ -284,14 +287,14 @@ def test(clf, test_data, args):
     acc = get_accuracy(preds, test_labels)
     
     # so results are in test_labels, preds
-    # resfile = open(resfile_name, 'wb')
+    resfile = open(resfile_name, 'wb')
     results = []
     results.append((test_labels, preds))
-    # pickle.dump(results, resfile)
-    # resfile.close()
-    # logging.info("Printing results:")
-    # with open(resfile_name, 'wb') as writer:
-    #     print_multilabel_results(results, writer, args=clf.get_args())
+    pickle.dump(results, resfile)
+    resfile.close()
+    logging.info("Printing results:")
+    with open(resfile_name, 'wb') as writer:
+        print_multilabel_results(results, writer, args=clf.get_args())
     return results
 
 def get_accuracy(preds, labels):
@@ -629,6 +632,10 @@ def print_multilabel_results(results, retfile, result_type="", args=None, n_stra
     bnz = MultiLabelBinarizer()
     bnz.fit(y_true)
     all_tags = copy.deepcopy(y_true)
+
+    with open('./results/pred_true.txt', 'w') as datatile:
+        yaml.dump(y_true, datatile)
+        
     for preds in y_pred:
         for label in preds:
             if label not in bnz.classes_:
