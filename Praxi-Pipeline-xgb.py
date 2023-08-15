@@ -1,7 +1,7 @@
 
 
 kubeflow_endpoint="https://praxi-kfp-endpoint-praxi.apps.nerc-ocp-test.rc.fas.harvard.edu"
-bearer_token = "sha256~JQg6F8x0C0BDtVjx_tdOMdkf_S7nk3etC1GoqPeW0hw" # oc whoami --show-token
+bearer_token = "sha256~McJ45wcRxYpVL9QzhIrK_y60A8hwWqFZck7q9201TAo" # oc whoami --show-token
 
 from typing import NamedTuple
 
@@ -23,8 +23,8 @@ def load_model(clf_path: OutputPath(str), index_tag_mapping_path: OutputPath(str
     
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
-                        aws_access_key_id="AKIAXECNQISLO5332P6S", 
-                        aws_secret_access_key="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",)
+                        aws_access_key_id="AKIAXECNQISLIBBXAMLV", 
+                        aws_secret_access_key="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",)
     
     model_localpath = '/pipelines/component/src/model.json'
     index_tag_mapping_localpath = '/pipelines/component/src/index_tag_mapping'
@@ -32,15 +32,15 @@ def load_model(clf_path: OutputPath(str), index_tag_mapping_path: OutputPath(str
     index_label_mapping_localpath = '/pipelines/component/src/index_label_mapping'
     label_index_mapping_localpath = '/pipelines/component/src/label_index_mapping'
 
-    s3.Bucket('praxi-model-xgb-0').download_file(Key='model.json', Filename=model_localpath)
+    s3.Bucket('praxi-model-xgb-02').download_file(Key='model.json', Filename=model_localpath)
     os.popen('cp {0} {1}'.format(model_localpath, clf_path))
-    s3.Bucket('praxi-model-xgb-0').download_file(Key='index_tag_mapping', Filename=index_tag_mapping_localpath)
+    s3.Bucket('praxi-model-xgb-02').download_file(Key='index_tag_mapping', Filename=index_tag_mapping_localpath)
     os.popen('cp {0} {1}'.format(index_tag_mapping_localpath, index_tag_mapping_path))
-    s3.Bucket('praxi-model-xgb-0').download_file(Key='tag_index_mapping', Filename=tag_index_mapping_localpath)
+    s3.Bucket('praxi-model-xgb-02').download_file(Key='tag_index_mapping', Filename=tag_index_mapping_localpath)
     os.popen('cp {0} {1}'.format(tag_index_mapping_localpath, tag_index_mapping_path))
-    s3.Bucket('praxi-model-xgb-0').download_file(Key='index_label_mapping', Filename=index_label_mapping_localpath)
+    s3.Bucket('praxi-model-xgb-02').download_file(Key='index_label_mapping', Filename=index_label_mapping_localpath)
     os.popen('cp {0} {1}'.format(index_label_mapping_localpath, index_label_mapping_path))
-    s3.Bucket('praxi-model-xgb-0').download_file(Key='label_index_mapping', Filename=label_index_mapping_localpath)
+    s3.Bucket('praxi-model-xgb-02').download_file(Key='label_index_mapping', Filename=label_index_mapping_localpath)
     os.popen('cp {0} {1}'.format(label_index_mapping_localpath, label_index_mapping_path))
 
 generate_loadmod_op = kfp.components.create_component_from_func(load_model, output_component_file='generate_loadmod_op.yaml', base_image="zongshun96/load_model_s3:0.01")
@@ -56,8 +56,8 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
     # import json
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
-                        aws_access_key_id="AKIAXECNQISLO5332P6S", 
-                        aws_secret_access_key="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",)
+                        aws_access_key_id="AKIAXECNQISLIBBXAMLV", 
+                        aws_secret_access_key="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",)
     
     changesets_l = read_layered_image.run()
     # time.sleep(5000)
@@ -87,8 +87,8 @@ def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(s
     # from function import changeset_gen
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
-                        aws_access_key_id="AKIAXECNQISLO5332P6S", 
-                        aws_secret_access_key="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",)
+                        aws_access_key_id="AKIAXECNQISLIBBXAMLV", 
+                        aws_secret_access_key="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",)
 
     # Load data from previous component
     with open(input_args_path, 'rb') as in_argfile:
@@ -142,8 +142,8 @@ def gen_prediction(clf_path: InputPath(str), index_tag_mapping_path: InputPath(s
     # args = main.get_inputs()
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
-                        aws_access_key_id="AKIAXECNQISLO5332P6S", 
-                        aws_secret_access_key="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",)
+                        aws_access_key_id="AKIAXECNQISLIBBXAMLV", 
+                        aws_secret_access_key="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",)
     cwd = "/pipelines/component/cwd/"
     # cwd = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
 

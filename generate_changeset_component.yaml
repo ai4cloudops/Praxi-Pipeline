@@ -20,8 +20,8 @@ implementation:
       \    import pickle\n    import time\n    import yaml\n    import boto3\n   \
       \ # import os\n    # import json\n    s3 = boto3.resource(service_name='s3',\
       \ \n                        region_name='us-east-1', \n                    \
-      \    aws_access_key_id=\"AKIAXECNQISLO5332P6S\", \n                        aws_secret_access_key=\"\
-      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\",)\n\n    changesets_l = read_layered_image.run()\n\
+      \    aws_access_key_id=\"AKIAXECNQISLIBBXAMLV\", \n                        aws_secret_access_key=\"\
+      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\",)\n\n    changesets_l = read_layered_image.run()\n\
       \    # time.sleep(5000)\n    # debug\n    for ind, changeset in enumerate(changesets_l):\n\
       \        with open(\"/pipelines/component/cwd/changesets/changesets_l\"+str(ind)+\"\
       .yaml\", 'w') as writer:\n            # yaml.dump(changesets_l, writer)\n  \

@@ -30,8 +30,8 @@ implementation:
       \    import tagsets_XGBoost\n    import xgboost as xgb\n    import boto3\n \
       \   # args = main.get_inputs()\n    s3 = boto3.resource(service_name='s3', \n\
       \                        region_name='us-east-1', \n                       \
-      \ aws_access_key_id=\"AKIAXECNQISLO5332P6S\", \n                        aws_secret_access_key=\"\
-      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\",)\n    cwd = \"/pipelines/component/cwd/\"\
+      \ aws_access_key_id=\"AKIAXECNQISLIBBXAMLV\", \n                        aws_secret_access_key=\"\
+      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\",)\n    cwd = \"/pipelines/component/cwd/\"\
       \n    # cwd = \"/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/\"\
       \n\n    # # load from previous component\n    # with open(test_tags_path, 'rb')\
       \ as reader:\n    #     tagsets_l = pickle.load(reader)\n    tagset_files, feature_matrix,\

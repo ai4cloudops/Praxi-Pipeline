@@ -22,21 +22,21 @@ implementation:
       \ label_index_mapping_path):\n    '''Loads the vw model file and Hybrid class\
       \ object '''\n    import boto3\n    import os\n    import time\n    # time.sleep(5000)\n\
       \n    s3 = boto3.resource(service_name='s3', \n                        region_name='us-east-1',\
-      \ \n                        aws_access_key_id=\"AKIAXECNQISLO5332P6S\", \n \
-      \                       aws_secret_access_key=\"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\"\
+      \ \n                        aws_access_key_id=\"AKIAXECNQISLIBBXAMLV\", \n \
+      \                       aws_secret_access_key=\"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\"\
       ,)\n\n    model_localpath = '/pipelines/component/src/model.json'\n    index_tag_mapping_localpath\
       \ = '/pipelines/component/src/index_tag_mapping'\n    tag_index_mapping_localpath\
       \ = '/pipelines/component/src/tag_index_mapping'\n    index_label_mapping_localpath\
       \ = '/pipelines/component/src/index_label_mapping'\n    label_index_mapping_localpath\
-      \ = '/pipelines/component/src/label_index_mapping'\n\n    s3.Bucket('praxi-model-xgb-0').download_file(Key='model.json',\
+      \ = '/pipelines/component/src/label_index_mapping'\n\n    s3.Bucket('praxi-model-xgb-02').download_file(Key='model.json',\
       \ Filename=model_localpath)\n    os.popen('cp {0} {1}'.format(model_localpath,\
-      \ clf_path))\n    s3.Bucket('praxi-model-xgb-0').download_file(Key='index_tag_mapping',\
+      \ clf_path))\n    s3.Bucket('praxi-model-xgb-02').download_file(Key='index_tag_mapping',\
       \ Filename=index_tag_mapping_localpath)\n    os.popen('cp {0} {1}'.format(index_tag_mapping_localpath,\
-      \ index_tag_mapping_path))\n    s3.Bucket('praxi-model-xgb-0').download_file(Key='tag_index_mapping',\
+      \ index_tag_mapping_path))\n    s3.Bucket('praxi-model-xgb-02').download_file(Key='tag_index_mapping',\
       \ Filename=tag_index_mapping_localpath)\n    os.popen('cp {0} {1}'.format(tag_index_mapping_localpath,\
-      \ tag_index_mapping_path))\n    s3.Bucket('praxi-model-xgb-0').download_file(Key='index_label_mapping',\
+      \ tag_index_mapping_path))\n    s3.Bucket('praxi-model-xgb-02').download_file(Key='index_label_mapping',\
       \ Filename=index_label_mapping_localpath)\n    os.popen('cp {0} {1}'.format(index_label_mapping_localpath,\
-      \ index_label_mapping_path))\n    s3.Bucket('praxi-model-xgb-0').download_file(Key='label_index_mapping',\
+      \ index_label_mapping_path))\n    s3.Bucket('praxi-model-xgb-02').download_file(Key='label_index_mapping',\
       \ Filename=label_index_mapping_localpath)\n    os.popen('cp {0} {1}'.format(label_index_mapping_localpath,\
       \ label_index_mapping_path))\n\nimport argparse\n_parser = argparse.ArgumentParser(prog='Load\
       \ model', description='Loads the vw model file and Hybrid class object')\n_parser.add_argument(\"\
