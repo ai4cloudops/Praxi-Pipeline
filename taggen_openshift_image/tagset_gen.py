@@ -142,7 +142,7 @@ def get_columbus_tags(X, disable_tqdm=False, return_freq=True,
 
 if __name__ == "__main__":
     # Load data from previous component
-    cs_dump_path = "/home/ubuntu/Praxi-Pipeline/get_layer_changes/cwd/changesets_l_dump"
+    cs_dump_path = "/home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/cwd/changesets_l_dump"
     with open(cs_dump_path, 'rb') as in_changesets_l:
         changesets_l = pickle.load(in_changesets_l)
                               
@@ -156,17 +156,25 @@ if __name__ == "__main__":
         tagsets_l.append(cur_dict)
 
     # Debug
-    changesets_path = "/home/ubuntu/Praxi-Pipeline/taggen_openshift_image/cwd/changesets.txt"
+    Path("/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd").mkdir(parents=True, exist_ok=True)
+    changesets_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/changesets.txt"
     with open(changesets_path, 'w') as writer:
         for change_dict in changesets_l:
             writer.write(json.dumps(change_dict) + '\n')
-    tagsets_path = "/home/ubuntu/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets.txt"
+    tagsets_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets.txt"
     with open(tagsets_path, 'w') as writer:
         for tag_dict in tagsets_l:
             writer.write(json.dumps(tag_dict) + '\n')
     # time.sleep(5000)
 
     # Pass data to next component
-    ts_dump_path = "/home/ubuntu/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets_l_dump"
+    ts_dump_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets_l_dump"
     with open(ts_dump_path, 'wb') as writer:
         pickle.dump(tagsets_l, writer)
+
+    # Debug
+    Path("/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets").mkdir(parents=True, exist_ok=True)
+    ts_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/unknown"
+    for idx, tagset in enumerate(tagsets_l):
+        with open(ts_path+"-{:d}.tag".format(idx), 'w') as writer:
+            yaml.dump(tagset, writer, default_flow_style=False)

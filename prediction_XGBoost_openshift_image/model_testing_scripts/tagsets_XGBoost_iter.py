@@ -262,9 +262,9 @@ if __name__ == "__main__":
                       booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
                       subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
     # BOW_XGB.load_model(cwd+'model_init.model')
-    # BOW_XGB.fit(train_feature_matrix_iter, train_label_matrix_iter, xgb_model=BOW_XGB.get_booster())
+    BOW_XGB_iter.fit(train_feature_matrix_iter, train_label_matrix_iter, xgb_model=BOW_XGB_init.get_booster())
     # BOW_XGB.fit(train_feature_matrix_iter, train_label_matrix_iter, xgb_model=cwd+'model_init.model')
-    BOW_XGB_iter.fit(train_feature_matrix_iter, train_label_matrix_iter)
+    # BOW_XGB_iter.fit(train_feature_matrix_iter, train_label_matrix_iter)
     pred_label_matrix_iter = BOW_XGB_init.predict(test_feature_matrix_iter)
     pred_label_prob_matrix_iter = BOW_XGB_init.predict_proba(test_feature_matrix_iter)
     pred_label_matrix_iter = pred_label_matrix_iter.add(BOW_XGB_iter.predict(test_feature_matrix_iter))

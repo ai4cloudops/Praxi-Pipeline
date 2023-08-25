@@ -150,7 +150,7 @@ def gen_prediction(clf_path: InputPath(str), index_tag_mapping_path: InputPath(s
     # # load from previous component
     # with open(test_tags_path, 'rb') as reader:
     #     tagsets_l = pickle.load(reader)
-    tagset_files, feature_matrix, label_matrix = tagsets_XGBoost.tagsets_to_matrix(test_tags_path, index_tag_mapping_path, tag_index_mapping_path, index_label_mapping_path, label_index_mapping_path, train_flag=False, cwd=cwd)
+    tagset_files, feature_matrix, label_matrix = tagsets_XGBoost.tagsets_to_matrix(test_tags_path, index_tag_mapping_path=index_tag_mapping_path, tag_index_mapping_path=tag_index_mapping_path, index_label_mapping_path=index_label_mapping_path, label_index_mapping_path=label_index_mapping_path, train_flag=False, inference_flag=True, iter_flag=False, cwd=cwd)
     BOW_XGB = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
                       booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
                       subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)

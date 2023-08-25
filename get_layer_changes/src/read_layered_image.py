@@ -1,5 +1,5 @@
 import tarfile, sys, io, json, os, tempfile, subprocess, yaml, pickle
-import requests
+# import requests
 from pathlib import Path
 from pprint import pprint
 
@@ -22,35 +22,36 @@ def get_free_filename(stub, directory, suffix=''):
             return file_candidate
 
 def run():
-    # homed = "/home/ubuntu/Praxi-Pipeline/get_layer_changes/"
-    homed = "/pipelines/component/"
+    homed = "/home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/"
+    # homed = "/pipelines/component/"
     src = homed+"src/"
-    # if not Path(src).exists():
-    #     Path(src).mkdir()
-    #     os.chmod(src, 777)
+    if not Path(src).exists():
+        Path(src).mkdir()
+        # os.chmod(src, 777)
     cwd = homed+"cwd/"
-    # if not Path(cwd).exists():
-    #     Path(cwd).mkdir()
-    #     os.chmod(cwd, 777)
+    if not Path(cwd).exists():
+        Path(cwd).mkdir()
+        # os.chmod(cwd, 777)
 
-    # LOKI_TOKEN=$(oc whoami -t)
-    # curl -H "Authorization: Bearer $LOKI_TOKEN" "https://grafana-open-cluster-management-observability.apps.nerc-ocp-infra.rc.fas.harvard.edu/api/datasources/proxy/1/api/v1/query" --data-urlencode 'query=kube_pod_container_info{namespace="ai4cloudops-f7f10d9"}' | jq
+    # # LOKI_TOKEN=$(oc whoami -t)
+    # # curl -H "Authorization: Bearer $LOKI_TOKEN" "https://grafana-open-cluster-management-observability.apps.nerc-ocp-infra.rc.fas.harvard.edu/api/datasources/proxy/1/api/v1/query" --data-urlencode 'query=kube_pod_container_info{namespace="ai4cloudops-f7f10d9"}' | jq
 
-    grafana_addr = 'https://grafana-open-cluster-management-observability.apps.nerc-ocp-infra.rc.fas.harvard.edu/api/datasources/proxy/1/api/v1/query'
+    # grafana_addr = 'https://grafana-open-cluster-management-observability.apps.nerc-ocp-infra.rc.fas.harvard.edu/api/datasources/proxy/1/api/v1/query'
 
-    headers={
-        'Authorization': 'Bearer sha256~1GInrC-5iKWU-HpwVLRmAzefAm64vsgEp3wNewZPNBw',
-        'Content-Type': 'application/x-www-form-urlencoded'
-        }
+    # headers={
+    #     'Authorization': 'Bearer sha256~1GInrC-5iKWU-HpwVLRmAzefAm64vsgEp3wNewZPNBw',
+    #     'Content-Type': 'application/x-www-form-urlencoded'
+    #     }
 
-    name_space = "ai4cloudops-f7f10d9"
-    params = {
-        "query": "kube_pod_container_info{namespace='"+name_space+"'}"
-        }
+    # name_space = "ai4cloudops-f7f10d9"
+    # params = {
+    #     "query": "kube_pod_container_info{namespace='"+name_space+"'}"
+    #     }
 
-    kube_pod_container_info = requests.get(grafana_addr, params=params, headers=headers)
-    image_name = "/".join(kube_pod_container_info.json()['data']['result'][0]['metric']['image'].split("/")[1:])
+    # kube_pod_container_info = requests.get(grafana_addr, params=params, headers=headers)
+    # image_name = "/".join(kube_pod_container_info.json()['data']['result'][0]['metric']['image'].split("/")[1:])
 
+    image_name = "zongshun96/introspected_container:0.01"
 
     cmd1 = "bash "+src+"download-frozen-image-v2.sh "+cwd+"introspected_container "+image_name
     p_cmd1 = subprocess.Popen(cmd1.split(" "), stdin=subprocess.PIPE)
@@ -105,9 +106,9 @@ def run():
 
     changesets_l = []             
     changesets_dir = cwd+"changesets/"
-    # if not Path(changesets_dir).exists():
-    #     Path(changesets_dir).mkdir()
-    #     os.chmod(changesets_dir, 777)
+    if not Path(changesets_dir).exists():
+        Path(changesets_dir).mkdir()
+        # os.chmod(changesets_dir, 777)
     with open(cwd+"logfile_changeset_gen_introspected.log", "w") as log_file:
         # pprint(image_d)
         # pprint(image_meta_d)
@@ -145,10 +146,10 @@ def run():
 
 if __name__ == "__main__":
     changesets_l = run()
-    cs_dump_path = "/home/ubuntu/Praxi-Pipeline/get_layer_changes/cwd/changesets_l_dump"
-    cs_path = "/home/ubuntu/Praxi-Pipeline/get_layer_changes/cwd/changesets_l.txt"
+    cs_dump_path = "/home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/cwd/changesets_l_dump"
+    # cs_path = "/home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/cwd/unknown"
     with open(cs_dump_path, 'wb') as writer:
         pickle.dump(changesets_l, writer)
-    with open(cs_path, 'w') as writer:
-        for changeset in changesets_l:
-            yaml.dump(changeset, writer, default_flow_style=False)
+    # for idx, changeset in enumerate(changesets_l):
+    #     with open(cs_path+"-{%d}.yaml".format(idx), 'w') as writer:
+    #         yaml.dump(changeset, writer, default_flow_style=False)

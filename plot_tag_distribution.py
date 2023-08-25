@@ -12,9 +12,9 @@ def plot_size():
     # sizes_l, p_l = [], []
     c_size_d = defaultdict(int)
     p_size_d = {}
-    target_dir = "big_ML_biased_test"
+    # target_dir = "big_ML_biased_test"
     # target_dir = "big_SL_biased_test"
-    # target_dir = "big_train"
+    target_dir = "big_train"
     dirname = "/home/cc/Praxi-study/Praxi-Pipeline/data/"
     out_dirname = dirname+target_dir+"/"
     # print(out_dirname)
