@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import yaml, statistics
 from tqdm import tqdm
 from collections import defaultdict
+from pathlib import Path
 
 def plot_size():
     # sizes_l, p_l = [], []
@@ -15,10 +16,10 @@ def plot_size():
     # target_dir = "big_ML_biased_test"
     # target_dir = "big_SL_biased_test"
     target_dir = "big_train"
-    dirname = "/home/cc/Praxi-study/Praxi-Pipeline/data/"
+    dirname = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_0/"
     out_dirname = dirname+target_dir+"/"
     # print(out_dirname)
-    tagsets_l = [name for name in os.listdir(out_dirname) if os.path.isfile(out_dirname+name)]
+    tagsets_l = [name for name in os.listdir(out_dirname) if os.path.isfile(out_dirname+name) and name[-4:]!=".obj"]
     # print(tagsets_l)
     # if len(tagsets_l) == 2:
     for tagsets_name in tqdm(tagsets_l):
@@ -43,6 +44,8 @@ def plot_size():
                         p_size_d[tagset['label']] = 1
             except yaml.YAMLError as exc:
                 print(exc)
+
+    Path(dirname+"plots/").mkdir(parents=True, exist_ok=True)
 
     p_size_d = {k: v for k, v in sorted(p_size_d.items(), key=lambda item: item[1])}
     fig, ax = plt.subplots(1, 1, figsize=(26, 6), dpi=600)
