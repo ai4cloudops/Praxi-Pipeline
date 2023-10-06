@@ -14,7 +14,7 @@ import xgboost as xgb
 import psutil
 
 
-def tagsets_to_matrix(tags_path, index_tag_mapping_path=None, tag_index_mapping_path=None, index_label_mapping_path=None, label_index_mapping_path=None, cwd="/home/ubuntu/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/", train_flag=False, inference_flag=True, iter_flag=False):
+def tagsets_to_matrix(tags_path, index_tag_mapping_path=None, tag_index_mapping_path=None, index_label_mapping_path=None, label_index_mapping_path=None, cwd="/home/ubuntu/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/", train_flag=False, inference_flag=True, iter_flag=False, packages_select_set=set(), input_size=None):
     if index_tag_mapping_path == None:
         index_tag_mapping_path=cwd+'index_tag_mapping'
         tag_index_mapping_path=cwd+'tag_index_mapping'
@@ -33,7 +33,7 @@ def tagsets_to_matrix(tags_path, index_tag_mapping_path=None, tag_index_mapping_
     # debuging with lcoal tagset files
     # print(os.listdir(tags_path))
     for tag_file in tqdm(os.listdir(tags_path)):
-        if(tag_file[-3:] == 'tag'):
+        if(tag_file[-3:] == 'tag') and (tag_file[:-3].rsplit('-', 1)[0] in packages_select_set or packages_select_set == set()):
             with open(tags_path + tag_file, 'rb') as tf:
                 # print(tag_file)
                 tagset_files.append(tag_file)
@@ -158,14 +158,28 @@ def tagsets_to_matrix(tags_path, index_tag_mapping_path=None, tag_index_mapping_
     ## Generate Feature Matrix
     instance_row_list = []
     for instance_tags_d in tags_by_instance_l:
-        instance_row = np.zeros(len(all_tags_l))
-        for tag_name,tag_count in instance_tags_d.items():
-            if tag_name in tag_index_mapping:  # remove new tags unseen in mapping.
-                instance_row[tag_index_mapping[tag_name]] = tag_count
-            else:
-                removed_tags_l.append(tag_name)
+        if input_size == None:
+            instance_row = np.zeros(len(all_tags_l))
+            for tag_name,tag_count in instance_tags_d.items():
+                if tag_name in tag_index_mapping:  # remove new tags unseen in mapping.
+                    instance_row[tag_index_mapping[tag_name]] = tag_count
+                else:
+                    removed_tags_l.append(tag_name)
+        else:
+            instance_row = np.zeros(input_size)
+            for tag_name,tag_count in instance_tags_d.items():
+                if tag_name in tag_index_mapping:  # remove new tags unseen in mapping.
+                    instance_row[tag_index_mapping[tag_name]%input_size] = tag_count
+                else:
+                    removed_tags_l.append(tag_name)
+        # else:
+        #     # instance_row = np.zeros(input_size)
+        #     instance_row = np.random.randint(1000000000, size=input_size)
+        #     # instance_row = np.array(range(input_size-1,-1,-1))
         instance_row_list.append(instance_row)
+    # instance_row_list.extend(instance_row_list)
     feature_matrix = np.vstack(instance_row_list)
+    del instance_row_list
     with open(cwd+'removed_tags_l', 'wb') as fp:
         pickle.dump(removed_tags_l, fp)
     with open(cwd+'removed_tags_l.txt', 'w') as f:
@@ -179,6 +193,7 @@ def tagsets_to_matrix(tags_path, index_tag_mapping_path=None, tag_index_mapping_
     if not inference_flag:
         removed_label_l = []
         ## Handling Mapping
+
         if train_flag and not iter_flag:  # generate initial mapping.
             all_label_l = list(all_label_set)
             label_index_mapping = {}
@@ -234,6 +249,7 @@ def tagsets_to_matrix(tags_path, index_tag_mapping_path=None, tag_index_mapping_
             instance_row_list.append(instance_row)
             # label_matrix = np.vstack([label_matrix, instance_row])
         # label_matrix = np.delete(label_matrix, (0), axis=0)
+        # instance_row_list.extend(instance_row_list)
         label_matrix = np.vstack(instance_row_list)
         with open(cwd+'removed_label_l', 'wb') as fp:
             pickle.dump(removed_label_l, fp)
@@ -315,7 +331,7 @@ def print_metrics(cwd, outfile, y_true, y_pred, labels, op_durations=None):
             np.array([]), fmt='%d', header=file_header, delimiter=',',
             comments='')
 
-def run_init_train(train_tags_init_path, test_tags_path, cwd):
+def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estimators=100, train_packages_select_set=set(), test_packages_select_set=set(), input_size=None, depth=1, tree_method="auto"):
     # train_tags_init_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_SL_biased_test/"
     # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
     # # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_init/"
@@ -327,9 +343,9 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd):
 
     # Data
     t0 = time.time()
-    train_tagset_files_init, train_feature_matrix_init, train_label_matrix_init = tagsets_to_matrix(train_tags_init_path, cwd=cwd, train_flag=True, inference_flag=False)
+    train_tagset_files_init, train_feature_matrix_init, train_label_matrix_init = tagsets_to_matrix(train_tags_init_path, cwd=cwd, train_flag=True, inference_flag=False, packages_select_set=train_packages_select_set, input_size=input_size)
     t1 = time.time()
-    test_tagset_files_init, test_feature_matrix_init, test_label_matrix_init = tagsets_to_matrix(test_tags_path, cwd=cwd, train_flag=False, inference_flag=False)
+    test_tagset_files_init, test_feature_matrix_init, test_label_matrix_init = tagsets_to_matrix(test_tags_path, cwd=cwd, train_flag=False, inference_flag=False, packages_select_set=test_packages_select_set, input_size=input_size)
     # test_tagset_files, test_feature_matrix, test_label_matrix = tagsets_to_matrix(test_tags_path, cwd=cwd, train_flag=False, inference_flag=False)
     t2 = time.time()
     print(t1-t0)
@@ -337,6 +353,10 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd):
     op_durations["tagsets_to_matrix-trainset_xsize"] = train_feature_matrix_init.shape[0]
     op_durations["tagsets_to_matrix-trainset_ysize"] = train_feature_matrix_init.shape[1]
     op_durations["tagsets_to_matrix-testset"] = t2-t1
+
+    ######## save train_feature_matrix_init
+    with open(cwd+"train_feature_matrix_init.mat","wb") as filehandler:
+        np.save(filehandler, train_feature_matrix_init)
 
     ######## Plot train feature usage as a B/W plot
     fig, ax = plt.subplots(1, 1, figsize=(600, 10))
@@ -420,9 +440,10 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd):
 
     # Init Training & Testing
     t0 = time.time()
-    BOW_XGB_init = xgb.XGBClassifier(n_estimators=1, max_depth=1, learning_rate=0.1,silent=False, objective='binary:logistic', \
-                      booster='gbtree', n_jobs=32, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
-                      subsample=1, colsample_bytree=1, colsample_bylevel=1, reg_alpha=0, reg_lambda=1)
+    BOW_XGB_init = xgb.XGBClassifier(n_estimators=n_estimators, max_depth=depth, learning_rate=0.1,silent=False, objective='binary:logistic', \
+                      booster='gbtree', n_jobs=n_jobs, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
+                      subsample=1, colsample_bytree=1, colsample_bylevel=1, reg_alpha=0, reg_lambda=1, tree_method=tree_method)
+                    #   subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1, tree_method=tree_method)
     BOW_XGB_init.fit(train_feature_matrix_init, train_label_matrix_init)
     t1 = time.time()
     pred_label_matrix_init = BOW_XGB_init.predict(test_feature_matrix_init)
@@ -492,7 +513,7 @@ def run_iter_train():
         labels = np.array(pickle.load(fp))
     print_metrics(cwd, 'metrics_iter.out', test_label_matrix_iter, pred_label_matrix_iter, labels)
 
-def run_pred(cwd, clf_path_l, test_tags_path):
+def run_pred(cwd, clf_path_l, test_tags_path, n_jobs=64, n_estimators=100, packages_select_set=set(), input_size=None, depth=1, tree_method="auto"):
     # # cwd = "/pipelines/component/cwd/"
     # cwd = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
     # clf_path = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/model_init.json"
@@ -502,7 +523,7 @@ def run_pred(cwd, clf_path_l, test_tags_path):
     op_durations = {}
     label_matrix_list, pred_label_matrix_list, labels_list = [], [], []
     results = defaultdict(list)
-    for clf_path in clf_path_l:
+    for clf_idx, clf_path in enumerate(clf_path_l):
         # op_durations = {}
 
         # # load from previous component
@@ -510,7 +531,7 @@ def run_pred(cwd, clf_path_l, test_tags_path):
         #     tagsets_l = pickle.load(reader)
         t0 = time.time()
         # ########### convert from tag:count strings to encoding format
-        tagset_files, feature_matrix, label_matrix = tagsets_to_matrix(test_tags_path, inference_flag=False, cwd=clf_path[:-15]) # get rid of "model_init.json" in the clf_path.
+        tagset_files, feature_matrix, label_matrix = tagsets_to_matrix(test_tags_path, inference_flag=False, cwd=clf_path[:-15], packages_select_set=packages_select_set, input_size=input_size) # get rid of "model_init.json" in the clf_path.
         # # ########### load a previously converted encoding format data obj
         # with open(test_tags_path+"feature_matrix.obj","rb") as filehandler:
         #     feature_matrix = pickle.load(filehandler)
@@ -519,9 +540,9 @@ def run_pred(cwd, clf_path_l, test_tags_path):
         # with open(test_tags_path+"tagset_files.obj","rb") as filehandler:
         #     tagset_files = pickle.load(filehandler)
         # # ############################################
-        BOW_XGB = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
-                        booster='gbtree', n_jobs=8, gamma=0, min_child_weight=1, max_delta_step=0, \
-                        subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
+        BOW_XGB = xgb.XGBClassifier(n_estimators=n_estimators, max_depth=depth, learning_rate=0.1,silent=False, objective='binary:logistic', \
+                      booster='gbtree', n_jobs=n_jobs, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
+                      subsample=1, colsample_bytree=1, colsample_bylevel=1, reg_alpha=0, reg_lambda=1, tree_method=tree_method)
         BOW_XGB.load_model(clf_path)
         BOW_XGB.set_params(n_jobs=1)
         t1 = time.time()
@@ -531,6 +552,9 @@ def run_pred(cwd, clf_path_l, test_tags_path):
         op_durations[clf_path+"\n label_matrix_size_0"] = label_matrix.shape[0]
         op_durations[clf_path+"\n label_matrix_size_1"] = label_matrix.shape[1]
         # op_durations[clf_path+"\n tagset_files"] = tagset_files
+        ######## save train_feature_matrix_init
+        with open(cwd+"train_feature_matrix_init_"+str(clf_idx)+".mat","wb") as filehandler:
+            np.save(filehandler, feature_matrix)
 
         # # debug
         # with open("/pipelines/component/cwd/tagsets.log", 'w') as writer:
@@ -589,6 +613,7 @@ def load_model(clf_path):
     return BOW_XGB
 
 if __name__ == "__main__":
+    import itertools
     # # p = psutil.Process()
     # # p.cpu_affinity([0])
     # # ###################################
@@ -608,177 +633,49 @@ if __name__ == "__main__":
 
 
     ###################################
-    # # run_init_train()
-    # # # input size vs train latency
-    train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_0/big_train/"
-    test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_0/big_ML_biased_test/"
-    cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_0_train_1tree/"
-    run_init_train(train_tags_path, test_tags_path, cwd)
+    # run_init_train()
+    # ============= data_0
+    packages_l = ["wrapt", "attrs", "fsspec", "MarkupSafe", "grpcio-status", "cffi", "click", "PyJWT", "pytz", "pyasn1"]
+    packages_l0 = ["psutil", "tomli", "isodate", "jsonschema", "grpcio", "soupsieve", "frozenlist", "cachetools", "botocore", "awscli"]
+    packages_l1 = ["typing-extensions", "charset-normalizer", "idna", "python-dateutil", "google-api-core", "cryptography", "importlib-metadata", "s3fs", "yarl", "pyyaml"]
+    packages_l2 = ["emoji", "Flask", "seaborn", "NLTK", "pytest", "zipp", "authlib", "pycparser", "colorama", "oauthlib"]
+    packages_l3 = ["cmake", "nvidia-cuda-nvrtc-cu11", "jinja2", "nvidia-cuda-runtime-cu11", "wheel", "triton==2.0.0", "scikit-learn", "pandas", "dask", "deap"]
+    packages_l4 = ["requests", "Scrapy", "six", "opencv-python", "simplejson", "opacus", "redis", "astropy", "biopython", "bokeh"]
+    packages_l5 = ["scikit-image", "scoop", "Theano", "beautifulsoup4", "plotly", "pycaret", "mahotas", "statsmodels", "nilearn", "networkx"]
+    packages_l6 = ["SQLAlchemy", "matplotlib", "scipy", "boto3", "rsa", "s3transfer", "urllib3", "setuptools", "pyspark", "pillow"]
+    packages_l.extend(packages_l0)
+    packages_l.extend(packages_l1)
+    packages_l.extend(packages_l2)
+    packages_l.extend(packages_l3)
+    packages_l.extend(packages_l4)
+    packages_l.extend(packages_l5)
+    packages_l.extend(packages_l6)
 
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_1/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_1/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_1_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
 
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_2/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_2/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_2_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
+    # n_models = 1
+    for n_jobs in [1]:
+        for n_models in [8,4,2,1]:
+            for n_estimators in [100]:
+                for depth in [1]:
+                    for tree_method in["exact"]: # "exact","approx","hist"
+                        for input_size in [1708, 3416, 6832, 13664, 27329, 54659, 109319]: # [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
+                            package_subset, step = [], int(len(packages_l)/n_models)
+                            for i in range(0, len(packages_l), step):
+                                package_subset.append(set(packages_l[i:i+step]))
 
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_3/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_3/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_3_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
+                            for i, train_subset in enumerate(package_subset):
+                                test_subset = set()
+                                for package_names in itertools.permutations(train_subset, 2):
+                                    test_subset.add("-".join(package_names))
+                                train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_train/"
+                                test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
+                                cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/"
+                                # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
+                                # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"randomint10000000_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
+                                run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
+                                # break
 
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_4/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_4/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_4_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
 
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_5/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_5/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_5_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_6/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_6/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_6_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_7/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_7/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_7_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_8/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_8/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_8_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_9/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_9/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_9_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_10/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_10/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_10_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_11/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_11/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_11_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_12/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_12/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_12_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_13/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_13/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_13_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # # # Number of Models
-    # # 8 models
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_0/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_0/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_0_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_1/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_1/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_1_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_2/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_2/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_2_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_3/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_3/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_3_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_4/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_4/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_4_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_5/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_5/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_5_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_7/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_7/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_7_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # # 4 models
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_4_0/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_4_0/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_4_0_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_4_1/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_4_1/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_4_1_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_4_2/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_4_2/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_4_2_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_4_3/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_4_3/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_4_3_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # # 1 model
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_1_0/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_1_0/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_1_0_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # # # Datasets
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_SL_biased_test/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0&2_SL/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0&2_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_SL_biased_test/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_SL/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_2/big_SL_biased_test/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_2/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_2_SL/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
-
-    # train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_2/big_train/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_2/big_ML_biased_test/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_2_train/"
-    # run_init_train(train_tags_path, test_tags_path, cwd)
 
 
     ###################################
@@ -787,102 +684,23 @@ if __name__ == "__main__":
 
     ###################################
     # # run_pred()
-    # # # N Estimators
-    # # 1 model
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator/cwd_data_0&2_ML_with_data_0&2_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator/cwd_ML_with_data_0&2_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
-
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/50_estimator/cwd_data_0&2_ML_with_data_0&2_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/50_estimator/cwd_ML_with_data_0&2_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
-
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/10_estimator/cwd_data_0&2_ML_with_data_0&2_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/10_estimator/cwd_ML_with_data_0&2_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
-
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/5_estimator/cwd_data_0&2_ML_with_data_0&2_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/5_estimator/cwd_ML_with_data_0&2_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
-
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/1_estimator/cwd_data_0&2_ML_with_data_0&2_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/1_estimator/cwd_ML_with_data_0&2_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
-
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/1_estimator_1_depth/cwd_data_0&2_ML_with_data_0&2_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/1_estimator_1_depth/cwd_ML_with_data_0&2_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
-
-    # # two models
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator/cwd_data_0&2_ML_with_data_0+2_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator/cwd_ML_with_data_0_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator/cwd_ML_with_data_2_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
-
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/50_estimator/cwd_data_0&2_ML_with_data_0+2_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/50_estimator/cwd_ML_with_data_0_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/50_estimator/cwd_ML_with_data_2_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
-
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/10_estimator/cwd_data_0&2_ML_with_data_0+2_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/10_estimator/cwd_ML_with_data_0_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/10_estimator/cwd_ML_with_data_2_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
-
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/5_estimator/cwd_data_0&2_ML_with_data_0+2_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/5_estimator/cwd_ML_with_data_0_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/5_estimator/cwd_ML_with_data_2_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
-
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/1_estimator/cwd_data_0&2_ML_with_data_0+2_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/1_estimator/cwd_ML_with_data_0_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/1_estimator/cwd_ML_with_data_2_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
-
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/1_estimator_1_depth/cwd_data_0&2_ML_with_data_0+2_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/1_estimator_1_depth/cwd_ML_with_data_0_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/1_estimator_1_depth/cwd_ML_with_data_2_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
-
     # # # Number of Models
-    # # 1 models
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_data_0_ML_with_data_0_1_0_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_ML_with_data_0_1_0_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
+    for n_jobs in [8,1]:
+        for n_models in [8,4,2,1]:
+            for n_estimators in [100]:
+                for depth in [1]:
+                    for tree_method in["exact"]: # "exact","approx","hist"
+                        for input_size in [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]:
+                            clf_path = []
+                            for i in range(n_models):
+                                                # "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
+                                clf_path.append("/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+"8njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/model_init.json")
+                                # "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/"
+                            cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/"
+                            test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
+            #    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
+                            run_pred(cwd, clf_path, test_tags_path, n_jobs=n_jobs, n_estimators=n_estimators, input_size=input_size, depth=depth, tree_method=tree_method)
 
-    # # 4 models
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_data_0_ML_with_data_0_4_0+0_4_1+0_4_2+0_4_3_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_ML_with_data_0_4_0_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_ML_with_data_0_4_1_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_ML_with_data_0_4_2_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_ML_with_data_0_4_3_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
-
-    # # 8 models
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_data_0_ML_with_data_0_8_0+0_8_1+0_8_2+0_8_3+0_8_4+0_8_5+0_8_6+0_8_7_train/"
-    # clf_path = ["/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_ML_with_data_0_8_0_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_ML_with_data_0_8_1_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_ML_with_data_0_8_2_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_ML_with_data_0_8_3_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_ML_with_data_0_8_4_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_ML_with_data_0_8_5_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_ML_with_data_0_8_6_train/model_init.json", "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/100_estimator_1_depth/cwd_ML_with_data_0_8_7_train/model_init.json"]
-    # # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
-    # run_pred(cwd, clf_path, test_tags_path)
 
     ###################################
     # verify the init trees are still tehere.
