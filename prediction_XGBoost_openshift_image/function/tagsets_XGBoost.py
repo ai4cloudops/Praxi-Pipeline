@@ -1,4 +1,4 @@
-import os, pickle, time
+import os, pickle, time, gc
 import yaml, json
 import numpy as np
 from tqdm import tqdm
@@ -7,6 +7,8 @@ from sklearn.datasets import make_multilabel_classification
 import sklearn.metrics as metrics
 from sklearn.preprocessing import Normalizer
 from pathlib import Path
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 import xgboost as xgb
@@ -93,18 +95,18 @@ def tagsets_to_matrix(tags_path, index_tag_mapping_path=None, tag_index_mapping_
 
 
 
-# #############
-    # Save tag:count in mapping format
-    with open(tags_path+"all_tags_set.obj","wb") as filehandler:
-         pickle.dump(all_tags_set, filehandler)
-    with open(tags_path+"all_label_set.obj","wb") as filehandler:
-         pickle.dump(all_label_set, filehandler)
-    with open(tags_path+"tags_by_instance_l.obj","wb") as filehandler:
-         pickle.dump(tags_by_instance_l, filehandler)
-    with open(tags_path+"labels_by_instance_l.obj","wb") as filehandler:
-         pickle.dump(labels_by_instance_l, filehandler)
-    with open(tags_path+"tagset_files.obj","wb") as filehandler:
-         pickle.dump(tagset_files, filehandler)
+# # #############
+#     # # Save tag:count in mapping format
+#     # with open(tags_path+"all_tags_set.obj","wb") as filehandler:
+#     #      pickle.dump(all_tags_set, filehandler)
+#     # with open(tags_path+"all_label_set.obj","wb") as filehandler:
+#     #      pickle.dump(all_label_set, filehandler)
+#     # with open(tags_path+"tags_by_instance_l.obj","wb") as filehandler:
+#     #      pickle.dump(tags_by_instance_l, filehandler)
+#     # with open(tags_path+"labels_by_instance_l.obj","wb") as filehandler:
+#     #      pickle.dump(labels_by_instance_l, filehandler)
+#     # with open(tags_path+"tagset_files.obj","wb") as filehandler:
+#     #      pickle.dump(tagset_files, filehandler)
 
     # # Load tag:count in mapping format 
     # with open(tags_path+"all_tags_set.obj","rb") as filehandler:
@@ -332,10 +334,10 @@ def print_metrics(cwd, outfile, y_true, y_pred, labels, op_durations=None):
             comments='')
 
 def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estimators=100, train_packages_select_set=set(), test_packages_select_set=set(), input_size=None, depth=1, tree_method="auto"):
-    # train_tags_init_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_SL_biased_test/"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_init/"
-    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0&2_SL/"
+    # train_tags_init_path = "/home/ubuntu/Praxi-Pipeline/data/data_0&2/big_SL_biased_test/"
+    # test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
+    # # cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_init/"
+    # cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0&2_SL/"
     Path(cwd).mkdir(parents=True, exist_ok=True)
 
     op_durations = {}
@@ -346,7 +348,6 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estim
     train_tagset_files_init, train_feature_matrix_init, train_label_matrix_init = tagsets_to_matrix(train_tags_init_path, cwd=cwd, train_flag=True, inference_flag=False, packages_select_set=train_packages_select_set, input_size=input_size)
     t1 = time.time()
     test_tagset_files_init, test_feature_matrix_init, test_label_matrix_init = tagsets_to_matrix(test_tags_path, cwd=cwd, train_flag=False, inference_flag=False, packages_select_set=test_packages_select_set, input_size=input_size)
-    # test_tagset_files, test_feature_matrix, test_label_matrix = tagsets_to_matrix(test_tags_path, cwd=cwd, train_flag=False, inference_flag=False)
     t2 = time.time()
     print(t1-t0)
     op_durations["tagsets_to_matrix-trainset"] = t1-t0
@@ -354,14 +355,16 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estim
     op_durations["tagsets_to_matrix-trainset_ysize"] = train_feature_matrix_init.shape[1]
     op_durations["tagsets_to_matrix-testset"] = t2-t1
 
-    ######## save train_feature_matrix_init
-    with open(cwd+"train_feature_matrix_init.mat","wb") as filehandler:
-        np.save(filehandler, train_feature_matrix_init)
+    # ######## save train_feature_matrix_init
+    # with open(cwd+"train_feature_matrix_init.mat","wb") as filehandler:
+    #     np.save(filehandler, train_feature_matrix_init)
 
-    ######## Plot train feature usage as a B/W plot
-    fig, ax = plt.subplots(1, 1, figsize=(600, 10))
-    ax.imshow(train_feature_matrix_init > 0, cmap='hot', interpolation="nearest")
-    plt.savefig(cwd+'train_feature_matrix_init.pdf', format='pdf', dpi=50, bbox_inches='tight')
+    # ######## Plot train feature usage as a B/W plot
+    # fig, ax = plt.subplots(1, 1, figsize=(600, 10))
+    # ax.imshow(train_feature_matrix_init > 0, cmap='hot', interpolation="nearest")
+    # plt.savefig(cwd+'train_feature_matrix_init.pdf', format='pdf', dpi=50, bbox_inches='tight')
+    # plt.close(fig)
+    # gc.collect()
 
     ######## Plot average train feature usage per label as a B/W plot
     # train_feature_init_used_count = (train_feature_matrix_init > 0).sum(axis=0)
@@ -370,7 +373,6 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estim
     # for line in train_tagset_files_init:
     #     label_count_d["-".join(line.split("-")[:-1])] += 1
     train_feature_init_used_count_list = []
-    # train_feature_init_used_count = np.zeros(train_feature_matrix_init.shape[1])
     idxs_yx = np.nonzero(train_label_matrix_init)
     label_row_idx = np.array([])
     col_idx_prev = -1
@@ -378,22 +380,23 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estim
     for entry_idx, (row_idx, col_idx) in enumerate(zip(idxs_yx[0],idxs_yx[1])):
         if col_idx_prev != col_idx:
             if col_idx_prev != -1:
-                # train_feature_init_used_count = np.vstack([train_feature_init_used_count, train_feature_matrix_init[list(range(row_idx_prev, row_idx)), :].mean(axis=0)])
                 train_feature_init_used_count_list.append(train_feature_matrix_init[list(range(row_idx_prev, row_idx)), :].mean(axis=0))
             col_idx_prev = col_idx
             row_idx_prev = row_idx
             label_row_idx = np.append(label_row_idx, [row_idx])
-        if entry_idx == len(idxs_yx)-1 and col_idx_prev != -1:
-            # train_feature_init_used_count = np.vstack([train_feature_init_used_count, train_feature_matrix_init[list(range(row_idx_prev, row_idx+1)), :].mean(axis=0)])
+        if entry_idx == len(idxs_yx[0])-1 and col_idx_prev != -1:
             train_feature_init_used_count_list.append(train_feature_matrix_init[list(range(row_idx_prev, row_idx+1)), :].mean(axis=0))
-    # train_feature_init_used_count = np.delete(train_feature_init_used_count, (0), axis=0)
     train_feature_init_used_count = np.vstack(train_feature_init_used_count_list)
-    fig, ax = plt.subplots(1, 1, figsize=(600, 10))
-    ax.imshow(train_feature_init_used_count > 0, cmap='hot', interpolation="nearest")
-    plt.savefig(cwd+'train_feature_init_used_count.pdf', format='pdf', dpi=50, bbox_inches='tight')
-    fig, ax = plt.subplots(1, 1, figsize=(600, 10))
-    ax.bar(list(range(train_feature_matrix_init.shape[1])), (train_feature_init_used_count > 0).sum(axis=0))
-    plt.savefig(cwd+'train_feature_init_used_count_bar.pdf', format='pdf', dpi=50, bbox_inches='tight')
+    # fig, ax = plt.subplots(1, 1, figsize=(600, 10))
+    # ax.imshow(train_feature_init_used_count > 0, cmap='hot', interpolation="nearest")
+    # plt.savefig(cwd+'train_feature_init_used_count.pdf', format='pdf', dpi=50, bbox_inches='tight')
+    # plt.close(fig)
+    # gc.collect()
+    # fig, ax = plt.subplots(1, 1, figsize=(600, 10))
+    # ax.bar(list(range(train_feature_matrix_init.shape[1])), (train_feature_init_used_count > 0).sum(axis=0))
+    # plt.savefig(cwd+'train_feature_init_used_count_bar.pdf', format='pdf', dpi=50, bbox_inches='tight')
+    # plt.close(fig)
+    # gc.collect()
     unique, counts = np.unique((train_feature_init_used_count > 0).sum(axis=0), return_counts=True)
     x, y = [], []
     for idx in range(min(unique), max(unique)+1):
@@ -402,41 +405,58 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estim
             y.extend(list(counts[np.where(unique == idx)]))
         else:
             y.append(0)
-    fig, ax = plt.subplots(1, 1, figsize=(100, 100))
-    ax.tick_params(axis='both', which='major', labelsize=50)
-    ax.tick_params(axis='both', which='minor', labelsize=45)
-    ax.bar(x,y)
-    ax.set_xticklabels([str(idx) for idx in x])
-    ax.set_xticks(x)
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    y_normalized = [round(y_entry/sum(y)*100, 2) for y_entry in y]
+    p = ax.bar(x,y_normalized)
+    ax.bar_label(p, fontsize=18)
+    # ax.set_xticklabels([str(idx) for idx in x])
+    # ax.set_xticks(x)
+    ax.set_xlim([0,5.5])
+    ax.set_title("% of Tokens Occurring in Multiple Packages", fontsize=20)
+    ax.set_ylabel("% of Tokens", fontsize=20)
+    ax.set_xlabel("Number of Packages", fontsize=20)
     plt.savefig(cwd+'train_feature_init_used_count_freq_bar.pdf', format='pdf', dpi=50, bbox_inches='tight')
+    plt.close(fig)
+    gc.collect()
 
-    ######## Plot train label occurance as a B/W plot
-    fig, ax = plt.subplots(1, 1, figsize=(600, 10))
-    ax.imshow(train_label_matrix_init > 0, cmap='hot', interpolation="nearest")
-    plt.savefig(cwd+'train_label_matrix_init.pdf', format='pdf', dpi=50, bbox_inches='tight')
-
-    with open(cwd+'train_tagset_files_init.txt', 'w') as f:
-        for line in train_tagset_files_init:
-            f.write(f"{line}\n")
-
-    ######## Plot test feature usage as a B/W plot
-    fig, ax = plt.subplots(1, 1, figsize=(600, 10))
-    ax.imshow(test_feature_matrix_init > 0, cmap='hot', interpolation="nearest")
-    plt.savefig(cwd+'test_feature_matrix_init.pdf', format='pdf', dpi=50, bbox_inches='tight')
-
-    # test_feature_init_used_count = (test_feature_matrix_init > 0).sum(axis=0)
+    # ######## Plot train label occurance as a B/W plot
     # fig, ax = plt.subplots(1, 1, figsize=(600, 10))
-    # ax.bar(list(range(len(test_feature_init_used_count))), test_feature_init_used_count)
-    # plt.savefig(cwd+'test_feature_init_used_count.pdf', format='pdf', dpi=50, bbox_inches='tight')
+    # ax.imshow(train_label_matrix_init > 0, cmap='hot', interpolation="nearest")
+    # plt.savefig(cwd+'train_label_matrix_init.pdf', format='pdf', dpi=50, bbox_inches='tight')
+    # plt.close(fig)
+    # gc.collect()
 
-    ######## Plot test label occurance as a B/W plot
-    fig, ax = plt.subplots(1, 1, figsize=(600, 10))
-    ax.imshow(test_label_matrix_init > 0, cmap='hot', interpolation="nearest")
-    plt.savefig(cwd+'test_label_matrix_init.pdf', format='pdf', dpi=50, bbox_inches='tight')
+    # with open(cwd+'train_tagset_files_init.txt', 'w') as f:
+    #     for line in train_tagset_files_init:
+    #         f.write(f"{line}\n")
 
-    with open(cwd+'test_tagset_files_init.txt', 'w') as f:
-        for line in test_tagset_files_init:
-            f.write(f"{line}\n")
+
+    # ######## Plot test feature usage as a B/W plot
+    # fig, ax = plt.subplots(1, 1, figsize=(600, 10))
+    # ax.imshow(test_feature_matrix_init > 0, cmap='hot', interpolation="nearest")
+    # plt.savefig(cwd+'test_feature_matrix_init.pdf', format='pdf', dpi=50, bbox_inches='tight')
+    # plt.close(fig)
+    # gc.collect()
+
+    # # test_feature_init_used_count = (test_feature_matrix_init > 0).sum(axis=0)
+    # # fig, ax = plt.subplots(1, 1, figsize=(600, 10))
+    # # ax.bar(list(range(len(test_feature_init_used_count))), test_feature_init_used_count)
+    # # plt.savefig(cwd+'test_feature_init_used_count.pdf', format='pdf', dpi=50, bbox_inches='tight')
+    # # plt.close(fig)
+    # # gc.collect()
+
+    # ######## Plot test label occurance as a B/W plot
+    # fig, ax = plt.subplots(1, 1, figsize=(600, 10))
+    # ax.imshow(test_label_matrix_init > 0, cmap='hot', interpolation="nearest")
+    # plt.savefig(cwd+'test_label_matrix_init.pdf', format='pdf', dpi=50, bbox_inches='tight')
+    # plt.close(fig)
+    # gc.collect()
+
+    # with open(cwd+'test_tagset_files_init.txt', 'w') as f:
+    #     for line in test_tagset_files_init:
+    #         f.write(f"{line}\n")
 
     # Init Training & Testing
     t0 = time.time()
@@ -460,9 +480,9 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estim
 
     # np.savetxt(cwd+'test_feature_matrix.out', test_feature_matrix, delimiter=',')
 
-    np.savetxt(cwd+'pred_label_matrix_init.out', pred_label_matrix_init, delimiter=',')
-    np.savetxt(cwd+'test_label_matrix_init.out', test_label_matrix_init, delimiter=',')
-    np.savetxt(cwd+'pred_label_prob_matrix_init.out', pred_label_prob_matrix_init, delimiter=',')
+    # np.savetxt(cwd+'pred_label_matrix_init.out', pred_label_matrix_init, delimiter=',')
+    # np.savetxt(cwd+'test_label_matrix_init.out', test_label_matrix_init, delimiter=',')
+    # np.savetxt(cwd+'pred_label_prob_matrix_init.out', pred_label_prob_matrix_init, delimiter=',')
     # np.savetxt(cwd+'results.out', results, delimiter=',')
     with open(cwd+'results.out', 'w') as fp:
         labels = yaml.dump(results, fp)
@@ -617,7 +637,7 @@ if __name__ == "__main__":
     # # p = psutil.Process()
     # # p.cpu_affinity([0])
     # # ###################################
-    # cwd  = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_1_train/"
+    # cwd  = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_1_train/"
     # BOW_XGB = load_model(cwd+"model_init.json")
     # # booster = BOW_XGB.get_booster()
     # # tree_df = booster.trees_to_dataframe()
@@ -653,12 +673,12 @@ if __name__ == "__main__":
 
 
     # n_models = 1
-    for n_jobs in [1]:
-        for n_models in [8,4,2,1]:
+    for n_jobs in [6]:
+        for n_models in [1,8,4,2]:
             for n_estimators in [100]:
                 for depth in [1]:
                     for tree_method in["exact"]: # "exact","approx","hist"
-                        for input_size in [1708, 3416, 6832, 13664, 27329, 54659, 109319]: # [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
+                        for input_size in [109319, 1708, 3416, 6832, 13664, 27329, 54659]: # [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
                             package_subset, step = [], int(len(packages_l)/n_models)
                             for i in range(0, len(packages_l), step):
                                 package_subset.append(set(packages_l[i:i+step]))
@@ -667,11 +687,11 @@ if __name__ == "__main__":
                                 test_subset = set()
                                 for package_names in itertools.permutations(train_subset, 2):
                                     test_subset.add("-".join(package_names))
-                                train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_train/"
-                                test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
-                                cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/"
-                                # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
-                                # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"randomint10000000_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
+                                train_tags_path = "/home/ubuntu/Praxi-Pipeline/data/data_0/big_train/"
+                                test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
+                                cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/"
+                                # cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
+                                # cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"randomint10000000_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
                                 run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
                                 # break
 
@@ -682,24 +702,24 @@ if __name__ == "__main__":
     # run_iter_train()
 
 
-    ###################################
-    # # run_pred()
-    # # # Number of Models
-    for n_jobs in [8,1]:
-        for n_models in [8,4,2,1]:
-            for n_estimators in [100]:
-                for depth in [1]:
-                    for tree_method in["exact"]: # "exact","approx","hist"
-                        for input_size in [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]:
-                            clf_path = []
-                            for i in range(n_models):
-                                                # "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
-                                clf_path.append("/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+"8njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/model_init.json")
-                                # "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/"
-                            cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/"
-                            test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
-            #    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
-                            run_pred(cwd, clf_path, test_tags_path, n_jobs=n_jobs, n_estimators=n_estimators, input_size=input_size, depth=depth, tree_method=tree_method)
+    # ###################################
+    # # # run_pred()
+    # # # # Number of Models
+    # for n_jobs in [8,1]:
+    #     for n_models in [8,4,2,1]:
+    #         for n_estimators in [100]:
+    #             for depth in [1]:
+    #                 for tree_method in["exact"]: # "exact","approx","hist"
+    #                     for input_size in [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]:
+    #                         clf_path = []
+    #                         for i in range(n_models):
+    #                                             # "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
+    #                             clf_path.append("/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+"8njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/model_init.json")
+    #                             # "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/"
+    #                         cwd = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/"
+    #                         test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
+    #         #    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
+    #                         run_pred(cwd, clf_path, test_tags_path, n_jobs=n_jobs, n_estimators=n_estimators, input_size=input_size, depth=depth, tree_method=tree_method)
 
 
     ###################################
