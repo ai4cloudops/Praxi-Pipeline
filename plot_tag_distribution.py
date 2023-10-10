@@ -13,10 +13,10 @@ def plot_size():
     # sizes_l, p_l = [], []
     c_size_d = defaultdict(int)
     p_size_d = {}
-    # target_dir = "big_ML_biased_test"
+    target_dir = "big_ML_biased_test"
     # target_dir = "big_SL_biased_test"
-    target_dir = "big_train"
-    dirname = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_8_6_rm_tmp_0/"
+    # target_dir = "big_train"
+    dirname = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_3/"
     out_dirname = dirname+target_dir+"/"
     # print(out_dirname)
     tagsets_l = [name for name in os.listdir(out_dirname) if os.path.isfile(out_dirname+name) and name[-4:]!=".obj"]
