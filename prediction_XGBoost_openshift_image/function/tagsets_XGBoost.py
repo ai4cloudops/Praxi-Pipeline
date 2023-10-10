@@ -96,17 +96,17 @@ def tagsets_to_matrix(tags_path, index_tag_mapping_path=None, tag_index_mapping_
 
 
 # # #############
-#     # # Save tag:count in mapping format
-#     # with open(tags_path+"all_tags_set.obj","wb") as filehandler:
-#     #      pickle.dump(all_tags_set, filehandler)
-#     # with open(tags_path+"all_label_set.obj","wb") as filehandler:
-#     #      pickle.dump(all_label_set, filehandler)
-#     # with open(tags_path+"tags_by_instance_l.obj","wb") as filehandler:
-#     #      pickle.dump(tags_by_instance_l, filehandler)
-#     # with open(tags_path+"labels_by_instance_l.obj","wb") as filehandler:
-#     #      pickle.dump(labels_by_instance_l, filehandler)
-#     # with open(tags_path+"tagset_files.obj","wb") as filehandler:
-#     #      pickle.dump(tagset_files, filehandler)
+#     # Save tag:count in mapping format
+#     with open(tags_path+"all_tags_set.obj","wb") as filehandler:
+#          pickle.dump(all_tags_set, filehandler)
+#     with open(tags_path+"all_label_set.obj","wb") as filehandler:
+#          pickle.dump(all_label_set, filehandler)
+#     with open(tags_path+"tags_by_instance_l.obj","wb") as filehandler:
+#          pickle.dump(tags_by_instance_l, filehandler)
+#     with open(tags_path+"labels_by_instance_l.obj","wb") as filehandler:
+#          pickle.dump(labels_by_instance_l, filehandler)
+#     with open(tags_path+"tagset_files.obj","wb") as filehandler:
+#          pickle.dump(tagset_files, filehandler)
 
     # # Load tag:count in mapping format 
     # with open(tags_path+"all_tags_set.obj","rb") as filehandler:
@@ -333,7 +333,7 @@ def print_metrics(cwd, outfile, y_true, y_pred, labels, op_durations=None):
             np.array([]), fmt='%d', header=file_header, delimiter=',',
             comments='')
 
-def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estimators=100, train_packages_select_set=set(), test_packages_select_set=set(), input_size=None, depth=1, tree_method="auto"):
+def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estimators=100, train_packages_select_set=set(), test_packages_select_set=set(), input_size=None, depth=1, tree_method="auto", max_bin=6):
     # train_tags_init_path = "/home/ubuntu/Praxi-Pipeline/data/data_0&2/big_SL_biased_test/"
     # test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
     # # cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_init/"
@@ -462,7 +462,7 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estim
     t0 = time.time()
     BOW_XGB_init = xgb.XGBClassifier(n_estimators=n_estimators, max_depth=depth, learning_rate=0.1,silent=False, objective='binary:logistic', \
                       booster='gbtree', n_jobs=n_jobs, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
-                      subsample=1, colsample_bytree=1, colsample_bylevel=1, reg_alpha=0, reg_lambda=1, tree_method=tree_method)
+                      subsample=1, colsample_bytree=1, colsample_bylevel=1, reg_alpha=0, reg_lambda=1, tree_method=tree_method, max_bin=max_bin)
                     #   subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1, tree_method=tree_method)
     BOW_XGB_init.fit(train_feature_matrix_init, train_label_matrix_init)
     t1 = time.time()
@@ -538,7 +538,7 @@ def run_pred(cwd, clf_path_l, test_tags_path, n_jobs=64, n_estimators=100, packa
     # cwd = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
     # clf_path = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/model_init.json"
     # test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/inference_test/"
-    # Path(cwd).mkdir(parents=True, exist_ok=True)
+    Path(cwd).mkdir(parents=True, exist_ok=True)
 
     op_durations = {}
     label_matrix_list, pred_label_matrix_list, labels_list = [], [], []
@@ -572,9 +572,9 @@ def run_pred(cwd, clf_path_l, test_tags_path, n_jobs=64, n_estimators=100, packa
         op_durations[clf_path+"\n label_matrix_size_0"] = label_matrix.shape[0]
         op_durations[clf_path+"\n label_matrix_size_1"] = label_matrix.shape[1]
         # op_durations[clf_path+"\n tagset_files"] = tagset_files
-        ######## save train_feature_matrix_init
-        with open(cwd+"train_feature_matrix_init_"+str(clf_idx)+".mat","wb") as filehandler:
-            np.save(filehandler, feature_matrix)
+        # ######## save train_feature_matrix_init
+        # with open(cwd+"train_feature_matrix_init_"+str(clf_idx)+".mat","wb") as filehandler:
+        #     np.save(filehandler, feature_matrix)
 
         # # debug
         # with open("/pipelines/component/cwd/tagsets.log", 'w') as writer:
@@ -674,26 +674,27 @@ if __name__ == "__main__":
 
     # n_models = 1
     for n_jobs in [6]:
-        for n_models in [1,8,4,2]:
+        for n_models in [8,4,2,1]:
             for n_estimators in [100]:
                 for depth in [1]:
-                    for tree_method in["exact"]: # "exact","approx","hist"
-                        for input_size in [109319, 1708, 3416, 6832, 13664, 27329, 54659]: # [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
-                            package_subset, step = [], int(len(packages_l)/n_models)
-                            for i in range(0, len(packages_l), step):
-                                package_subset.append(set(packages_l[i:i+step]))
+                    for tree_method in["approx"]: # "exact","approx","hist"
+                        for max_bin in [1,3,5]:
+                            for input_size in [None, 13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]: # [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
+                                package_subset, step = [], int(len(packages_l)/n_models)
+                                for i in range(0, len(packages_l), step):
+                                    package_subset.append(set(packages_l[i:i+step]))
 
-                            for i, train_subset in enumerate(package_subset):
-                                test_subset = set()
-                                for package_names in itertools.permutations(train_subset, 2):
-                                    test_subset.add("-".join(package_names))
-                                train_tags_path = "/home/ubuntu/Praxi-Pipeline/data/data_0/big_train/"
-                                test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
-                                cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/"
-                                # cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
-                                # cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"randomint10000000_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
-                                run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
-                                # break
+                                for i, train_subset in enumerate(package_subset):
+                                    test_subset = set()
+                                    for package_names in itertools.permutations(train_subset, 2):
+                                        test_subset.add("-".join(package_names))
+                                    train_tags_path = "/home/ubuntu/Praxi-Pipeline/data/data_0/big_train/"
+                                    test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
+                                    cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin/"
+                                    # cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
+                                    # cwd  ="/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"randomint10000000_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
+                                    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
+                                    # break
 
 
 
@@ -703,23 +704,24 @@ if __name__ == "__main__":
 
 
     # ###################################
-    # # # run_pred()
-    # # # # Number of Models
-    # for n_jobs in [8,1]:
+    # run_pred()
+    # # Number of Models
+    # for n_jobs in [6]:
     #     for n_models in [8,4,2,1]:
     #         for n_estimators in [100]:
     #             for depth in [1]:
-    #                 for tree_method in["exact"]: # "exact","approx","hist"
-    #                     for input_size in [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]:
-    #                         clf_path = []
-    #                         for i in range(n_models):
-    #                                             # "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
-    #                             clf_path.append("/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+"8njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/model_init.json")
-    #                             # "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/"
-    #                         cwd = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/"
-    #                         test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
-    #         #    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
-    #                         run_pred(cwd, clf_path, test_tags_path, n_jobs=n_jobs, n_estimators=n_estimators, input_size=input_size, depth=depth, tree_method=tree_method)
+    #                 for tree_method in["exact","approx"]: # "exact","approx","hist"
+    #                     for max_bin in [6]:
+    #                         for input_size in [None]:
+    #                             clf_path = []
+    #                             for i in range(n_models):
+    #                                                 # "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
+    #                                 clf_path.append("/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin/model_init.json")
+    #                                 # "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/"
+    #                             cwd = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod/"
+    #                             test_tags_path = "/home/ubuntu/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
+    #             #    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
+    #                             run_pred(cwd, clf_path, test_tags_path, n_jobs=n_jobs, n_estimators=n_estimators, input_size=input_size, depth=depth, tree_method=tree_method)
 
 
     ###################################
