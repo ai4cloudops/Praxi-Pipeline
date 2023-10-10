@@ -2,10 +2,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 
-def plotting(fig_path, filename, cates_values, labels):
+def plotting(fig_path, filename, cates_values, labels, yaxis_label=None, xaxis_label=None, title=None, figsize=(10, 7)):
     width = 0.4
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
 
     for i, cate_values in enumerate(cates_values):
         bottom = np.zeros(len(labels))
@@ -17,16 +17,23 @@ def plotting(fig_path, filename, cates_values, labels):
             bottom += value
             ax.bar_label(p)
 
-    ax.set_title(" ".join(filename.split("_")))
+    if title == None:
+        ax.set_title(" ".join(filename.split("_")))
+    else:
+        ax.set_title(title, fontsize=20)
     if labels[0]!=None:
-        ax.legend(loc="best")
+        ax.legend(loc="best", prop={'size': 16})
         ax.set_xticks(list(range(len(labels))))
-        ax.set_xticklabels(labels, rotation=45)
-    # ax.set_ylabel("Train Time (Seconds)")
-    # ax.set_xlabel("Dimensions")
+        ax.set_xticklabels(labels)
+    if yaxis_label != None:
+        ax.set_ylabel(yaxis_label, fontsize=20)
+    if xaxis_label != None:
+        ax.set_xlabel(xaxis_label, fontsize=20)
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
 
     # plt.show()
-    plt.savefig(fig_path+filename+'.png', bbox_inches='tight')
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
 
 
@@ -381,7 +388,26 @@ if __name__ == "__main__":
         "Estimated": np.array([8*2.4, 4*2.4*2*(4*math.log(25*20)/math.log(25*10)), 2*19.0*2*(4*math.log(25*40)/math.log(25*20)), 143.5*2*(4*math.log(25*80)/math.log(25*40))])
     }
     cate_values = [cate_values_1, cate_values_2]
-    plotting(fig_path, filename, cate_values, labels)
+    plotting(fig_path, filename, cate_values, labels, xaxis_label="Number of Labels Per Model", yaxis_label="Training Time(s)", title="Train Latency by N Models with the Same Train Dataset")
+
+
+    fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
+    filename = "inferencelatency_by_N_models_with_rawinput_data_0"
+    labels = (
+        "8","4","2","1"
+    )
+    cate_values_1 = {
+        "M10-M20-M40-M80": np.array([0.026, 0.099, 0.179, 2.072]),
+        "M10-M20-M40-MX_1": np.array([0.075, 0.090, 1.785, 0]),
+        "M10-M20-M40-MX_2": np.array([0.025, 0.398, 0, 0]),
+        "M10-M20-M40-MX_3": np.array([0.067, 1.325, 0, 0]),
+        "M10-MX-MX-MX_1": np.array([0.236, 0, 0, 0]),
+        "M10-MX-MX-MX_2": np.array([0.157, 0, 0, 0]),
+        "M10-MX-MX-MX_3": np.array([1.110, 0, 0, 0]),
+        "M10-MX-MX-MX_4": np.array([0.149, 0, 0, 0]),
+    }
+    cate_values = [cate_values_1]
+    plotting(fig_path, filename, cate_values, labels, xaxis_label="Number of Labels Per Model", yaxis_label="Inference Time(s)", title="Inference Latency by N Models with the Same Test Dataset")
 
 
     fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
@@ -439,13 +465,13 @@ if __name__ == "__main__":
     ax.set_zlabel('Training Latency')
 
     # plt.show()
-    plt.savefig(fig_path+filename+'.png', bbox_inches='tight')
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
 
 
     fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
     filename = "testf1score_by_input_size_with_rawinput_data_0"
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
     xs=[13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
     labels = ("80 labels", "40 labels","20 labels","10 labels")
     ys_l=[[0.077, 0.521, 0.697, 0.727, 0.806, 0.843, 0.847, 0.906, 0.935, 0.934, 0.948, 0.951, 0.954],
@@ -455,16 +481,18 @@ if __name__ == "__main__":
         ]
     for ys, label in zip(ys_l, labels):
         ax.scatter(xs, ys, label=label)
-    ax.set_xlabel("Input Dimensions")
-    ax.set_ylabel("F1-Scores")
-    plt.legend()
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Input Dimensions", fontsize=20)
+    ax.set_ylabel("F1-Scores", fontsize=20)
+    plt.legend(prop={'size': 16})
     # plt.show()
-    plt.savefig(fig_path+filename+'.png', bbox_inches='tight')
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
 
     fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
     filename = "trainlatency_by_input_size_with_rawinput_data_0"
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
     xs=[13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
     labels = ("10 labels", "20 labels","40 labels","80 labels")
     ys_l=[[0.102, 0.103, 0.143, 0.156, 0.226, 0.278, 0.392, 0.664, 1.205, 2.407, 5.449, 11.784, 24.566],
@@ -474,34 +502,59 @@ if __name__ == "__main__":
         ]
     for ys, label in zip(ys_l, labels):
         ax.scatter(xs, ys, label=label)
-    ax.set_xlabel("Input Dimensions")
-    ax.set_ylabel("Training Time(s)")
-    plt.legend()
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Input Dimensions", fontsize=20)
+    ax.set_ylabel("Training Time(s)", fontsize=20)
+    plt.legend(prop={'size': 16})
     # plt.show()
-    plt.savefig(fig_path+filename+'.png', bbox_inches='tight')
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
+    plt.close()
+
+    filename = "inferencelatency_by_input_size_with_rawinput_data_0"
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
+    xs=[13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
+    labels = ("10 labels", "20 labels","40 labels","80 labels")
+    ys_l=[[0.017+0.015+0.015+0.015+0.015+0.015+0.015+0.015, 0.017+0.024+0.017+0.017+0.017+0.018+0.018+0.018, 0.020+0.020+0.020+0.020+0.021+0.021+0.021+0.022, 0.022+0.023+0.023+0.023+0.024+0.023+0.023+0.024, 0.030+0.030+0.030+0.030+0.031+0.031+0.031+0.031, 0.034+0.036+0.035+0.034+0.035+0.035+0.035+0.035, 0.045+0.042+0.042+0.042+0.042+0.044+0.043+0.043, 0.065+0.065+0.067+0.066+0.065+0.065+0.065+0.065, 0.114+0.115+0.114+0.114+0.114+0.114+0.115+0.115, 0.212+0.214+0.214+0.212+0.214+0.213+0.213+0.218, 0.408+0.409+0.411+0.411+0.409+0.409+0.410+0.409, 0.810+0.817+0.817+0.815+0.814+0.809+0.814+0.813, 1.675+1.686+1.681+1.677+1.672+1.679+1.679+1.678],
+        [0.030+0.031+0.031+0.030, 0.031+0.032+0.031+0.032, 0.034+0.034+0.034+0.034, 0.036+0.037+0.037+0.037, 0.045+0.044+0.045+0.045, 0.047+0.047+0.048+0.050, 0.055+0.059+0.056+0.056, 0.079+0.079+0.079+0.081, 0.128+0.132+0.129+0.131, 0.226+0.226+0.225+0.227, 0.425+0.424+0.423+0.425, 0.831+0.830+0.831+0.836, 1.711+1.709+1.706+1.711],
+        [0.054+0.054, 0.056+0.058, 0.060+0.063, 0.061+0.061, 0.073+0.074, 0.079+0.081, 0.086+0.090, 0.112+0.122, 0.170+0.165, 0.268+0.263, 0.461+0.465, 0.875+0.883, 1.772+1.779],
+        [0.101, 0.107, 0.111, 0.122, 0.136, 0.149, 0.161, 0.199, 0.256, 0.380, 0.547, 0.979, 1.959]
+        ]
+    for ys, label in zip(ys_l, labels):
+        ax.scatter(xs, ys, label=label)
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Input Dimensions", fontsize=20)
+    ax.set_ylabel("Inference Time(s)", fontsize=20)
+    plt.legend(prop={'size': 16})
+    # plt.show()
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
 
     fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
     filename = "trainlatency_by_input_size_with_rawinput_data_0_estimated"
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
     xs=[13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
-    labels = ("Observed", "Estimated_test", "Estimated")
+    labels = ("Observed", "Estimated")
     ys_l=[[1.227, 2.012, 3.810, 5.275, 9.333, 12.124, 17.675, 34.274, 67.655, 136.472, 274.488, 546.612, 1096.709],
         #   [1.227, 1.227*2, 1.227*2**2, 1.227*2**3, 1.227*2**4, 1.227*2**5, 1.227*2**6, 1.227*2**7, 1.227*2**8, 1.227*2**9, 1.227*2**10, 1.227*2**11, 1.227*2**12],
-        [1.227, 1.227*2, 2.012*2, 3.810*2, 5.275*2, 9.333*2, 12.124*2, 17.675*2, 34.274*2, 67.655*2, 136.472*2, 274.488*2, 546.612*2]
+        # [1.227, 1.227*2, 2.012*2, 3.810*2, 5.275*2, 9.333*2, 12.124*2, 17.675*2, 34.274*2, 67.655*2, 136.472*2, 274.488*2, 546.612*2]
+        [1096.709/2**12, 1096.709/2**11, 1096.709/2**10, 1096.709/2**9, 1096.709/2**8, 1096.709/2**7, 1096.709/2**6, 1096.709/2**5, 1096.709/2**4, 1096.709/2**3, 1096.709/2**2, 1096.709/2, 1096.709]
         ]
     for ys, label in zip(ys_l, labels):
         ax.scatter(xs, ys, label=label)
-    ax.set_xlabel("Input Dimensions")
-    ax.set_ylabel("Training Time(s)")
-    plt.legend()
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Input Dimensions", fontsize=20)
+    ax.set_ylabel("Training Time(s)", fontsize=20)
+    plt.legend(prop={'size': 16})
     # plt.show()
-    plt.savefig(fig_path+filename+'.png', bbox_inches='tight')
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
 
     # fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
     # filename = "trainlatency_by_input_size_with_rawinput_data_0_estimated_sanitycheck"
-    # fig, ax = plt.subplots()
+    # fig, ax = plt.subplots(1, 1, figsize=(10, 7))
     # xs=[13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
     # labels = ("Observed", "Estimated")
     # ys_l=[[1.227, 2.012, 3.810, 5.275, 9.333, 12.124, 17.675, 34.274, 67.655, 136.472, 274.488, 546.612, 1096.709],
@@ -511,14 +564,14 @@ if __name__ == "__main__":
     #     ax.scatter(xs, ys, label=label)
     # ax.set_xlabel("Input Dimensions")
     # ax.set_ylabel("Training Time(s)")
-    # plt.legend()
+    # plt.legend(prop={'size': 16})
     # # plt.show()
-    # plt.savefig(fig_path+filename+'.png', bbox_inches='tight')
+    # plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     # plt.close()
 
     fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
     filename = "trainlatency_by_labels_per_model_with_rawinput_data_0"
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
     xs=[10, 20, 40, 80]
     labels = ("13 dims", "106 dims", "284 dims", "427 dims", "854 dims", "1138 dims", "1708 dims", "3416 dims", "6832 dims", "13664 dims", "27329 dims", "54659 dims", "109319 dims")
     # ys_l=list(map(list, zip(*ys_l)))
@@ -539,16 +592,50 @@ if __name__ == "__main__":
             ]
     for ys, label in zip(ys_l, labels):
         ax.scatter(xs, ys, label=label)
-    ax.set_xlabel("Labels Per Model")
-    ax.set_ylabel("Training Time(s)")
-    plt.legend()
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Labels Per Model", fontsize=20)
+    ax.set_ylabel("Training Time(s)", fontsize=20)
+    plt.legend(prop={'size': 16})
     # plt.show()
-    plt.savefig(fig_path+filename+'.png', bbox_inches='tight')
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
+    plt.close()
+
+    fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
+    filename = "inferencelatency_by_labels_per_model_with_rawinput_data_0"
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
+    xs=[10, 20, 40, 80]
+    labels = ("13 dims", "106 dims", "284 dims", "427 dims", "854 dims", "1138 dims", "1708 dims", "3416 dims", "6832 dims", "13664 dims", "27329 dims", "54659 dims", "109319 dims")
+    # ys_l=list(map(list, zip(*ys_l)))
+    # print(ys_l)
+    ys_l = [[0.017+0.015+0.015+0.015+0.015+0.015+0.015+0.015, 0.030+0.031+0.031+0.030, 0.054+0.054, 0.101],
+            [0.017+0.024+0.017+0.017+0.017+0.018+0.018+0.018, 0.031+0.032+0.031+0.032, 0.056+0.058, 0.107],
+            [0.020+0.020+0.020+0.020+0.021+0.021+0.021+0.022, 0.034+0.034+0.034+0.034, 0.060+0.063, 0.111],
+            [0.022+0.023+0.023+0.023+0.024+0.023+0.023+0.024, 0.036+0.037+0.037+0.037, 0.061+0.061, 0.122],
+            [0.030+0.030+0.030+0.030+0.031+0.031+0.031+0.031, 0.045+0.044+0.045+0.045, 0.073+0.074, 0.136],
+            [0.034+0.036+0.035+0.034+0.035+0.035+0.035+0.035, 0.047+0.047+0.048+0.050, 0.079+0.081, 0.149],
+            [0.045+0.042+0.042+0.042+0.042+0.044+0.043+0.043, 0.055+0.059+0.056+0.056, 0.086+0.090, 0.161],
+            [0.065+0.065+0.067+0.066+0.065+0.065+0.065+0.065, 0.079+0.079+0.079+0.081, 0.112+0.122, 0.199],
+            [0.114+0.115+0.114+0.114+0.114+0.114+0.115+0.115, 0.128+0.132+0.129+0.131, 0.170+0.165, 0.256],
+            [0.212+0.214+0.214+0.212+0.214+0.213+0.213+0.218, 0.226+0.226+0.225+0.227, 0.268+0.263, 0.380],
+            [0.408+0.409+0.411+0.411+0.409+0.409+0.410+0.409, 0.425+0.424+0.423+0.425, 0.461+0.465, 0.547],
+            [0.810+0.817+0.817+0.815+0.814+0.809+0.814+0.813, 0.831+0.830+0.831+0.836, 0.875+0.883, 0.979],
+            [1.675+1.686+1.681+1.677+1.672+1.679+1.679+1.678, 1.711+1.709+1.706+1.711, 1.772+1.779, 1.959]
+            ]
+    for ys, label in zip(ys_l, labels):
+        ax.scatter(xs, ys, label=label)
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Labels Per Model", fontsize=20)
+    ax.set_ylabel("Inference Time(s)", fontsize=20)
+    plt.legend(prop={'size': 16})
+    # plt.show()
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
 
     fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
     filename = "testf1score_by_labels_per_model_with_rawinput_data_0"
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
     xs=[10, 20, 40, 80]
     labels = ("13 dims", "106 dims", "284 dims", "427 dims", "854 dims", "1138 dims", "1708 dims", "3416 dims", "6832 dims", "13664 dims", "27329 dims", "54659 dims", "109319 dims")
     ys_l=[[0.259, 0.21, 0.166, 0.077], 
@@ -568,40 +655,52 @@ if __name__ == "__main__":
     # print(ys_l)
     for ys, label in zip(ys_l, labels):
         ax.scatter(xs, ys, label=label)
-    ax.set_xlabel("Labels Per Model")
-    ax.set_ylabel("F1-Score")
-    plt.legend()
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Labels Per Model", fontsize=20)
+    ax.set_ylabel("F1-Score", fontsize=20)
+    plt.legend(prop={'size': 16})
     # plt.show()
-    plt.savefig(fig_path+filename+'.png', bbox_inches='tight')
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
 
 
 
     fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
     filename = "trainlatency_by_labels_per_model_with_rawinput_data_0_estimated"
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
     xs=[10, 20, 40, 80]
-    labels = ("Observed", "Estimated")
+    labels = ("Observed", "Estimated", "Estimated_nosorting")
     # ys_l=list(map(list, zip(*ys_l)))
     # print(ys_l)
     ys_l = [[24.566, 80.171, 286.711, 1096.709],
-            [24.566,
-            24.566*(4*math.log(25*20)/math.log(25*10)),
-            80.171*(4*math.log(25*40)/math.log(25*20)), 
-            286.711*(4*math.log(25*80)/math.log(25*40))]
+            # [24.566,
+            # 24.566*(4*math.log(25*20)/math.log(25*10)),
+            # 80.171*(4*math.log(25*40)/math.log(25*20)), 
+            # 286.711*(4*math.log(25*80)/math.log(25*40))]
+            [1096.709/(4*math.log(25*80)/math.log(25*40))/(4*math.log(25*40)/math.log(25*20))/(4*math.log(25*20)/math.log(25*10)),
+            1096.709/(4*math.log(25*80)/math.log(25*40))/(4*math.log(25*40)/math.log(25*20)), 
+            1096.709/(4*math.log(25*80)/math.log(25*40)),
+            1096.709],
+            [1096.709/(4)/(4)/(4),
+            1096.709/(4)/(4), 
+            1096.709/(4),
+            1096.709]
             ]
     for ys, label in zip(ys_l, labels):
         ax.scatter(xs, ys, label=label)
-    ax.set_xlabel("Labels Per Model")
-    ax.set_ylabel("Training Time(s)")
-    plt.legend()
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Labels Per Model", fontsize=20)
+    ax.set_ylabel("Training Time(s)", fontsize=20)
+    plt.legend(prop={'size': 16})
     # plt.show()
-    plt.savefig(fig_path+filename+'.png', bbox_inches='tight')
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
 
     fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
     filename = "trainlatency_by_labels_per_model_with_rawinput_data_0_estimated_1njob_no_sorting"
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
     xs=[10, 20, 40, 80]
     labels = ("Observed", "Estimated")
     # ys_l=list(map(list, zip(*ys_l)))
@@ -618,16 +717,18 @@ if __name__ == "__main__":
             ]
     for ys, label in zip(ys_l, labels):
         ax.scatter(xs, ys, label=label)
-    ax.set_xlabel("Labels Per Model")
-    ax.set_ylabel("Training Time(s)")
-    plt.legend()
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Labels Per Model", fontsize=20)
+    ax.set_ylabel("Training Time(s)", fontsize=20)
+    plt.legend(prop={'size': 16})
     # plt.show()
-    plt.savefig(fig_path+filename+'.png', bbox_inches='tight')
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
 
     fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
     filename = "trainlatency_by_labels_per_model_with_rawinput_data_0_estimated_1njob_doublesample_nosorting"
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
     xs=[10, 20, 40, 80]
     labels = ("Observed", "Estimated")
     # ys_l=list(map(list, zip(*ys_l)))
@@ -644,17 +745,19 @@ if __name__ == "__main__":
             ]
     for ys, label in zip(ys_l, labels):
         ax.scatter(xs, ys, label=label)
-    ax.set_xlabel("Labels Per Model")
-    ax.set_ylabel("Training Time(s)")
-    plt.legend()
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Labels Per Model", fontsize=20)
+    ax.set_ylabel("Training Time(s)", fontsize=20)
+    plt.legend(prop={'size': 16})
     # plt.show()
-    plt.savefig(fig_path+filename+'.png', bbox_inches='tight')
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
 
     fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
     filename = "trainlatency_by_labels_per_model_with_randomint10000000_109319_data_0_estimated_1njob_doublesample"
     # filename = "trainlatency_by_labels_per_model_with_randomint10000000_109319_data_0_estimated_1njob_doublesample_nosorting"
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
     xs=[10, 20, 40, 80]
     labels = ("Observed", "Estimated")
     # ys_l=list(map(list, zip(*ys_l)))
@@ -671,16 +774,18 @@ if __name__ == "__main__":
             ]
     for ys, label in zip(ys_l, labels):
         ax.scatter(xs, ys, label=label)
-    ax.set_xlabel("Labels Per Model")
-    ax.set_ylabel("Training Time(s)")
-    plt.legend()
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Labels Per Model", fontsize=20)
+    ax.set_ylabel("Training Time(s)", fontsize=20)
+    plt.legend(prop={'size': 16})
     # plt.show()
-    plt.savefig(fig_path+filename+'.png', bbox_inches='tight')
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
 
     fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
     filename = "trainlatency_by_labels_per_model_with_rawinput_data_0_estimated_2njob_no_sorting"
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
     xs=[10, 20, 40, 80]
     labels = ("Observed", "Estimated")
     # ys_l=list(map(list, zip(*ys_l)))
@@ -697,16 +802,18 @@ if __name__ == "__main__":
             ]
     for ys, label in zip(ys_l, labels):
         ax.scatter(xs, ys, label=label)
-    ax.set_xlabel("Labels Per Model")
-    ax.set_ylabel("Training Time(s)")
-    plt.legend()
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Labels Per Model", fontsize=20)
+    ax.set_ylabel("Training Time(s)", fontsize=20)
+    plt.legend(prop={'size': 16})
     # plt.show()
-    plt.savefig(fig_path+filename+'.png', bbox_inches='tight')
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
 
     # fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
     # filename = "trainlatency_by_labels_per_model_with_randomint10000000_109319_estimated_sanitycheck"
-    # fig, ax = plt.subplots()
+    # fig, ax = plt.subplots(1, 1, figsize=(10, 7))
     # xs=[10, 20, 40, 80]
     # labels = ("Observed", "Estimated")
     # # ys_l=list(map(list, zip(*ys_l)))
@@ -721,7 +828,7 @@ if __name__ == "__main__":
     #     ax.scatter(xs, ys, label=label)
     # ax.set_xlabel("Labels Per Model")
     # ax.set_ylabel("Training Time(s)")
-    # plt.legend()
+    # plt.legend(prop={'size': 16})
     # # plt.show()
-    # plt.savefig(fig_path+filename+'.png', bbox_inches='tight')
+    # plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     # plt.close()
