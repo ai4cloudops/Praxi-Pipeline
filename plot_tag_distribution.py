@@ -48,6 +48,8 @@ def plot_size():
     Path(dirname+"plots/").mkdir(parents=True, exist_ok=True)
 
     p_size_d = {k: v for k, v in sorted(p_size_d.items(), key=lambda item: item[1])}
+    with open(dirname+"plots/"+target_dir+"_p_size_d", 'w') as outfile:
+        yaml.dump(p_size_d, outfile, default_flow_style=False)
     fig, ax = plt.subplots(1, 1, figsize=(26, 6), dpi=600)
     # proba_array = proba_array.reshape(-1)
     # c_l = [color_l[cluster_idx] for cluster_idx in yhats]
