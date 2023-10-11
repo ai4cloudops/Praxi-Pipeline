@@ -10,11 +10,75 @@ from pathlib import Path
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import multiprocessing as mp
 
 import xgboost as xgb
 
-import psutil
+import psutil, sys
 
+
+def build_logger(logger_name, logfilepath):
+    import logging
+    # Create a custom logger
+    logger = logging.getLogger(logger_name)
+
+    # Create handlers
+    # print(logdirpath)
+    Path(logfilepath).mkdir(parents=True, exist_ok=True)
+    f_handler = logging.FileHandler(filename=logfilepath+logger_name+'.log')
+    c_handler = logging.StreamHandler(stream=sys.stdout)
+    f_handler.setLevel(logging.INFO)
+    c_handler.setLevel(logging.INFO)
+
+    # Create formatters and add it to handlers
+    f_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    f_handler.setFormatter(f_format)
+    c_handler.setFormatter(f_format)
+
+    # Add handlers to the logger
+    logger.addHandler(c_handler)
+    logger.addHandler(f_handler)
+
+    logger.setLevel(logging.INFO)
+    
+    return logger
+
+def read_tokens(tags_path, tag_file, cwd, packages_select_set, inference_flag):
+    logger = build_logger(tag_file, cwd+"logs/")
+    try:
+        ret = {}
+        if(tag_file[-3:] == 'tag') and (tag_file[:-3].rsplit('-', 1)[0] in packages_select_set or packages_select_set == set()):
+            with open(tags_path + tag_file, 'rb') as tf:
+                # print(tag_file)
+                # tagset_files.append(tag_file)
+                ret["tag_file"] = tag_file
+                local_all_tags_set = set()
+                instance_feature_tags_d = defaultdict(int)
+                tagset = yaml.load(tf, Loader=yaml.Loader)
+                # tagset = json.load(tf)   
+
+                # feature 
+                for tag_vs_count in tagset['tags']:
+                    k,v = tag_vs_count.split(":")
+                    local_all_tags_set.add(k)
+                    instance_feature_tags_d[k] += int(v)
+                ret["local_all_tags_set"] = local_all_tags_set
+                ret["instance_feature_tags_d"] = instance_feature_tags_d
+                # tags_by_instance_l.append(instance_feature_tags_d)
+
+                # label
+                if not inference_flag:
+                    if 'labels' in tagset:
+                        ret["labels"] = tagset['labels']
+                        # all_label_set.update(tagset['labels'])
+                        # labels_by_instance_l.append(tagset['labels'])
+                    else:
+                        ret["labels"] = [tagset['label']]
+                        # all_label_set.add(tagset['label'])
+                        # labels_by_instance_l.append([tagset['label']])
+    except Exception as e: # work on python 3.x
+        logger.info('%s', e)
+    return ret
 
 def tagsets_to_matrix(tags_path, index_tag_mapping_path=None, tag_index_mapping_path=None, index_label_mapping_path=None, label_index_mapping_path=None, cwd="/home/cc/Praxi-study/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/", train_flag=False, inference_flag=True, iter_flag=False, packages_select_set=set(), input_size=None):
     if index_tag_mapping_path == None:
@@ -32,32 +96,26 @@ def tagsets_to_matrix(tags_path, index_tag_mapping_path=None, tag_index_mapping_
     tags_by_instance_l, labels_by_instance_l = [], []
     tagset_files = []
 
-    # debuging with lcoal tagset files
-    # print(os.listdir(tags_path))
-    for tag_file in tqdm(os.listdir(tags_path)):
-        if(tag_file[-3:] == 'tag') and (tag_file[:-3].rsplit('-', 1)[0] in packages_select_set or packages_select_set == set()):
-            with open(tags_path + tag_file, 'rb') as tf:
-                # print(tag_file)
-                tagset_files.append(tag_file)
-                instance_feature_tags_d = defaultdict(int)
-                tagset = yaml.load(tf, Loader=yaml.Loader)
-                # tagset = json.load(tf)   
-
-                # feature 
-                for tag_vs_count in tagset['tags']:
-                    k,v = tag_vs_count.split(":")
-                    all_tags_set.add(k)
-                    instance_feature_tags_d[k] += int(v)
-                tags_by_instance_l.append(instance_feature_tags_d)
-
-                # label
-                if not inference_flag:
-                    if 'labels' in tagset:
-                        all_label_set.update(tagset['labels'])
-                        labels_by_instance_l.append(tagset['labels'])
-                    else:
-                        all_label_set.add(tagset['label'])
-                        labels_by_instance_l.append([tagset['label']])
+    # # debuging with lcoal tagset files
+    # for tag_file in tqdm(os.listdir(tags_path)):
+    #     data_instance_d = read_tokens(tags_path, tag_file, cwd, packages_select_set, inference_flag)
+    #     if len(data_instance_d) ==4:
+    #         tagset_files.append(data_instance_d['tag_file'])
+    #         all_tags_set.update(data_instance_d['local_all_tags_set'])
+    #         tags_by_instance_l.append(data_instance_d['instance_feature_tags_d'])
+    #         all_label_set.update(data_instance_d['labels'])
+    #         labels_by_instance_l.append(data_instance_d['labels'])
+    pool = mp.Pool(processes=mp.cpu_count())
+    # pool = mp.Pool(processes=1)
+    data_instance_d_l = [pool.apply_async(read_tokens, args=(tags_path, tag_file, cwd, packages_select_set, inference_flag)) for tag_file in tqdm(os.listdir(tags_path))]
+    data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
+    for data_instance_d in data_instance_d_l:
+        if len(data_instance_d) ==4:
+                tagset_files.append(data_instance_d['tag_file'])
+                all_tags_set.update(data_instance_d['local_all_tags_set'])
+                tags_by_instance_l.append(data_instance_d['instance_feature_tags_d'])
+                all_label_set.update(data_instance_d['labels'])
+                labels_by_instance_l.append(data_instance_d['labels'])
 
     # # kfp / RHODS pipeline with intermediate data as dumps 
     # with open(tags_path, 'rb') as reader:
@@ -95,18 +153,18 @@ def tagsets_to_matrix(tags_path, index_tag_mapping_path=None, tag_index_mapping_
 
 
 
-# # #############
-#     # Save tag:count in mapping format
-#     with open(tags_path+"all_tags_set.obj","wb") as filehandler:
-#          pickle.dump(all_tags_set, filehandler)
-#     with open(tags_path+"all_label_set.obj","wb") as filehandler:
-#          pickle.dump(all_label_set, filehandler)
-#     with open(tags_path+"tags_by_instance_l.obj","wb") as filehandler:
-#          pickle.dump(tags_by_instance_l, filehandler)
-#     with open(tags_path+"labels_by_instance_l.obj","wb") as filehandler:
-#          pickle.dump(labels_by_instance_l, filehandler)
-#     with open(tags_path+"tagset_files.obj","wb") as filehandler:
-#          pickle.dump(tagset_files, filehandler)
+#############
+    # # Save tag:count in mapping format
+    # with open(tags_path+"all_tags_set.obj","wb") as filehandler:
+    #      pickle.dump(all_tags_set, filehandler)
+    # with open(tags_path+"all_label_set.obj","wb") as filehandler:
+    #      pickle.dump(all_label_set, filehandler)
+    # with open(tags_path+"tags_by_instance_l.obj","wb") as filehandler:
+    #      pickle.dump(tags_by_instance_l, filehandler)
+    # with open(tags_path+"labels_by_instance_l.obj","wb") as filehandler:
+    #      pickle.dump(labels_by_instance_l, filehandler)
+    # with open(tags_path+"tagset_files.obj","wb") as filehandler:
+    #      pickle.dump(tagset_files, filehandler)
 
     # # Load tag:count in mapping format 
     # with open(tags_path+"all_tags_set.obj","rb") as filehandler:
@@ -564,7 +622,7 @@ def run_pred(cwd, clf_path_l, test_tags_path, n_jobs=64, n_estimators=100, packa
                       booster='gbtree', n_jobs=n_jobs, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
                       subsample=1, colsample_bytree=1, colsample_bylevel=1, reg_alpha=0, reg_lambda=1, tree_method=tree_method)
         BOW_XGB.load_model(clf_path)
-        BOW_XGB.set_params(n_jobs=1)
+        BOW_XGB.set_params(n_jobs=n_jobs)
         t1 = time.time()
         op_durations[clf_path+"\n BOW_XGB.load_model"] = t1-t0
         op_durations[clf_path+"\n feature_matrix_size_0"] = feature_matrix.shape[0]
@@ -653,7 +711,7 @@ if __name__ == "__main__":
 
 
     ###################################
-    # run_init_train()
+    # # run_init_train()
     # # ============= data_0
     # packages_l = ["wrapt", "attrs", "fsspec", "MarkupSafe", "grpcio-status", "cffi", "click", "PyJWT", "pytz", "pyasn1"]
     # packages_l0 = ["psutil", "tomli", "isodate", "jsonschema", "grpcio", "soupsieve", "frozenlist", "cachetools", "botocore", "awscli"]
@@ -673,30 +731,29 @@ if __name__ == "__main__":
     # ============= data_3
     packages_l = ['certifi', 'numpy', 'packaging', 'aiobotocore', 'protobuf', 'jmespath', 'googleapis-common-protos', 'platformdirs', 'google-auth', 'werkzeug', 'pydantic', 'filelock', 'pyparsing', 'async-timeout', 'aiohttp', 'docutils', 'pyarrow', 'exceptiongroup', 'pluggy', 'lxml', 'requests-oauthlib', 'tqdm', 'pyasn1-modules', 'azure-core', 'decorator', 'pyopenssl', 'greenlet', 'importlib-resources', 'multidict', 'pygments', 'websocket-client', 'pymysql', 'distlib', 'coverage', 'aiosignal', 'et-xmlfile', 'openpyxl', 'chardet', 'google-cloud-core', 'google-cloud-storage', 'asn1crypto', 'tabulate', 'google-api-python-client', 'referencing', 'iniconfig', 'tomlkit', 'rpds-py', 'paramiko', 'gitpython', 'jsonschema-specifications', 'requests-toolbelt', 'pynacl', 'more-itertools', 'proto-plus', 'psycopg2-binary', 'itsdangerous', 'azure-storage-blob', 'msal', 'google-resumable-media', 'bcrypt', 'pathspec', 'tzlocal', 'anyio', 'grpcio-tools', 'google-cloud-bigquery', 'docker', 'cython', 'mdit-py-plugins', 'joblib', 'regex', 'mypy-extensions', 'smmap', 'gitdb', 'sagemaker', 'sqlparse', 'msgpack', 'wcwidth', 'google-auth-oauthlib', 'poetry-core', 'sniffio', 'py', 'pycryptodomex', 'pyrsistent', 'azure-common', 'future', 'dnspython', 'pexpect', 'ptyprocess', 'msrest', 'jaraco-classes', 'dill', 'portalocker', 'ruamel-yaml', 'markdown', 'snowflake-connector-python', 'py4j', 'tornado', 'keyring', 'google-crc32c', 'prompt-toolkit', 'markdown-it-py', 'tenacity', 'cloudpickle', 'httplib2', 'rich', 'alembic', 'gunicorn', 'tzdata', 'awswrangler', 'fonttools', 'azure-identity', 'threadpoolctl', 'msal-extensions', 'xmltodict', 'kiwisolver', 'pycodestyle', 'termcolor', 'python-dotenv', 'tb-nightly', 'scramp', 'backoff', 'uritemplate', 'toml', 'jedi', 'webencodings', 'cachecontrol', 'marshmallow', 'poetry-plugin-export', 'ipython', 'h11', 'mccabe', 'nest-asyncio', 'cycler', 'ply', 'sortedcontainers', 'pycryptodome', 'pg8000', 'google-auth-httplib2', 'trove-classifiers', 'oscrypto', 'traitlets', 'mako', 'pyodbc', 'pkgutil-resolve-name', 'pyzmq', 'prometheus-client', 'redshift-connector', 'isort', 'toolz', 'jeepney', 'httpcore', 'secretstorage', 'adal', 'pytest-cov', 'shellingham', 'babel', 'blinker', 'datadog', 'typing-inspect', 'black', 'pymongo', 'jsonpointer', 'jupyter-client', 'defusedxml', 'google-cloud-pubsub', 'argcomplete', 'httpx', 'tensorboard', 'pyflakes', 'jupyter-core', 'sentry-sdk', 'xlrd', 'flake8', 'poetry', 'cfn-lint', 'pkginfo', 'fastapi', 'nbconvert', 'mdurl', 'requests-aws4auth', 'parso', 'asynctest', 'contourpy', 'pydantic-core', 'python-json-logger', 'absl-py', 'jsonpath-ng', 'databricks-cli', 'python-utils', 'google-cloud-bigquery-storage', 'nbformat', 'pickleshare', 'backcall', 'fastjsonschema', 'notebook', 'progressbar2', 'astroid', 'aioitertools', 'mistune', 'starlette', 'rapidfuzz', 'matplotlib-inline', 'opensearch-py', 'appdirs', 'lazy-object-proxy', 'jupyter-server', 'tensorflow', 'ipykernel', 'pbr', 'pylint', 'transformers', 'arrow', 'h5py', 'kubernetes', 'build', 'jsonpatch', 'imageio', 'setuptools-scm', 'bleach', 'huggingface-hub', 'asgiref', 'annotated-types', 'websockets', 'html5lib', 'debugpy', 'cattrs', 'pyproject-hooks', 'entrypoints', 'grpc-google-iam-v1', 'uvicorn', 'mlflow', 'smart-open', 'oauth2client', 'altair', 'msrestazure', 'multiprocess', 'numba', 'tinycss2', 'dulwich', 'llvmlite', 'tensorflow-estimator', 'zope-interface', 'lockfile', 'elasticsearch', 'mock', 'google-pasta', 'flatbuffers', 'retry', 'aiofiles', 'google-cloud-secret-manager', 'pygithub', 'mypy', 'humanfriendly', 'requests-file', 'shapely', 'orjson', 'crashtest', 'great-expectations', 'aenum', 'pysocks', 'cleo', 'comm', 'httptools', 'gast', 'querystring-parser', 'nodeenv', 'nbclient', 'tensorboard-data-server', 'contextlib2', 'identify', 'xlsxwriter', 'cached-property', 'azure-storage-file-datalake', 'croniter', 'tox', 'deepdiff', 'tokenizers', 'django', 'notebook-shim', 'send2trash', 'mysql-connector-python', 'ipywidgets', 'configparser', 'pendulum', 'execnet', 'jupyterlab-server', 'widgetsnbextension', 'text-unidecode', 'rfc3339-validator', 'overrides', 'pre-commit', 'typer', 'keras', 'json5', 'semver', 'watchdog', 'hvac', 'responses', 'torch', 'jupyterlab', 'pytzdata', 'aws-sam-translator', 'snowflake-sqlalchemy', 'python-slugify', 'cfgv', 'pipenv', 'asttokens', 'argon2-cffi', 'installer', 'dataclasses', 'sphinx', 'jupyterlab-widgets', 'executing', 'gremlinpython', 'distro', 'typeguard', 'azure-mgmt-core', 'selenium', 'jupyter-events', 'pytest-xdist', 'click-plugins', 'stack-data', 'pytest-mock', 'azure-storage-common', 'confluent-kafka', 'slack-sdk', 'pure-eval', 'opt-einsum', 'rfc3986', 'xgboost', 'tblib', 'dataclasses-json', 'opentelemetry-sdk', 'apache-airflow', 'uri-template', 'fastavro', 'tensorflow-serving-api', 'ipython-genutils', 'sentencepiece', 'futures', 'tensorflow-io-gcs-filesystem', 'sympy', 'unidecode', 'xxhash', 'safetensors', 'db-dtypes', 'pandocfilters', 'prettytable', 'patsy', 'opentelemetry-api', 'retrying', 'docopt', 'azure-mgmt-resource', 'mpmath', 'gcsfs', 'async-lru', 'jupyterlab-pygments', 'astunparse', 'setproctitle', 'terminado', 'libclang', 'pytest-runner', 'thrift', 'jsonpickle', 'semantic-version', 'ordered-set', 'azure-keyvault-secrets', 'pymssql', 'faker', 'pysftp', 'webcolors', 'argon2-cffi-bindings', 'jupyter-lsp', 'typing', 'rfc3986-validator', 'zeep', 'inflection', 'antlr4-python3-runtime', 'sphinxcontrib-serializinghtml', 'azure-datalake-store', 'graphviz', 'boto', 'fqdn', 'isoduration', 'jupyter-server-terminals', 'deprecation', 'moto', 'snowballstemmer', 'openai', 'opentelemetry-proto', 'distributed', 'azure-graphrbac', 'typed-ast', 'sphinxcontrib-htmlhelp', 'sphinxcontrib-applehelp', 'sphinxcontrib-devhelp', 'sphinxcontrib-qthelp', 'opencensus', 'ujson', 'opencensus-context', 'aioconsole', 'pathos', 'libcst', 'parsedatetime', 'stevedore', 'python-gnupg', 'google-cloud-firestore', 'pyproj', 'pandas-gbq', 'pox', 'trio', 'ppft', 'gspread', 'applicationinsights', 'numexpr', 'gevent', 'zope-event', 'kombu', 'shap', 'argparse', 'opentelemetry-exporter-otlp-proto-http', 'trio-websocket', 'google-cloud-appengine-logging', 'email-validator', 'structlog', 'loguru', 'watchtower', 'pyathena', 'torchvision', 'azure-mgmt-keyvault', 'azure-mgmt-storage', 'simple-salesforce', 'checkov', 'coloredlogs', 'apache-beam', 'tensorboard-plugin-wit', 'gsutil', 'kafka-python', 'mypy-boto3-rds', 'celery', 'pathlib2', 'pycrypto', 'wandb', 'colorlog', 'enum34', 'pybind11', 'tldextract', 'prometheus-flask-exporter', 'opentelemetry-semantic-conventions', 'types-urllib3', 'azure-cosmos', 'azure-eventhub', 'djangorestframework', 'opencensus-ext-azure', 'docstring-parser', 'lz4', 'pydata-google-auth', 'pywavelets', 'lightgbm', 'datetime', 'ecdsa', 'pyhcl', 'uamqp', 'cligj', 'google-cloud-resource-manager', 'slicer', 'fire', 'makefun', 'python-jose', 'azure-mgmt-containerregistry', 'imagesize', 'google-cloud-logging', 'keras-preprocessing', 'unittest-xml-reporting', 'alabaster', 'flask-cors', 'schema', 'hpack', 'nvidia-cudnn-cu11', 'partd', 'delta-spark', 'nvidia-cublas-cu11', 'wsproto', 'amqp', 'hypothesis', 'pytest-asyncio', 'python-http-client', 'validators', 'h2', 'azure-mgmt-authorization', 'databricks-sql-connector', 'sshtunnel', 'hyperframe', 'spacy', 'unicodecsv', 'brotli', 'fiona', 'locket', 'apache-airflow-providers-common-sql', 'holidays']
 
+    for dataset in ["data_3"]:
+        for n_jobs in [8]:
+            for n_models in [32,16,8,1]:
+                for n_estimators in [100]:
+                    for depth in [1]:
+                        for tree_method in["exact"]: # "exact","approx","hist"
+                            for max_bin in [1]:
+                                for input_size in [None]: # [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
+                                    package_subset, step = [], int(len(packages_l)/n_models)
+                                    for i in range(0, len(packages_l), step):
+                                        package_subset.append(set(packages_l[i:i+step]))
 
-    # n_models = 1
-    for n_jobs in [8]:
-        for n_models in [32,16,8,1]:
-            for n_estimators in [10]:
-                for depth in [1]:
-                    for tree_method in["exact"]: # "exact","approx","hist"
-                        for max_bin in [1]:
-                            for input_size in [None]: # [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
-                                package_subset, step = [], int(len(packages_l)/n_models)
-                                for i in range(0, len(packages_l), step):
-                                    package_subset.append(set(packages_l[i:i+step]))
-
-                                for i, train_subset in enumerate(package_subset):
-                                    test_subset = set()
-                                    for package_names in itertools.permutations(train_subset, 2):
-                                        test_subset.add("-".join(package_names))
-                                    train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_train/"
-                                    test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
-                                    cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin/"
-                                    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
-                                    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"randomint10000000_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
-                                    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
-                                    # break
+                                    for i, train_subset in enumerate(package_subset):
+                                        test_subset = set()
+                                        for package_names in itertools.permutations(train_subset, 2):
+                                            test_subset.add("-".join(package_names))
+                                        train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_train/"
+                                        test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
+                                        cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par/"
+                                        # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
+                                        # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"randomint10000000_sampling1_"+str(tree_method)+"treemethod_doublesamples/"
+                                        run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
+                                        # break
 
 
 
@@ -705,23 +762,24 @@ if __name__ == "__main__":
     # run_iter_train()
 
 
-    # ###################################
-    # run_pred()
-    # Number of Models
-    for n_jobs in [8]:
-        for n_models in [8,4,2,1]:
-            for n_estimators in [100]:
-                for depth in [1]:
-                    for tree_method in["exact"]: # "exact","approx","hist"
-                        for max_bin in [1]:
-                            for input_size in [None]:
-                                clf_path = []
-                                for i in range(n_models):
-                                    clf_path.append("/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin/model_init.json")
-                                cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin/"
-                                test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/big_ML_biased_test/"
-                #    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
-                                run_pred(cwd, clf_path, test_tags_path, n_jobs=n_jobs, n_estimators=n_estimators, input_size=input_size, depth=depth, tree_method=tree_method)
+    # # ###################################
+    # # run_pred()
+    # for dataset in ["data_0"]:
+    #     for n_jobs in [1]:
+    #         for clf_njobs in [8]:
+    #             for n_models in [8]:
+    #                 for n_estimators in [100]:
+    #                     for depth in [1]:
+    #                         for tree_method in["exact"]: # "exact","approx","hist"
+    #                             for max_bin in [1]:
+    #                                 for input_size in [None]:
+    #                                     clf_path = []
+    #                                     for i in range(n_models):
+    #                                         clf_path.append("/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par/model_init.json")
+    #                                     cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par/"
+    #                                     test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
+    #                     #    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
+    #                                     run_pred(cwd, clf_path, test_tags_path, n_jobs=n_jobs, n_estimators=n_estimators, input_size=input_size, depth=depth, tree_method=tree_method)
 
 
     ###################################
