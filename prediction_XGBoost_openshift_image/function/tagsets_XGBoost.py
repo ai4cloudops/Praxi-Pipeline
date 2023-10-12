@@ -43,6 +43,21 @@ def build_logger(logger_name, logfilepath):
     
     return logger
 
+def map_tagfilesl(tags_path, tag_files, cwd, packages_select_set, inference_flag):
+    all_tags_set, all_label_set = set(), set()
+    tags_by_instance_l, labels_by_instance_l = [], []
+    tagset_files = []
+    data_instance_d_l = [read_tokens(tags_path, tag_file, cwd, packages_select_set, inference_flag) for tag_file in tag_files]
+    # data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
+    for data_instance_d in data_instance_d_l:
+        if len(data_instance_d) ==4:
+                tagset_files.append(data_instance_d['tag_file'])
+                all_tags_set.update(data_instance_d['local_all_tags_set'])
+                tags_by_instance_l.append(data_instance_d['instance_feature_tags_d'])
+                all_label_set.update(data_instance_d['labels'])
+                labels_by_instance_l.append(data_instance_d['labels'])
+    return {"tagset_files": tagset_files, "all_tags_set": all_tags_set, "tags_by_instance_l":tags_by_instance_l ,"all_label_set":all_label_set, "labels_by_instance_l":labels_by_instance_l}
+
 def read_tokens(tags_path, tag_file, cwd, packages_select_set, inference_flag):
     logger = build_logger(tag_file, cwd+"logs/")
     try:
@@ -80,7 +95,7 @@ def read_tokens(tags_path, tag_file, cwd, packages_select_set, inference_flag):
         logger.info('%s', e)
     return ret
 
-def tagsets_to_matrix(tags_path, index_tag_mapping_path=None, tag_index_mapping_path=None, index_label_mapping_path=None, label_index_mapping_path=None, cwd="/home/cc/Praxi-study/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/", train_flag=False, inference_flag=True, iter_flag=False, packages_select_set=set(), input_size=None):
+def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None, tag_index_mapping_path=None, index_label_mapping_path=None, label_index_mapping_path=None, cwd="/home/cc/Praxi-study/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/", train_flag=False, inference_flag=True, iter_flag=False, packages_select_set=set(), input_size=None, compact_factor=1):
     if index_tag_mapping_path == None:
         index_tag_mapping_path=cwd+'index_tag_mapping'
         tag_index_mapping_path=cwd+'tag_index_mapping'
@@ -105,17 +120,38 @@ def tagsets_to_matrix(tags_path, index_tag_mapping_path=None, tag_index_mapping_
     #         tags_by_instance_l.append(data_instance_d['instance_feature_tags_d'])
     #         all_label_set.update(data_instance_d['labels'])
     #         labels_by_instance_l.append(data_instance_d['labels'])
+
     pool = mp.Pool(processes=mp.cpu_count())
     # pool = mp.Pool(processes=1)
-    data_instance_d_l = [pool.apply_async(read_tokens, args=(tags_path, tag_file, cwd, packages_select_set, inference_flag)) for tag_file in tqdm(os.listdir(tags_path))]
+    if tag_files_l == None:
+        tag_files_l = [tag_file for tag_file in os.listdir(tags_path) if tag_file[-3:] == 'tag']
+    tag_files_l_of_l, step = [], len(tag_files_l)//mp.cpu_count()+1
+    for i in range(0, len(tag_files_l), step):
+        tag_files_l_of_l.append(tag_files_l[i:i+step])
+    data_instance_d_l = [pool.apply_async(map_tagfilesl, args=(tags_path, tag_files_l, cwd, packages_select_set, inference_flag)) for tag_files_l in tqdm(tag_files_l_of_l)]
     data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
+    pool.close()
+    pool.join()
     for data_instance_d in data_instance_d_l:
-        if len(data_instance_d) ==4:
-                tagset_files.append(data_instance_d['tag_file'])
-                all_tags_set.update(data_instance_d['local_all_tags_set'])
-                tags_by_instance_l.append(data_instance_d['instance_feature_tags_d'])
-                all_label_set.update(data_instance_d['labels'])
-                labels_by_instance_l.append(data_instance_d['labels'])
+        if len(data_instance_d) == 5:
+                tagset_files.extend(data_instance_d['tagset_files'])
+                all_tags_set.update(data_instance_d['all_tags_set'])
+                tags_by_instance_l.extend(data_instance_d['tags_by_instance_l'])
+                all_label_set.update(data_instance_d['all_label_set'])
+                labels_by_instance_l.extend(data_instance_d['labels_by_instance_l'])
+    
+
+    # pool = mp.Pool(processes=mp.cpu_count())
+    # # pool = mp.Pool(processes=1)
+    # data_instance_d_l = [pool.apply_async(read_tokens, args=(tags_path, tag_file, cwd, packages_select_set, inference_flag)) for tag_file in tqdm(os.listdir(tags_path))]
+    # data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
+    # for data_instance_d in data_instance_d_l:
+    #     if len(data_instance_d) ==4:
+    #             tagset_files.append(data_instance_d['tag_file'])
+    #             all_tags_set.update(data_instance_d['local_all_tags_set'])
+    #             tags_by_instance_l.append(data_instance_d['instance_feature_tags_d'])
+    #             all_label_set.update(data_instance_d['labels'])
+    #             labels_by_instance_l.append(data_instance_d['labels'])
 
     # # kfp / RHODS pipeline with intermediate data as dumps 
     # with open(tags_path, 'rb') as reader:
@@ -219,19 +255,27 @@ def tagsets_to_matrix(tags_path, index_tag_mapping_path=None, tag_index_mapping_
     instance_row_list = []
     for instance_tags_d in tags_by_instance_l:
         if input_size == None:
-            instance_row = np.zeros(len(all_tags_l))
-            for tag_name,tag_count in instance_tags_d.items():
-                if tag_name in tag_index_mapping:  # remove new tags unseen in mapping.
-                    instance_row[tag_index_mapping[tag_name]] = tag_count
-                else:
-                    removed_tags_l.append(tag_name)
-        else:
-            instance_row = np.zeros(input_size)
-            for tag_name,tag_count in instance_tags_d.items():
-                if tag_name in tag_index_mapping:  # remove new tags unseen in mapping.
-                    instance_row[tag_index_mapping[tag_name]%input_size] = tag_count
-                else:
-                    removed_tags_l.append(tag_name)
+            input_size = len(all_tags_l)//compact_factor
+        instance_row = np.zeros(input_size)
+        for tag_name,tag_count in instance_tags_d.items():
+            if tag_name in tag_index_mapping:  # remove new tags unseen in mapping.
+                instance_row[tag_index_mapping[tag_name]%input_size] = tag_count
+            else:
+                removed_tags_l.append(tag_name)
+        # if input_size == None:
+        #     instance_row = np.zeros(len(all_tags_l))
+        #     for tag_name,tag_count in instance_tags_d.items():
+        #         if tag_name in tag_index_mapping:  # remove new tags unseen in mapping.
+        #             instance_row[tag_index_mapping[tag_name]] = tag_count
+        #         else:
+        #             removed_tags_l.append(tag_name)
+        # else:
+        #     instance_row = np.zeros(input_size)
+        #     for tag_name,tag_count in instance_tags_d.items():
+        #         if tag_name in tag_index_mapping:  # remove new tags unseen in mapping.
+        #             instance_row[tag_index_mapping[tag_name]%input_size] = tag_count
+        #         else:
+        #             removed_tags_l.append(tag_name)
         # else:
         #     # instance_row = np.zeros(input_size)
         #     instance_row = np.random.randint(1000000000, size=input_size)
@@ -340,6 +384,7 @@ def merge_preds(labels_1, labels_2):
 def print_metrics(cwd, outfile, y_true, y_pred, labels, op_durations=None):
     # with open(cwd+'index_label_mapping', 'rb') as fp:
     #     labels = np.array(pickle.load(fp))
+    print(len(y_true), len(y_true[0]), len(y_pred), len(labels))
     report = metrics.classification_report(y_true, y_pred, target_names=labels)
     f1w = metrics.f1_score(y_true, y_pred, average='weighted')
     f1i = metrics.f1_score(y_true, y_pred, average='micro')
@@ -391,7 +436,7 @@ def print_metrics(cwd, outfile, y_true, y_pred, labels, op_durations=None):
             np.array([]), fmt='%d', header=file_header, delimiter=',',
             comments='')
 
-def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estimators=100, train_packages_select_set=set(), test_packages_select_set=set(), input_size=None, depth=1, tree_method="auto", max_bin=6):
+def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estimators=100, train_packages_select_set=set(), test_packages_select_set=set(), test_batch_count=1, input_size=None, compact_factor=1, depth=1, tree_method="auto", max_bin=6):
     # train_tags_init_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_SL_biased_test/"
     # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
     # # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_init/"
@@ -400,18 +445,18 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estim
 
     op_durations = {}
     
+    process = psutil.Process()
+    # print(process.memory_info())
 
-    # Data
+    # Train Data
     t0 = time.time()
-    train_tagset_files_init, train_feature_matrix_init, train_label_matrix_init = tagsets_to_matrix(train_tags_init_path, cwd=cwd, train_flag=True, inference_flag=False, packages_select_set=train_packages_select_set, input_size=input_size)
-    t1 = time.time()
-    test_tagset_files_init, test_feature_matrix_init, test_label_matrix_init = tagsets_to_matrix(test_tags_path, cwd=cwd, train_flag=False, inference_flag=False, packages_select_set=test_packages_select_set, input_size=input_size)
+    train_tagset_files_init, train_feature_matrix_init, train_label_matrix_init = tagsets_to_matrix(train_tags_init_path, cwd=cwd, train_flag=True, inference_flag=False, packages_select_set=train_packages_select_set, input_size=input_size, compact_factor=compact_factor)
+    # print(process.memory_info())
     t2 = time.time()
-    print(t1-t0)
-    op_durations["tagsets_to_matrix-trainset"] = t1-t0
+    print(t2-t0)
+    op_durations["tagsets_to_matrix-trainset"] = t2-t0
     op_durations["tagsets_to_matrix-trainset_xsize"] = train_feature_matrix_init.shape[0]
     op_durations["tagsets_to_matrix-trainset_ysize"] = train_feature_matrix_init.shape[1]
-    op_durations["tagsets_to_matrix-testset"] = t2-t1
 
     # ######## save train_feature_matrix_init
     # with open(cwd+"train_feature_matrix_init.mat","wb") as filehandler:
@@ -490,32 +535,6 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estim
     #     for line in train_tagset_files_init:
     #         f.write(f"{line}\n")
 
-
-    # ######## Plot test feature usage as a B/W plot
-    # fig, ax = plt.subplots(1, 1, figsize=(600, 10))
-    # ax.imshow(test_feature_matrix_init > 0, cmap='hot', interpolation="nearest")
-    # plt.savefig(cwd+'test_feature_matrix_init.pdf', format='pdf', dpi=50, bbox_inches='tight')
-    # plt.close(fig)
-    # gc.collect()
-
-    # # test_feature_init_used_count = (test_feature_matrix_init > 0).sum(axis=0)
-    # # fig, ax = plt.subplots(1, 1, figsize=(600, 10))
-    # # ax.bar(list(range(len(test_feature_init_used_count))), test_feature_init_used_count)
-    # # plt.savefig(cwd+'test_feature_init_used_count.pdf', format='pdf', dpi=50, bbox_inches='tight')
-    # # plt.close(fig)
-    # # gc.collect()
-
-    # ######## Plot test label occurance as a B/W plot
-    # fig, ax = plt.subplots(1, 1, figsize=(600, 10))
-    # ax.imshow(test_label_matrix_init > 0, cmap='hot', interpolation="nearest")
-    # plt.savefig(cwd+'test_label_matrix_init.pdf', format='pdf', dpi=50, bbox_inches='tight')
-    # plt.close(fig)
-    # gc.collect()
-
-    # with open(cwd+'test_tagset_files_init.txt', 'w') as f:
-    #     for line in test_tagset_files_init:
-    #         f.write(f"{line}\n")
-
     # Init Training & Testing
     t0 = time.time()
     BOW_XGB_init = xgb.XGBClassifier(n_estimators=n_estimators, max_depth=depth, learning_rate=0.1,silent=False, objective='binary:logistic', \
@@ -524,36 +543,76 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estim
                     #   subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1, tree_method=tree_method)
     BOW_XGB_init.fit(train_feature_matrix_init, train_label_matrix_init)
     t1 = time.time()
-    pred_label_matrix_init = BOW_XGB_init.predict(test_feature_matrix_init)
-    t2 = time.time()
-    pred_label_prob_matrix_init = BOW_XGB_init.predict_proba(test_feature_matrix_init)
-    t3 = time.time()
-    results = one_hot_to_names(cwd+'index_label_mapping', pred_label_matrix_init)
-    t4 = time.time()
-    print(t1-t0, t2-t1, t3-t2)
     op_durations["BOW_XGB_init.fit"] = t1-t0
-    op_durations["BOW_XGB_init.predict"] = t2-t1
-    op_durations["BOW_XGB_init.predict_proba"] = t3-t2
-    op_durations["one_hot_to_names"] = t4-t3
-
-    # np.savetxt(cwd+'test_feature_matrix.out', test_feature_matrix, delimiter=',')
-
-    # np.savetxt(cwd+'pred_label_matrix_init.out', pred_label_matrix_init, delimiter=',')
-    # np.savetxt(cwd+'test_label_matrix_init.out', test_label_matrix_init, delimiter=',')
-    # np.savetxt(cwd+'pred_label_prob_matrix_init.out', pred_label_prob_matrix_init, delimiter=',')
-    # np.savetxt(cwd+'results.out', results, delimiter=',')
-    with open(cwd+'results.out', 'w') as fp:
-        labels = yaml.dump(results, fp)
-    with open(cwd+"pred_d_dump", 'w') as writer:
-        results_d = {}
-        for k,v in results.items():
-            results_d[int(k)] = v
-        yaml.dump(results_d, writer)
-    with open(cwd+'index_label_mapping', 'rb') as fp:
-        labels = np.array(pickle.load(fp))
-    print_metrics(cwd, 'metrics_init.out', test_label_matrix_init, pred_label_matrix_init, labels, op_durations)
-
     BOW_XGB_init.save_model(cwd+'model_init.json')
+
+    tag_files_l = [tag_file for tag_file in os.listdir(test_tags_path) if tag_file[-3:] == 'tag']
+    step = len(tag_files_l)//test_batch_count+1
+    for batch_first_idx in range(0, len(tag_files_l), step):
+        # Test Data
+        t0 = time.time()
+        test_tagset_files_init, test_feature_matrix_init, test_label_matrix_init = tagsets_to_matrix(test_tags_path, tag_files_l = tag_files_l[batch_first_idx:batch_first_idx+step], cwd=cwd, train_flag=False, inference_flag=False, packages_select_set=test_packages_select_set, input_size=input_size, compact_factor=compact_factor)
+        # print(process.memory_info())
+        t1 = time.time()
+        op_durations["tagsets_to_matrix-testset"] = t2-t1
+        op_durations["tagsets_to_matrix-testset_xsize"] = test_feature_matrix_init.shape[0]
+        op_durations["tagsets_to_matrix-testset_ysize"] = test_feature_matrix_init.shape[1]
+
+        # ######## Plot test feature usage as a B/W plot
+        # fig, ax = plt.subplots(1, 1, figsize=(600, 10))
+        # ax.imshow(test_feature_matrix_init > 0, cmap='hot', interpolation="nearest")
+        # plt.savefig(cwd+'test_feature_matrix_init.pdf', format='pdf', dpi=50, bbox_inches='tight')
+        # plt.close(fig)
+        # gc.collect()
+
+        # # test_feature_init_used_count = (test_feature_matrix_init > 0).sum(axis=0)
+        # # fig, ax = plt.subplots(1, 1, figsize=(600, 10))
+        # # ax.bar(list(range(len(test_feature_init_used_count))), test_feature_init_used_count)
+        # # plt.savefig(cwd+'test_feature_init_used_count.pdf', format='pdf', dpi=50, bbox_inches='tight')
+        # # plt.close(fig)
+        # # gc.collect()
+
+        # ######## Plot test label occurance as a B/W plot
+        # fig, ax = plt.subplots(1, 1, figsize=(600, 10))
+        # ax.imshow(test_label_matrix_init > 0, cmap='hot', interpolation="nearest")
+        # plt.savefig(cwd+'test_label_matrix_init.pdf', format='pdf', dpi=50, bbox_inches='tight')
+        # plt.close(fig)
+        # gc.collect()
+
+        # with open(cwd+'test_tagset_files_init.txt', 'w') as f:
+        #     for line in test_tagset_files_init:
+        #         f.write(f"{line}\n")
+        
+        # Prediction
+        pred_label_matrix_init = BOW_XGB_init.predict(test_feature_matrix_init)
+        t2 = time.time()
+        # pred_label_prob_matrix_init = BOW_XGB_init.predict_proba(test_feature_matrix_init)
+        # t3 = time.time()
+        results = one_hot_to_names(cwd+'index_label_mapping', pred_label_matrix_init)
+        t4 = time.time()
+        print(t1-t0, t2-t1, t4-t2)
+        op_durations["BOW_XGB_init.predict"] = t2-t1
+        # op_durations["BOW_XGB_init.predict_proba"] = t3-t2
+        op_durations["one_hot_to_names"] = t4-t2
+
+        # np.savetxt(cwd+'test_feature_matrix.out', test_feature_matrix, delimiter=',')
+
+        # np.savetxt(cwd+'pred_label_matrix_init.out', pred_label_matrix_init, delimiter=',')
+        # np.savetxt(cwd+'test_label_matrix_init.out', test_label_matrix_init, delimiter=',')
+        # np.savetxt(cwd+'pred_label_prob_matrix_init.out', pred_label_prob_matrix_init, delimiter=',')
+        # np.savetxt(cwd+'results.out', results, delimiter=',')
+        with open(cwd+'results.out', 'w') as fp:
+            labels = yaml.dump(results, fp)
+        with open(cwd+"pred_d_dump", 'w') as writer:
+            results_d = {}
+            for k,v in results.items():
+                results_d[int(k)] = v
+            yaml.dump(results_d, writer)
+        with open(cwd+'index_label_mapping', 'rb') as fp:
+            labels = np.array(pickle.load(fp))
+        print_metrics(cwd, 'metrics_init_'+str(batch_first_idx)+'.out', test_label_matrix_init, pred_label_matrix_init, labels, op_durations)
+
+    
 
 
 def run_iter_train():
@@ -591,7 +650,7 @@ def run_iter_train():
         labels = np.array(pickle.load(fp))
     print_metrics(cwd, 'metrics_iter.out', test_label_matrix_iter, pred_label_matrix_iter, labels)
 
-def run_pred(cwd, clf_path_l, test_tags_path, n_jobs=64, n_estimators=100, packages_select_set=set(), input_size=None, depth=1, tree_method="auto"):
+def run_pred(cwd, clf_path_l, test_tags_path, n_jobs=64, n_estimators=100, packages_select_set=set(), test_batch_count=1, input_size=None, compact_factor=1, depth=1, tree_method="auto"):
     # # cwd = "/pipelines/component/cwd/"
     # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
     # clf_path = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/model_init.json"
@@ -602,64 +661,71 @@ def run_pred(cwd, clf_path_l, test_tags_path, n_jobs=64, n_estimators=100, packa
     label_matrix_list, pred_label_matrix_list, labels_list = [], [], []
     results = defaultdict(list)
     for clf_idx, clf_path in enumerate(clf_path_l):
-        # op_durations = {}
-
-        # # load from previous component
-        # with open(test_tags_path, 'rb') as reader:
-        #     tagsets_l = pickle.load(reader)
-        t0 = time.time()
-        # ########### convert from tag:count strings to encoding format
-        tagset_files, feature_matrix, label_matrix = tagsets_to_matrix(test_tags_path, inference_flag=False, cwd=clf_path[:-15], packages_select_set=packages_select_set, input_size=input_size) # get rid of "model_init.json" in the clf_path.
-        # # ########### load a previously converted encoding format data obj
-        # with open(test_tags_path+"feature_matrix.obj","rb") as filehandler:
-        #     feature_matrix = pickle.load(filehandler)
-        # with open(test_tags_path+"label_matrix.obj","rb") as filehandler:
-        #     label_matrix = pickle.load(filehandler)
-        # with open(test_tags_path+"tagset_files.obj","rb") as filehandler:
-        #     tagset_files = pickle.load(filehandler)
-        # # ############################################
-        BOW_XGB = xgb.XGBClassifier(n_estimators=n_estimators, max_depth=depth, learning_rate=0.1,silent=False, objective='binary:logistic', \
-                      booster='gbtree', n_jobs=n_jobs, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
-                      subsample=1, colsample_bytree=1, colsample_bylevel=1, reg_alpha=0, reg_lambda=1, tree_method=tree_method)
-        BOW_XGB.load_model(clf_path)
-        BOW_XGB.set_params(n_jobs=n_jobs)
-        t1 = time.time()
-        op_durations[clf_path+"\n BOW_XGB.load_model"] = t1-t0
-        op_durations[clf_path+"\n feature_matrix_size_0"] = feature_matrix.shape[0]
-        op_durations[clf_path+"\n feature_matrix_size_1"] = feature_matrix.shape[1]
-        op_durations[clf_path+"\n label_matrix_size_0"] = label_matrix.shape[0]
-        op_durations[clf_path+"\n label_matrix_size_1"] = label_matrix.shape[1]
-        # op_durations[clf_path+"\n tagset_files"] = tagset_files
-        # ######## save train_feature_matrix_init
-        # with open(cwd+"train_feature_matrix_init_"+str(clf_idx)+".mat","wb") as filehandler:
-        #     np.save(filehandler, feature_matrix)
-
-        # # debug
-        # with open("/pipelines/component/cwd/tagsets.log", 'w') as writer:
-        #     for tag_dict in tagsets_l:
-        #         writer.write(json.dumps(tag_dict) + '\n')
-        # time.sleep(5000)
-        # print("labs",clf.all_labels)
-
-        # prediction
-        t0 = time.time()
-        pred_label_matrix = BOW_XGB.predict(feature_matrix)
-        # while True:
-        #     BOW_XGB.predict(feature_matrix)
-        t1 = time.time()
-        label_matrix_list.append(label_matrix)
-        pred_label_matrix_list.append(pred_label_matrix)
-        results = merge_preds(results, one_hot_to_names(clf_path[:-15]+'index_label_mapping', pred_label_matrix))
         with open(clf_path[:-15]+'index_label_mapping', 'rb') as fp:
             labels_list.append(np.array(pickle.load(fp)))
-        t2 = time.time()
-        op_durations[clf_path+"\n BOW_XGB.predict"] = t1-t0
-        op_durations[clf_path+"\n one_hot_to_names"] = t2-t1
+        label_matrix_list_per_clf, pred_label_matrix_list_per_clf = [],[]
+        tag_files_l = [tag_file for tag_file in os.listdir(test_tags_path) if tag_file[-3:] == 'tag']
+        step = len(tag_files_l)//test_batch_count+1
+        for batch_first_idx in range(0, len(tag_files_l), step):
+            # op_durations = {}
 
-        # op_durations_glb[clf_path] = op_durations
-        # results_d = {}
-        # for k,v in results.items():
-        #     results_d[int(k)] = v
+            # # load from previous component
+            # with open(test_tags_path, 'rb') as reader:
+            #     tagsets_l = pickle.load(reader)
+            t0 = time.time()
+            # ########### convert from tag:count strings to encoding format
+            tagset_files, feature_matrix, label_matrix = tagsets_to_matrix(test_tags_path, tag_files_l = tag_files_l[batch_first_idx:batch_first_idx+step], inference_flag=False, cwd=clf_path[:-15], packages_select_set=packages_select_set, input_size=input_size, compact_factor=compact_factor) # get rid of "model_init.json" in the clf_path.
+            # # ########### load a previously converted encoding format data obj
+            # with open(test_tags_path+"feature_matrix.obj","rb") as filehandler:
+            #     feature_matrix = pickle.load(filehandler)
+            # with open(test_tags_path+"label_matrix.obj","rb") as filehandler:
+            #     label_matrix = pickle.load(filehandler)
+            # with open(test_tags_path+"tagset_files.obj","rb") as filehandler:
+            #     tagset_files = pickle.load(filehandler)
+            # # ############################################
+            BOW_XGB = xgb.XGBClassifier(n_estimators=n_estimators, max_depth=depth, learning_rate=0.1,silent=False, objective='binary:logistic', \
+                        booster='gbtree', n_jobs=n_jobs, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
+                        subsample=1, colsample_bytree=1, colsample_bylevel=1, reg_alpha=0, reg_lambda=1, tree_method=tree_method)
+            BOW_XGB.load_model(clf_path)
+            BOW_XGB.set_params(n_jobs=n_jobs)
+            t1 = time.time()
+            op_durations[clf_path+"\n BOW_XGB.load_model_"+str(batch_first_idx)+"/"+str(test_batch_count)] = t1-t0
+            op_durations[clf_path+"\n feature_matrix_size_0_"+str(batch_first_idx)+"/"+str(test_batch_count)] = feature_matrix.shape[0]
+            op_durations[clf_path+"\n feature_matrix_size_1_"+str(batch_first_idx)+"/"+str(test_batch_count)] = feature_matrix.shape[1]
+            op_durations[clf_path+"\n label_matrix_size_0_"+str(batch_first_idx)+"/"+str(test_batch_count)] = label_matrix.shape[0]
+            op_durations[clf_path+"\n label_matrix_size_1_"+str(batch_first_idx)+"/"+str(test_batch_count)] = label_matrix.shape[1]
+            # op_durations[clf_path+"\n tagset_files"] = tagset_files
+            # ######## save train_feature_matrix_init
+            # with open(cwd+"train_feature_matrix_init_"+str(clf_idx)+".mat","wb") as filehandler:
+            #     np.save(filehandler, feature_matrix)
+
+            # # debug
+            # with open("/pipelines/component/cwd/tagsets.log", 'w') as writer:
+            #     for tag_dict in tagsets_l:
+            #         writer.write(json.dumps(tag_dict) + '\n')
+            # time.sleep(5000)
+            # print("labs",clf.all_labels)
+
+            # prediction
+            t0 = time.time()
+            pred_label_matrix = BOW_XGB.predict(feature_matrix)
+            # while True:
+            #     BOW_XGB.predict(feature_matrix)
+            t1 = time.time()
+            results = merge_preds(results, one_hot_to_names(clf_path[:-15]+'index_label_mapping', pred_label_matrix))
+            t2 = time.time()
+            op_durations[clf_path+"\n BOW_XGB.predict_"+str(batch_first_idx)+"/"+str(test_batch_count)] = t1-t0
+            op_durations[clf_path+"\n one_hot_to_names_"+str(batch_first_idx)+"/"+str(test_batch_count)] = t2-t1
+            label_matrix_list_per_clf.append(label_matrix)
+            pred_label_matrix_list_per_clf.append(pred_label_matrix)
+            # op_durations_glb[clf_path] = op_durations
+            # results_d = {}
+            # for k,v in results.items():
+            #     results_d[int(k)] = v
+        label_matrix_list_per_clf = np.vstack(label_matrix_list_per_clf)
+        pred_label_matrix_list_per_clf = np.vstack(pred_label_matrix_list_per_clf)
+        label_matrix_list.append(label_matrix_list_per_clf)
+        pred_label_matrix_list.append(pred_label_matrix_list_per_clf)
 
     Path(cwd).mkdir(parents=True, exist_ok=True)
     # with open(cwd+"pred_l_dump", 'w') as writer:
@@ -736,13 +802,13 @@ if __name__ == "__main__":
 
     for dataset in ["data_3"]:
         packages_l = packages_ll[dataset]
-        for n_jobs in [8]:
-            for n_models in [20,15,10,5,1]:
+        for n_jobs in [64]:
+            for n_models, test_batch_count in zip([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # ([50,25,20,15,10,5,1],[1,1,1,1,1,1,8])
                 for n_estimators in [100]:
                     for depth in [1]:
                         for tree_method in["exact"]: # "exact","approx","hist"
                             for max_bin in [1]:
-                                for input_size in [109319]: # [None, 13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
+                                for input_size, dim_compact_factor in zip([None],[1]): # [None, 13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
                                     package_subset, step = [], int(len(packages_l)/n_models)
                                     for i in range(0, len(packages_l), step):
                                         package_subset.append(set(packages_l[i:i+step]))
@@ -753,8 +819,8 @@ if __name__ == "__main__":
                                             test_subset.add("-".join(package_names))
                                         train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_train/"
                                         test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
-                                        cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par/"
-                                        run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
+                                        cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par/"
+                                        run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, test_batch_count=test_batch_count, input_size=input_size, compact_factor=dim_compact_factor, depth=depth, tree_method=tree_method)
                                         # break
 
 
@@ -764,24 +830,24 @@ if __name__ == "__main__":
     # run_iter_train()
 
 
-    # # ###################################
-    # # run_pred()
-    # for dataset in ["data_0"]:
-    #     for n_jobs in [1]:
-    #         for clf_njobs in [8]:
-    #             for n_models in [8]:
-    #                 for n_estimators in [100]:
-    #                     for depth in [1]:
-    #                         for tree_method in["exact"]: # "exact","approx","hist"
-    #                             for max_bin in [1]:
-    #                                 for input_size in [None]:
-    #                                     clf_path = []
-    #                                     for i in range(n_models):
-    #                                         clf_path.append("/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par/model_init.json")
-    #                                     cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par/"
-    #                                     test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
-    #                     #    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
-    #                                     run_pred(cwd, clf_path, test_tags_path, n_jobs=n_jobs, n_estimators=n_estimators, input_size=input_size, depth=depth, tree_method=tree_method)
+    # ###################################
+    # run_pred()
+    for dataset in ["data_3"]:
+        for n_jobs in [1]:
+            for clf_njobs in [64]:
+                for n_models, test_batch_count in zip([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]):
+                    for n_estimators in [100]:
+                        for depth in [1]:
+                            for tree_method in["exact"]: # "exact","approx","hist"
+                                for max_bin in [1]:
+                                    for input_size, dim_compact_factor in zip([None],[1]):
+                                        clf_path = []
+                                        for i in range(n_models):
+                                            clf_path.append("/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par/model_init.json")
+                                        cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par/"
+                                        test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
+                        #    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
+                                        run_pred(cwd, clf_path, test_tags_path, n_jobs=n_jobs, n_estimators=n_estimators, test_batch_count=test_batch_count, input_size=input_size, compact_factor=dim_compact_factor, depth=depth, tree_method=tree_method)
 
 
     ###################################
