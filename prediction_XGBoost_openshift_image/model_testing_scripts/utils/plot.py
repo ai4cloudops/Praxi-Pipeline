@@ -16,13 +16,13 @@ def plotting(fig_path, filename, cates_values, labels, cates_stds= None, yaxis_l
                 p = ax.bar([idx - width/len(cates_values)/2 + i*width/len(cates_values) for idx, _ in enumerate(value)], value, width/len(cates_values), label=cate, bottom=bottom)
             bottom += value
             ax.bar_label(p)
-    if cates_stds!=None:
-        for i, cate_stds in enumerate(cates_stds):
-            for cate, (y, yerr) in cate_stds.items():
-                if labels[0]==None:
-                    p = ax.bar([float(entry) for entry in cate.split("-")], y, yerr)
-                else:
-                    p = ax.bar([idx - width/len(cates_stds)/2 + i*width/len(cates_stds) for idx, _ in enumerate(y)], y, yerr)
+    # if cates_stds!=None:
+    #     for i, cate_stds in enumerate(cates_stds):
+    #         for cate, (y, yerr) in cate_stds.items():
+    #             if labels[0]==None:
+    #                 p = ax.bar([float(entry) for entry in cate.split("-")], y, yerr)
+    #             else:
+    #                 p = ax.bar([idx - width/len(cates_stds)/2 + i*width/len(cates_stds) for idx, _ in enumerate(y)], y, yerr)
 
     if title == None:
         ax.set_title(" ".join(filename.split("_")))
@@ -375,6 +375,28 @@ if __name__ == "__main__":
     # plotting(fig_path, filename, cate_values, labels)
 
 
+    fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
+    filename = "outputsize_by_N_models_with_rawinput_data_0"
+    labels = (
+        "8","4","2","1"
+    )
+    cate_values_1 = {
+        "M10-M20-M40-M80": np.array([13664, 27329, 54659, 109319]),
+        "M10-M20-M40-MX_1": np.array([13664, 27329, 54659, 0]),
+        "M10-M20-M40-MX_2": np.array([13664, 27329, 0, 0]),
+        "M10-M20-M40-MX_3": np.array([13664, 27329, 0, 0]),
+        "M10-MX-MX-MX_1": np.array([13664, 0, 0, 0]),
+        "M10-MX-MX-MX_2": np.array([13664, 0, 0, 0]),
+        "M10-MX-MX-MX_3": np.array([13664, 0, 0, 0]),
+        "M10-MX-MX-MX_4": np.array([13664, 0, 0, 0]),
+    }
+    # cate_values_2 = {
+    #     "-": np.array([0, 0, 0])
+    # }
+    cate_values = [cate_values_1]
+    plotting(fig_path, filename, cate_values, labels)
+
+
 
     fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
     filename = "trainlatency_by_N_models_with_rawinput_data_0"
@@ -397,81 +419,105 @@ if __name__ == "__main__":
     cate_values = [cate_values_1, cate_values_2]
     plotting(fig_path, filename, cate_values, labels, xaxis_label="Number of Labels Per Model", yaxis_label="Training Time(s)", title="Train Latency by N Models with the Same Train Dataset")
 
-
-    fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
-    filename = "inferencelatency_by_N_models_with_rawinput_data_0"
-    labels = (
-        "8","4","2","1"
-    )
-    cate_values_1_l = [{
-        "M10-M20-M40-M80": np.array([0.026, 0.099, 0.179, 2.072]),
-        "M10-M20-M40-MX_1": np.array([0.075, 0.090, 1.785, 0]),
-        "M10-M20-M40-MX_2": np.array([0.025, 0.398, 0, 0]),
-        "M10-M20-M40-MX_3": np.array([0.067, 1.325, 0, 0]),
-        "M10-MX-MX-MX_1": np.array([0.236, 0, 0, 0]),
-        "M10-MX-MX-MX_2": np.array([0.157, 0, 0, 0]),
-        "M10-MX-MX-MX_3": np.array([1.110, 0, 0, 0]),
-        "M10-MX-MX-MX_4": np.array([0.149, 0, 0, 0]),
-    },{
-        "M10-M20-M40-M80": np.array([0.026, 0.092, 0.171, 1.954]),
-        "M10-M20-M40-MX_1": np.array([0.073, 0.085, 1.713, 0]),
-        "M10-M20-M40-MX_2": np.array([0.023, 0.374, 0, 0]),
-        "M10-M20-M40-MX_3": np.array([0.064, 1.236, 0, 0]),
-        "M10-MX-MX-MX_1": np.array([0.234, 0, 0, 0]),
-        "M10-MX-MX-MX_2": np.array([0.148, 0, 0, 0]),
-        "M10-MX-MX-MX_3": np.array([1.086, 0, 0, 0]),
-        "M10-MX-MX-MX_4": np.array([0.142, 0, 0, 0]),
-    },{
-        "M10-M20-M40-M80": np.array([0.024, 0.092, 0.171, 2.192]),
-        "M10-M20-M40-MX_1": np.array([0.073, 0.088, 1.676, 0]),
-        "M10-M20-M40-MX_2": np.array([0.023, 0.373, 0, 0]),
-        "M10-M20-M40-MX_3": np.array([0.066, 1.224, 0, 0]),
-        "M10-MX-MX-MX_1": np.array([0.235, 0, 0, 0]),
-        "M10-MX-MX-MX_2": np.array([0.149, 0, 0, 0]),
-        "M10-MX-MX-MX_3": np.array([1.072, 0, 0, 0]),
-        "M10-MX-MX-MX_4": np.array([0.143, 0, 0, 0]),
-    }]
-    cate_values_1 = {"M10-M20-M40-M80": [],
-        "M10-M20-M40-MX_1": [],
-        "M10-M20-M40-MX_2": [],
-        "M10-M20-M40-MX_3": [],
-        "M10-MX-MX-MX_1": [],
-        "M10-MX-MX-MX_2": [],
-        "M10-MX-MX-MX_3": [],
-        "M10-MX-MX-MX_4": []}
-    cate_stds_1 = {"errors": []}
-    for d in cate_values_1_l:
-        for k, v in cate_values_1.items():
-            cate_values_1[k].append(d[k])
-    for k, v in cate_values_1.items():
-        cate_values_1[k] = np.vstack(cate_values_1[k])
-        cate_stds_1[k] = np.var(cate_values_1[k], axis=0)
-        cate_values_1[k] = np.mean(cate_values_1[k], axis=0)
-    cate_values = [cate_values_1]
-    cate_stds = [cate_stds_1]
-    plotting(fig_path, filename, cate_values, labels, cates_stds=cate_stds, xaxis_label="Number of Labels Per Model", yaxis_label="Inference Time(s)", title="Inference Latency by N Models with the Same Test Dataset")
-
-
-    fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
-    filename = "outputsize_by_N_models_with_rawinput_data_0"
-    labels = (
-        "8","4","2","1"
-    )
-    cate_values_1 = {
-        "M10-M20-M40-M80": np.array([13664, 27329, 54659, 109319]),
-        "M10-M20-M40-MX_1": np.array([13664, 27329, 54659, 0]),
-        "M10-M20-M40-MX_2": np.array([13664, 27329, 0, 0]),
-        "M10-M20-M40-MX_3": np.array([13664, 27329, 0, 0]),
-        "M10-MX-MX-MX_1": np.array([13664, 0, 0, 0]),
-        "M10-MX-MX-MX_2": np.array([13664, 0, 0, 0]),
-        "M10-MX-MX-MX_3": np.array([13664, 0, 0, 0]),
-        "M10-MX-MX-MX_4": np.array([13664, 0, 0, 0]),
-    }
-    # cate_values_2 = {
-    #     "-": np.array([0, 0, 0])
+    # fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
+    # filename = "trainlatencypermodel_by_N_models_with_rawinput_data_0"
+    # labels = (
+    #     "10","20","40","80"
+    # )
+    # cate_values_1 = {
+    #     "M10-M20-M40-M80": np.array([2.407, 18.840, 143.565, 1090.042]),
+    #     # "M10-M20-M40-MX_1": np.array([2.396, 18.788, 143.717, 0]),
+    #     # "M10-M20-M40-MX_2": np.array([2.413, 19.016, 0, 0]),
+    #     # "M10-M20-M40-MX_3": np.array([2.407, 18.862, 0, 0]),
+    #     # "M10-MX-MX-MX_1": np.array([2.406, 0, 0, 0]),
+    #     # "M10-MX-MX-MX_2": np.array([2.396, 0, 0, 0]),
+    #     # "M10-MX-MX-MX_3": np.array([2.440, 0, 0, 0]),
+    #     # "M10-MX-MX-MX_4": np.array([2.396, 0, 0, 0]),
     # }
-    cate_values = [cate_values_1]
-    plotting(fig_path, filename, cate_values, labels)
+    # # cate_values_2 = {
+    # #     "Estimated": np.array([8*2.4, 4*2.4*2*(4*math.log(25*20)/math.log(25*10)), 2*19.0*2*(4*math.log(25*40)/math.log(25*20)), 143.5*2*(4*math.log(25*80)/math.log(25*40))])
+    # # }
+    # cate_values = [cate_values_1]
+    # plotting(fig_path, filename, cate_values, labels, xaxis_label="Number of Labels Per Model", yaxis_label="Training Time(s)", title="Train Latency by N Models with the Same Train Dataset")
+
+
+    fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
+    filename = "trainlatencypermodel_by_N_models_with_rawinput_data_0"
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
+    xs=["10","20","40","80"]
+    # labels = ("Observed", "Estimated")
+    ys=[2.407, 18.840, 143.565, 1090.042]
+    # for ys, label in zip(ys_l, labels):
+    p = ax.bar(xs, ys)
+    ax.bar_label(p)
+    ax.set_xticks(list(range(len(xs))))
+    ax.set_xticklabels(xs)
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Number of Packages", fontsize=20)
+    ax.set_ylabel("Training Time(s)", fontsize=20)
+    # plt.legend(prop={'size': 16})
+    # plt.show()
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
+    plt.close()
+
+    # fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
+    # filename = "inferencelatency_by_N_models_with_rawinput_data_0"
+    # labels = (
+    #     "8","4","2","1"
+    # )
+    # cate_values_1_l = [{
+    #     "M10-M20-M40-M80": np.array([0.026, 0.099, 0.179, 2.072]),
+    #     "M10-M20-M40-MX_1": np.array([0.075, 0.090, 1.785, 0]),
+    #     "M10-M20-M40-MX_2": np.array([0.025, 0.398, 0, 0]),
+    #     "M10-M20-M40-MX_3": np.array([0.067, 1.325, 0, 0]),
+    #     "M10-MX-MX-MX_1": np.array([0.236, 0, 0, 0]),
+    #     "M10-MX-MX-MX_2": np.array([0.157, 0, 0, 0]),
+    #     "M10-MX-MX-MX_3": np.array([1.110, 0, 0, 0]),
+    #     "M10-MX-MX-MX_4": np.array([0.149, 0, 0, 0]),
+    # },{
+    #     "M10-M20-M40-M80": np.array([0.026, 0.092, 0.171, 1.954]),
+    #     "M10-M20-M40-MX_1": np.array([0.073, 0.085, 1.713, 0]),
+    #     "M10-M20-M40-MX_2": np.array([0.023, 0.374, 0, 0]),
+    #     "M10-M20-M40-MX_3": np.array([0.064, 1.236, 0, 0]),
+    #     "M10-MX-MX-MX_1": np.array([0.234, 0, 0, 0]),
+    #     "M10-MX-MX-MX_2": np.array([0.148, 0, 0, 0]),
+    #     "M10-MX-MX-MX_3": np.array([1.086, 0, 0, 0]),
+    #     "M10-MX-MX-MX_4": np.array([0.142, 0, 0, 0]),
+    # },{
+    #     "M10-M20-M40-M80": np.array([0.024, 0.092, 0.171, 2.192]),
+    #     "M10-M20-M40-MX_1": np.array([0.073, 0.088, 1.676, 0]),
+    #     "M10-M20-M40-MX_2": np.array([0.023, 0.373, 0, 0]),
+    #     "M10-M20-M40-MX_3": np.array([0.066, 1.224, 0, 0]),
+    #     "M10-MX-MX-MX_1": np.array([0.235, 0, 0, 0]),
+    #     "M10-MX-MX-MX_2": np.array([0.149, 0, 0, 0]),
+    #     "M10-MX-MX-MX_3": np.array([1.072, 0, 0, 0]),
+    #     "M10-MX-MX-MX_4": np.array([0.143, 0, 0, 0]),
+    # }]
+    # cate_values_1 = {"M10-M20-M40-M80": [],
+    #     "M10-M20-M40-MX_1": [],
+    #     "M10-M20-M40-MX_2": [],
+    #     "M10-M20-M40-MX_3": [],
+    #     "M10-MX-MX-MX_1": [],
+    #     "M10-MX-MX-MX_2": [],
+    #     "M10-MX-MX-MX_3": [],
+    #     "M10-MX-MX-MX_4": []}
+    # cate_stds_1 = {"errors": []}
+    # for d in cate_values_1_l:
+    #     for k, v in cate_values_1.items():
+    #         cate_values_1[k].append(d[k])
+    # for k, v in cate_values_1.items():
+    #     cate_values_1[k] = np.vstack(cate_values_1[k])
+    #     cate_stds_1[k] = np.var(cate_values_1[k], axis=0)
+    #     cate_values_1[k] = np.mean(cate_values_1[k], axis=0)
+    # cate_values = [cate_values_1]
+    # cate_stds = [cate_stds_1]
+    # plotting(fig_path, filename, cate_values, labels, cates_stds=cate_stds, xaxis_label="Number of Labels Per Model", yaxis_label="Inference Time(s)", title="Inference Latency by N Models with the Same Test Dataset")
+
+
+
+
+
 
 
 
