@@ -417,7 +417,7 @@ if __name__ == "__main__":
         "Estimated": np.array([8*2.4, 4*2.4*2*(4*math.log(25*20)/math.log(25*10)), 2*19.0*2*(4*math.log(25*40)/math.log(25*20)), 143.5*2*(4*math.log(25*80)/math.log(25*40))])
     }
     cate_values = [cate_values_1, cate_values_2]
-    plotting(fig_path, filename, cate_values, labels, xaxis_label="Number of Labels Per Model", yaxis_label="Training Time(s)", title="Train Latency by N Models with the Same Train Dataset")
+    plotting(fig_path, filename, cate_values, labels, xaxis_label="Number of Models", yaxis_label="Training Time(s)", title="Train Latency by N Models with the Same Train Dataset")
 
     # fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/figs/'
     # filename = "trainlatencypermodel_by_N_models_with_rawinput_data_0"
