@@ -43,11 +43,11 @@ def build_logger(logger_name, logfilepath):
     
     return logger
 
-def map_tagfilesl(tags_path, tag_files, cwd, packages_select_set, inference_flag, tokens_filter_set=set()):
+def map_tagfilesl(tags_path, tag_files, cwd, inference_flag, tokens_filter_set=set()):
     all_tags_set, all_label_set = set(), set()
     tags_by_instance_l, labels_by_instance_l = [], []
     tagset_files = []
-    data_instance_d_l = [read_tokens(tags_path, tag_file, cwd, packages_select_set, inference_flag, tokens_filter_set=tokens_filter_set) for tag_file in tag_files]
+    data_instance_d_l = [read_tokens(tags_path, tag_file, cwd, inference_flag, tokens_filter_set=tokens_filter_set) for tag_file in tag_files]
     # data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
     for data_instance_d in data_instance_d_l:
         if len(data_instance_d) ==4:
@@ -58,52 +58,52 @@ def map_tagfilesl(tags_path, tag_files, cwd, packages_select_set, inference_flag
                 labels_by_instance_l.append(data_instance_d['labels'])
     return {"tagset_files": tagset_files, "all_tags_set": all_tags_set, "tags_by_instance_l":tags_by_instance_l ,"all_label_set":all_label_set, "labels_by_instance_l":labels_by_instance_l}
 
-def read_tokens(tags_path, tag_file, cwd, packages_select_set, inference_flag, tokens_filter_set=set()):
+def read_tokens(tags_path, tag_file, cwd, inference_flag, tokens_filter_set=set()):
     try:
         ret = {}
-        if(tag_file[-3:] == 'tag') and (tag_file[:-3].rsplit('-', 1)[0] in packages_select_set or packages_select_set == set()):
-            with open(tags_path + tag_file, 'rb') as tf:
-                # print(tag_file)
-                # tagset_files.append(tag_file)
-                ret["tag_file"] = tag_file
-                local_all_tags_set = set()
-                instance_feature_tags_d = defaultdict(int)
-                tagset = yaml.load(tf, Loader=yaml.Loader)
-                # tagset = json.load(tf)   
+        # if(tag_file[-3:] == 'tag') and (tag_file[:-3].rsplit('-', 1)[0] in packages_select_set or packages_select_set == set()):
+        with open(tags_path + tag_file, 'rb') as tf:
+            # print(tag_file)
+            # tagset_files.append(tag_file)
+            ret["tag_file"] = tag_file
+            local_all_tags_set = set()
+            instance_feature_tags_d = defaultdict(int)
+            tagset = yaml.load(tf, Loader=yaml.Loader)
+            # tagset = json.load(tf)   
 
-                # feature 
-                filtered_tags_l = list()
-                for tag_vs_count in tagset['tags']:
-                    k,v = tag_vs_count.split(":")
-                    if k not in tokens_filter_set:
-                        local_all_tags_set.add(k)
-                        instance_feature_tags_d[k] += int(v)
-                    else:
-                        filtered_tags_l.append(k)
-                if local_all_tags_set == set():
-                    logger = build_logger(tag_file, cwd+"logs/")
-                    logger.info('%s', tag_file+" has empty tags after filtering: "+str(filtered_tags_l))
-                    return {}
-                ret["local_all_tags_set"] = local_all_tags_set
-                ret["instance_feature_tags_d"] = instance_feature_tags_d
-                # tags_by_instance_l.append(instance_feature_tags_d)
+            # feature 
+            filtered_tags_l = list()
+            for tag_vs_count in tagset['tags']:
+                k,v = tag_vs_count.split(":")
+                if k not in tokens_filter_set:
+                    local_all_tags_set.add(k)
+                    instance_feature_tags_d[k] += int(v)
+                else:
+                    filtered_tags_l.append(k)
+            if local_all_tags_set == set():
+                logger = build_logger(tag_file, cwd+"logs/")
+                logger.info('%s', tag_file+" has empty tags after filtering: "+str(filtered_tags_l))
+                return {}
+            ret["local_all_tags_set"] = local_all_tags_set
+            ret["instance_feature_tags_d"] = instance_feature_tags_d
+            # tags_by_instance_l.append(instance_feature_tags_d)
 
-                # label
-                if not inference_flag:
-                    if 'labels' in tagset:
-                        ret["labels"] = tagset['labels']
-                        # all_label_set.update(tagset['labels'])
-                        # labels_by_instance_l.append(tagset['labels'])
-                    else:
-                        ret["labels"] = [tagset['label']]
-                        # all_label_set.add(tagset['label'])
-                        # labels_by_instance_l.append([tagset['label']])
+            # label
+            if not inference_flag:
+                if 'labels' in tagset:
+                    ret["labels"] = tagset['labels']
+                    # all_label_set.update(tagset['labels'])
+                    # labels_by_instance_l.append(tagset['labels'])
+                else:
+                    ret["labels"] = [tagset['label']]
+                    # all_label_set.add(tagset['label'])
+                    # labels_by_instance_l.append([tagset['label']])
     except Exception as e: # work on python 3.x
         logger = build_logger(tag_file, cwd+"logs/")
         logger.info('%s', e)
     return ret
 
-def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None, tag_index_mapping_path=None, index_label_mapping_path=None, label_index_mapping_path=None, cwd="/home/cc/Praxi-study/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/", train_flag=False, inference_flag=True, iter_flag=False, packages_select_set=set(), tokens_filter_set=set(), input_size=None, compact_factor=1):
+def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None, tag_index_mapping_path=None, index_label_mapping_path=None, label_index_mapping_path=None, cwd="/home/cc/Praxi-study/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/", train_flag=False, inference_flag=True, iter_flag=False, samples_select_set=set(), packages_select_set=set(), tokens_filter_set=set(), input_size=None, compact_factor=1):
     if index_tag_mapping_path == None:
         index_tag_mapping_path=cwd+'index_tag_mapping'
         tag_index_mapping_path=cwd+'tag_index_mapping'
@@ -132,11 +132,12 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
     pool = mp.Pool(processes=mp.cpu_count())
     # pool = mp.Pool(processes=5)
     if tag_files_l == None:
-        tag_files_l = [tag_file for tag_file in os.listdir(tags_path) if tag_file[-3:] == 'tag']
+        tag_files_l = [tag_file for tag_file in os.listdir(tags_path) if (tag_file[-3:] == 'tag') and (tag_file[:-4].rsplit('-', 1)[0] in packages_select_set or packages_select_set == set()) and (tag_file[:-4].rsplit('-', 1)[1] in samples_select_set or samples_select_set == set())]
+    # return 
     tag_files_l_of_l, step = [], len(tag_files_l)//mp.cpu_count()+1
     for i in range(0, len(tag_files_l), step):
         tag_files_l_of_l.append(tag_files_l[i:i+step])
-    data_instance_d_l = [pool.apply_async(map_tagfilesl, args=(tags_path, tag_files_l, cwd, packages_select_set, inference_flag), kwds={"tokens_filter_set": tokens_filter_set}) for tag_files_l in tqdm(tag_files_l_of_l)]
+    data_instance_d_l = [pool.apply_async(map_tagfilesl, args=(tags_path, tag_files_l, cwd, inference_flag), kwds={"tokens_filter_set": tokens_filter_set}) for tag_files_l in tqdm(tag_files_l_of_l)]
     data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
     pool.close()
     pool.join()
@@ -198,17 +199,17 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
 
 
 #############
-    # # Save tag:count in mapping format
-    # with open(tags_path+"all_tags_set.obj","wb") as filehandler:
-    #      pickle.dump(all_tags_set, filehandler)
-    # with open(tags_path+"all_label_set.obj","wb") as filehandler:
-    #      pickle.dump(all_label_set, filehandler)
-    # with open(tags_path+"tags_by_instance_l.obj","wb") as filehandler:
-    #      pickle.dump(tags_by_instance_l, filehandler)
-    # with open(tags_path+"labels_by_instance_l.obj","wb") as filehandler:
-    #      pickle.dump(labels_by_instance_l, filehandler)
-    # with open(tags_path+"tagset_files.obj","wb") as filehandler:
-    #      pickle.dump(tagset_files, filehandler)
+    # Save tag:count in mapping format
+    with open(tags_path+"all_tags_set.obj","wb") as filehandler:
+         pickle.dump(all_tags_set, filehandler)
+    with open(tags_path+"all_label_set.obj","wb") as filehandler:
+         pickle.dump(all_label_set, filehandler)
+    with open(tags_path+"tags_by_instance_l.obj","wb") as filehandler:
+         pickle.dump(tags_by_instance_l, filehandler)
+    with open(tags_path+"labels_by_instance_l.obj","wb") as filehandler:
+         pickle.dump(labels_by_instance_l, filehandler)
+    with open(tags_path+"tagset_files.obj","wb") as filehandler:
+         pickle.dump(tagset_files, filehandler)
 
     # # Load tag:count in mapping format 
     # with open(tags_path+"all_tags_set.obj","rb") as filehandler:
@@ -444,7 +445,7 @@ def print_metrics(cwd, outfile, y_true, y_pred, labels, op_durations=None):
             np.array([]), fmt='%d', header=file_header, delimiter=',',
             comments='')
 
-def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estimators=100, train_packages_select_set=set(), highlight_label_set=set(), tokens_filter_set=set(), test_packages_select_set=set(), test_batch_count=1, input_size=None, compact_factor=1, depth=1, tree_method="auto", max_bin=6):
+def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estimators=100, train_samples_select_set=set(), train_packages_select_set=set(), highlight_label_set=set(), tokens_filter_set=set(), test_samples_select_set=set(), test_packages_select_set=set(), test_batch_count=1, input_size=None, compact_factor=1, depth=1, tree_method="auto", max_bin=6):
     # train_tags_init_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_SL_biased_test/"
     # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
     # # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_init/"
@@ -464,7 +465,7 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estim
     
     # Train Data
     t0 = time.time()
-    train_tagset_files_init, train_feature_matrix_init, train_label_matrix_init = tagsets_to_matrix(train_tags_init_path, cwd=cwd, train_flag=True, inference_flag=False, packages_select_set=train_packages_select_set, tokens_filter_set=tokens_filter_set, input_size=input_size, compact_factor=compact_factor)
+    train_tagset_files_init, train_feature_matrix_init, train_label_matrix_init = tagsets_to_matrix(train_tags_init_path, cwd=cwd, train_flag=True, inference_flag=False, samples_select_set=train_samples_select_set, packages_select_set=train_packages_select_set, tokens_filter_set=tokens_filter_set, input_size=input_size, compact_factor=compact_factor)
     # print(process.memory_info())
     t1 = time.time()
     print(t1-t0)
@@ -546,7 +547,7 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estim
     # ax.bar_label(p, fontsize=18)
     # # ax.set_xticklabels([str(idx) for idx in x])
     # # ax.set_xticks(x)
-    # ax.set_xlim([0,5.5])
+    # ax.set_xlim([-0.5,5.5])
     # ax.set_title("% of Tokens Occurring in Multiple Packages", fontsize=20)
     # ax.set_ylabel("% of Tokens", fontsize=20)
     # ax.set_xlabel("Number of Packages", fontsize=20)
@@ -604,7 +605,7 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estim
     ax.bar_label(p, fontsize=18)
     ax.set_xticklabels([str(occur) for occur in feature_occur])
     ax.set_xticks([idx for idx in range(len(feature_occurence_count_normalized))])
-    ax.set_xlim([0,5.5])
+    ax.set_xlim([-0.5,5.5])
     ax.set_title("% of Tokens Occurring in Multiple Packages", fontsize=20)
     ax.set_ylabel("% of Tokens", fontsize=20)
     ax.set_xlabel("Number of Packages", fontsize=20)
@@ -625,7 +626,7 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, n_jobs=64, n_estim
     for batch_first_idx in range(0, len(tag_files_l), step):
         # Test Data
         t0 = time.time()
-        test_tagset_files_init, test_feature_matrix_init, test_label_matrix_init = tagsets_to_matrix(test_tags_path, tag_files_l = tag_files_l[batch_first_idx:batch_first_idx+step], cwd=cwd, train_flag=False, inference_flag=False, packages_select_set=test_packages_select_set, input_size=input_size, compact_factor=compact_factor)
+        test_tagset_files_init, test_feature_matrix_init, test_label_matrix_init = tagsets_to_matrix(test_tags_path, tag_files_l = tag_files_l[batch_first_idx:batch_first_idx+step], cwd=cwd, train_flag=False, inference_flag=False, samples_select_set=test_samples_select_set, packages_select_set=test_packages_select_set, input_size=input_size, compact_factor=compact_factor)
         # print(process.memory_info())
         t1 = time.time()
         op_durations["tagsets_to_matrix-testset_"+str(batch_first_idx)] = t1-t0
@@ -903,22 +904,31 @@ if __name__ == "__main__":
     # highlight_label_set = set(['cffi', 'PyJWT', 'attrs', 'pyasn1', 'click', 'pytz', 'MarkupSafe', 'grpcio-status', 'psutil', 'frozenlist', 'botocore', 'soupsieve', 'grpcio', 'awscli', 'yarl', 'idna', 'google-api-core', 'charset-normalizer', 'authlib', 'seaborn', 'colorama', 'pytest', 'NLTK', 'Flask', 'oauthlib', 'pycparser', 'nvidia-cuda-runtime-cu11', 'pandas', 'jinja2', 'scikit-learn', 'triton==2.0.0', 'deap', 'nvidia-cuda-nvrtc-cu11', 'cmake', 'astropy', 'bokeh', 'requests', 'biopython', 'redis', 'Scrapy', 'simplejson', 'opencv-python', 'opacus', 'scoop', 'plotly', 'Theano', 'mahotas', 'nilearn', 'beautifulsoup4', 'statsmodels', 'networkx', 's3transfer', 'scipy', 'SQLAlchemy', 'matplotlib', 'setuptools', 'rsa', 'urllib3', 'pillow', 'pyspark'])
     highlight_label_set = set()
 
+    n_samples = 25
+    all_samples_select_l = [str(sampleidx) for sampleidx in range(n_samples)]
+    all_samples_select_set = set(all_samples_select_l)
+    test_portion = 0.2
+    sample_step = int(len(all_samples_select_set)*test_portion)
+
 
     for dataset in ["data_3"]:
         packages_l = packages_ll[dataset]
-        tokens_filter_set=tokenshares_filter_set_d[dataset].union(tokennoises_filter_set_d[dataset])
+        tokens_filter_set = tokenshares_filter_set_d[dataset].union(tokennoises_filter_set_d[dataset])
+        # tokens_filter_set = set()
         # packages_l = list(set(packages_l)-highlight_label_set)
         # packages_l = list(highlight_label_set)
         # highlight_label_set = set()
         # packages_l = list([packages_l[0]])
         # print(packages_l)
-        for n_jobs in [64]:
-            for n_models, test_batch_count in zip([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): #([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # ([8],[1])
+
+        for n_jobs in [8]:
+            for n_models, test_batch_count in zip([25],[1]): #([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # ([1,25,10],[8,1,1])
                 for n_estimators in [100]:
                     for depth in [1]:
                         for tree_method in["exact"]: # "exact","approx","hist"
                             for max_bin in [1]:
                                 for input_size, dim_compact_factor in zip([None],[1]): # [None, 13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
+                                # for input_size, dim_compact_factor in zip([None,24267*8//2,24267*8//4, 24267*8//8, 24267*8//16, 24267*8//32],[1,1,1,1,1,1]): # [None, 13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
                                     package_subset, step = [], len(packages_l)//n_models+1
                                     for i in range(0, len(packages_l), step):
                                         package_subset.append(set(packages_l[i:i+step]))
@@ -930,11 +940,14 @@ if __name__ == "__main__":
                                                 test_subset.add("-".join(package_names))
                                         else:
                                             test_subset.add(list(train_subset)[0])  # TODO-1: generate a SL test set. TODO-2: if there is only 1 class, the encoding should use 0 instead of 1. see https://stackoverflow.com/questions/71996617/invalid-classes-inferred-from-unique-values-of-y-expected-0-1-2-3-4-5-got
-                                        train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_train/"
-                                        test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
-                                        cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
-                                        run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, highlight_label_set=highlight_label_set, tokens_filter_set=tokens_filter_set, test_packages_select_set=test_subset, test_batch_count=test_batch_count, input_size=input_size, compact_factor=dim_compact_factor, depth=depth, tree_method=tree_method)
-                                        # break
+                                        for test_sample_batch_idx, test_samples_select_set in enumerate([set(all_samples_select_l[i0:i0+sample_step]) for i0 in range(0,n_samples,sample_step)]):
+                                            train_samples_select_set = all_samples_select_set - test_samples_select_set 
+
+                                            train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_train/"
+                                            test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_train/" # Cross Validation: testing a portion of the SL dataset
+                                            cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
+                                            run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_samples_select_set=train_samples_select_set, train_packages_select_set=train_subset, highlight_label_set=highlight_label_set, tokens_filter_set=tokens_filter_set, test_samples_select_set=test_samples_select_set, test_packages_select_set=test_subset, test_batch_count=test_batch_count, input_size=input_size, compact_factor=dim_compact_factor, depth=depth, tree_method=tree_method)
+                                            # break
 
 
 
@@ -944,33 +957,50 @@ if __name__ == "__main__":
 
 
     # ###################################
-    # # run_pred()
-    # for dataset in ["data_3"]:
-    #     for n_jobs in [64]:
-    #         for clf_njobs in [64]:
-    #             for n_models, test_batch_count in zip([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # zip([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]):
-    #                 for n_estimators in [100]:
-    #                     for depth in [1]:
-    #                         for tree_method in["exact"]: # "exact","approx","hist"
-    #                             for max_bin in [1]:
-    #                                 for input_size, dim_compact_factor in zip([None],[1]):
-    #                                     clf_path = []
-    #                                     for i in range(n_models):
-    #                                         clf_pathname = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/model_init.json"
-    #                                         if os.path.isfile(clf_pathname):
-    #                                             clf_path.append(clf_pathname)
-    #                                     cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
-    #                                     test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
-    #                     #    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
-    #                                     run_pred(cwd, clf_path, test_tags_path, n_jobs=n_jobs, n_estimators=n_estimators, test_batch_count=test_batch_count, input_size=input_size, compact_factor=dim_compact_factor, depth=depth, tree_method=tree_method)
+    # run_pred()
+    # Testing the ML dataset
+    for dataset in ["data_3"]:
+        for n_jobs in [8]:
+            for clf_njobs in [8]:
+                for n_models, test_batch_count in zip([25],[1]): # zip([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]):
+                    for n_estimators in [100]:
+                        for depth in [1]:
+                            for tree_method in["exact"]: # "exact","approx","hist"
+                                for max_bin in [1]:
+                                    for input_size, dim_compact_factor in zip([None],[1]):
+                                        for test_sample_batch_idx, test_samples_select_set in enumerate([set(all_samples_select_l[i0,i0+sample_step]) for i0 in range(0,n_samples,sample_step)]):
+                                            train_samples_select_set = all_samples_select_set - test_samples_select_set
+
+                                            clf_path = []
+                                            for i in range(n_models):
+                                                clf_pathname = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/model_init.json"
+                                                if os.path.isfile(clf_pathname):
+                                                    clf_path.append(clf_pathname)
+                                            cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
+                                            test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
+                            #    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
+                                            run_pred(cwd, clf_path, test_tags_path, n_jobs=n_jobs, n_estimators=n_estimators, test_batch_count=test_batch_count, input_size=input_size, compact_factor=dim_compact_factor, depth=depth, tree_method=tree_method)
 
 
-    ###################################
-    # verify the init trees are still tehere.
-    #   Preconfigure significantly large feature and label spaces
-    #       Both VW and XGBoost might have this problem
-    #       NN seems to be an easier way for fast incremental training, i.e., simply replace the output and input layer, until your model is not strong enough.
-    # evaluation steps
-    # compare VW and XGBoost
-    # TF-IDF
-    # NIW: 
+
+
+
+
+
+
+
+
+
+
+
+
+
+        ###################################
+        # verify the init trees are still tehere.
+        #   Preconfigure significantly large feature and label spaces
+        #       Both VW and XGBoost might have this problem
+        #       NN seems to be an easier way for fast incremental training, i.e., simply replace the output and input layer, until your model is not strong enough.
+        # evaluation steps
+        # compare VW and XGBoost
+        # TF-IDF
+        # NIW: 
