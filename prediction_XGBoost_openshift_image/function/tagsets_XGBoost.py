@@ -6,6 +6,7 @@ from collections import defaultdict
 from sklearn.datasets import make_multilabel_classification
 import sklearn.metrics as metrics
 from sklearn.preprocessing import Normalizer
+import random
 from pathlib import Path
 import matplotlib
 matplotlib.use('Agg')
@@ -909,6 +910,7 @@ if __name__ == "__main__":
     all_samples_select_set = set(all_samples_select_l)
     test_portion = 0.2
     sample_step = int(len(all_samples_select_set)*test_portion)
+    test_sample_batchsets_l = [set(all_samples_select_l[i0:i0+sample_step]) for i0 in range(0,n_samples,sample_step)]
 
 
     for dataset in ["data_3"]:
@@ -929,26 +931,33 @@ if __name__ == "__main__":
                             for max_bin in [1]:
                                 for input_size, dim_compact_factor in zip([None],[1]): # [None, 13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
                                 # for input_size, dim_compact_factor in zip([None,24267*8//2,24267*8//4, 24267*8//8, 24267*8//16, 24267*8//32],[1,1,1,1,1,1]): # [None, 13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
-                                    package_subset, step = [], len(packages_l)//n_models+1
-                                    for i in range(0, len(packages_l), step):
-                                        package_subset.append(set(packages_l[i:i+step]))
+                                    for shuffle_idx in range(3):
+                                        random.Random(4).shuffle(packages_l)
+                                        package_subset, step = [], len(packages_l)//n_models+1
+                                        for i in range(0, len(packages_l), step):
+                                            package_subset.append(set(packages_l[i:i+step]))
 
-                                    for i, train_subset in enumerate(package_subset):
-                                        test_subset = set()
-                                        if len(train_subset) > 1:
-                                            for package_names in itertools.permutations(train_subset, 2):
-                                                test_subset.add("-".join(package_names))
-                                        else:
-                                            test_subset.add(list(train_subset)[0])  # TODO-1: generate a SL test set. TODO-2: if there is only 1 class, the encoding should use 0 instead of 1. see https://stackoverflow.com/questions/71996617/invalid-classes-inferred-from-unique-values-of-y-expected-0-1-2-3-4-5-got
-                                        for test_sample_batch_idx, test_samples_select_set in enumerate([set(all_samples_select_l[i0:i0+sample_step]) for i0 in range(0,n_samples,sample_step)]):
-                                            train_samples_select_set = all_samples_select_set - test_samples_select_set 
+                                        for i, train_subset in enumerate(package_subset):
+                                            test_subset = set()
+                                            if len(train_subset) > 1:
+                                                for package_names in itertools.permutations(train_subset, 2):
+                                                    test_subset.add("-".join(package_names))
+                                            else:
+                                                test_subset.add(list(train_subset)[0])  # TODO-1: generate a SL test set. TODO-2: if there is only 1 class, the encoding should use 0 instead of 1. see https://stackoverflow.com/questions/71996617/invalid-classes-inferred-from-unique-values-of-y-expected-0-1-2-3-4-5-got
+                                            
+                                            # ###################### choose CV batch ######################
+                                            for test_sample_batch_idx, test_samples_select_set in enumerate(test_sample_batchsets_l):
+                                                train_samples_select_set = all_samples_select_set - test_samples_select_set 
+                                            # test_sample_batch_idx = 4
+                                            # test_samples_select_set = test_sample_batchsets_l[test_sample_batch_idx]
+                                            # train_samples_select_set = all_samples_select_set - test_samples_select_set
+                                            # # #############################################################
 
                                             train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_train/"
                                             test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_train/" # Cross Validation: testing a portion of the SL dataset
-                                            cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
+                                            cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"_shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
                                             run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_samples_select_set=train_samples_select_set, train_packages_select_set=train_subset, highlight_label_set=highlight_label_set, tokens_filter_set=tokens_filter_set, test_samples_select_set=test_samples_select_set, test_packages_select_set=test_subset, test_batch_count=test_batch_count, input_size=input_size, compact_factor=dim_compact_factor, depth=depth, tree_method=tree_method)
                                             # break
-
 
 
 
@@ -968,15 +977,22 @@ if __name__ == "__main__":
                             for tree_method in["exact"]: # "exact","approx","hist"
                                 for max_bin in [1]:
                                     for input_size, dim_compact_factor in zip([None],[1]):
-                                        for test_sample_batch_idx, test_samples_select_set in enumerate([set(all_samples_select_l[i0:i0+sample_step]) for i0 in range(0,n_samples,sample_step)]):
-                                            train_samples_select_set = all_samples_select_set - test_samples_select_set
+                                        for shuffle_idx in range(3):
+                                            
+                                            # ###################### choose CV batch ######################
+                                            for test_sample_batch_idx, test_samples_select_set in enumerate(test_sample_batchsets_l):
+                                                train_samples_select_set = all_samples_select_set - test_samples_select_set 
+                                            # test_sample_batch_idx = 4
+                                            # test_samples_select_set = test_sample_batchsets_l[test_sample_batch_idx]
+                                            # train_samples_select_set = all_samples_select_set - test_samples_select_set
+                                            # #############################################################
 
                                             clf_path = []
                                             for i in range(n_models):
-                                                clf_pathname = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/model_init.json"
+                                                clf_pathname = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"_shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/model_init.json"
                                                 if os.path.isfile(clf_pathname):
                                                     clf_path.append(clf_pathname)
-                                            cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
+                                            cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"_shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
                                             test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
                             #    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
                                             run_pred(cwd, clf_path, test_tags_path, n_jobs=n_jobs, n_estimators=n_estimators, test_batch_count=test_batch_count, input_size=input_size, compact_factor=dim_compact_factor, depth=depth, tree_method=tree_method)
@@ -990,17 +1006,3 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-
-        ###################################
-        # verify the init trees are still tehere.
-        #   Preconfigure significantly large feature and label spaces
-        #       Both VW and XGBoost might have this problem
-        #       NN seems to be an easier way for fast incremental training, i.e., simply replace the output and input layer, until your model is not strong enough.
-        # evaluation steps
-        # compare VW and XGBoost
-        # TF-IDF
-        # NIW: 
