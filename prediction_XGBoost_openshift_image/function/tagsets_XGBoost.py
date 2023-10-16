@@ -968,7 +968,7 @@ if __name__ == "__main__":
                             for tree_method in["exact"]: # "exact","approx","hist"
                                 for max_bin in [1]:
                                     for input_size, dim_compact_factor in zip([None],[1]):
-                                        for test_sample_batch_idx, test_samples_select_set in enumerate([set(all_samples_select_l[i0,i0+sample_step]) for i0 in range(0,n_samples,sample_step)]):
+                                        for test_sample_batch_idx, test_samples_select_set in enumerate([set(all_samples_select_l[i0:i0+sample_step]) for i0 in range(0,n_samples,sample_step)]):
                                             train_samples_select_set = all_samples_select_set - test_samples_select_set
 
                                             clf_path = []
