@@ -1,4 +1,72 @@
 import os
+
+
+
+# train time
+train_times_l = []
+for n_models in [50,25,20,15,10,5,1]: 
+    train_time_l = []
+    for model_idx in range(n_models):
+                #    "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_3_             50  _45                _train_64njobs_100trees_1depth_None-1rawinput_sampling1_exacttreemethod_1maxbin_modize_par_removesharedornoisestags"
+        filename = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_3_"+str(n_models)+"_"+str(model_idx)+"_train_8njobs_100trees_1depth_None-1rawinput_sampling1_exacttreemethod_1maxbin_modize_par_removesharedornoisestags0/metrics_init.out"
+        if os.path.isfile(filename):
+            
+            with open(filename) as file:
+                for line in file:
+                    line_l = line.rstrip().split(":")
+                    if line_l[0] == "BOW_XGB_init.fit":
+                        train_time_l.append(float(line_l[1]))
+    train_times_l.append(train_time_l)
+print([train_time_l[0] for train_time_l in train_times_l])
+
+
+# # Print sum training time of each N models
+# for input_size in [None]:#[13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]: # [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
+#     inference_times_l = []
+#     for n_models in [50,25,20,15,10,5,1]:
+#         inference_time = 0
+#         for model_idx in range(1):
+#             filename = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_3_"+str(n_models)+"_"+str(model_idx)+"_train_64njobs_100trees_1depth_None-1rawinput_sampling1_exacttreemethod_1maxbin_modize_par_removesharedornoisestags/metrics_init.out"
+#             if os.path.isfile(filename):
+#                 with open(filename) as file:
+#                     for line in file:
+#                         line_l = line.rstrip().split(":")
+#                         if line_l[0] == "BOW_XGB_init.fit":
+#                             inference_time+=float(line_l[1])
+#         else:
+#             inference_times_l.append(round(inference_time,2))
+#     print(inference_times_l)
+
+
+# # Print training time of each model
+# for input_size in [None]:#[13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]: # [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
+#     inference_times_l = []
+#     for n_models in [50,25,20,15,10,5,1]:
+#         inference_time_l = []
+#         for model_idx in range(n_models):
+#             filename = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_3_"+str(n_models)+"_"+str(model_idx)+"_train_8njobs_100trees_1depth_None-1rawinput_sampling1_exacttreemethod_1maxbin_modize_par_removesharedornoisestags0/metrics_init.out"
+#             time_counter = 0
+#             if os.path.isfile(filename):
+#                 with open(filename) as file:
+#                     for line in file:
+#                         line_l = line.rstrip().split(":")
+#                         if line_l[0] == "BOW_XGB_init.fit":
+#                             inference_time_l.append(float(line_l[1]))
+#                             time_counter+=1
+#         else:
+#             inference_time_l.extend([0]*(46-time_counter))
+#             # print("+".join(inference_time_l))
+#             inference_times_l.append(inference_time_l)
+#     inference_times_l = list(map(list, zip(*inference_times_l)))
+#     # print(inference_times_l)
+#     for inference_time_l in inference_times_l:
+#         print(inference_time_l, ",")
+#     # print("["+", ".join(inference_times_l)+"],")
+
+
+
+
+# # inference time
 # inference_times_l = []
 # for input_size in [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]: # [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
 #     filename = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_4_train_8njobs_100trees_1depth_"+str(input_size)+"rawinput_sampling1_exacttreemethod/metrics_pred.out"
@@ -13,7 +81,7 @@ import os
 # print(", ".join(inference_times_l))
 
 
-# # based on input dimensions
+# # inference time based on input dimensions
 # for n_models in [8,4,2,1]:
 #     inference_times_l = []
 #     for input_size in [13664, 27329, 54659, 109319]:#[13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]: # [13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
@@ -98,18 +166,37 @@ import os
 #         for idx, by_eachmodel in enumerate(by_eachmodel_l):
 #             print(idx, by_eachmodel)
 
-# read test precisions
-interested_lines_l, interested_precisions_l, interested_pkgs_l = [], [], []
-# filename = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_3_50_train_1njobs_64clfnjobs_100trees_1depth_None-1rawinput_sampling1_exacttreemethod_1maxbin_modize_par/metrics_pred.out"
-filename = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/data_0_results/cwd_ML_with_data_0_8_train_8njobs_100trees_1depth_Nonerawinput_sampling1_exacttreemethod_1maxbin/metrics_pred.out"
-with open(filename) as file:
-    for line in file:
-        line_l = line.split()
-        if len(line_l) == 5 and float(line_l[1])<0.2:
-            interested_lines_l.append(line.rstrip())
-            interested_precisions_l.append(float(line_l[1]))
-            interested_pkgs_l.append(line_l[0])
-print(len(interested_lines_l))
-for interested_pkg, interested_line, interested_precisions in zip(interested_pkgs_l, interested_lines_l,interested_precisions_l):
-    print(interested_pkg, interested_line, interested_precisions)
-print(interested_pkgs_l)
+# # read test precisions for each label
+# interested_lines_l, interested_precisions_l, interested_pkgs_l = [], [], []
+# # filename = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_3_50_train_1njobs_64clfnjobs_100trees_1depth_None-1rawinput_sampling1_exacttreemethod_1maxbin_modize_par/metrics_pred.out"
+# filename = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/data_0_results/cwd_ML_with_data_0_8_train_8njobs_100trees_1depth_Nonerawinput_sampling1_exacttreemethod_1maxbin/metrics_pred.out"
+# with open(filename) as file:
+#     for line in file:
+#         line_l = line.split()
+#         if len(line_l) == 5 and float(line_l[1])<0.2:
+#             interested_lines_l.append(line.rstrip())
+#             interested_precisions_l.append(float(line_l[1]))
+#             interested_pkgs_l.append(line_l[0])
+# print(len(interested_lines_l))
+# for interested_pkg, interested_line, interested_precisions in zip(interested_pkgs_l, interested_lines_l,interested_precisions_l):
+#     print(interested_pkg, interested_line, interested_precisions)
+# print(interested_pkgs_l)
+
+# # read weighted test f1-score
+# interested_lines_l, interested_value_l = [], []
+# # for n_models in [50,25,20,15,10,5,1]:
+# for n_models in [8,4,2,1]:
+#     # filename =   "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_3_"+str(n_models)+"_train_64njobs_64clfnjobs_100trees_1depth_None-1rawinput_sampling1_exacttreemethod_1maxbin_modize_par_removesharedornoisestags/metrics_pred.out"
+#     # filename = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_3_"+str(n_models)+"_train_1njobs_64clfnjobs_100trees_1depth_None-1rawinput_sampling1_exacttreemethod_1maxbin_modize_par/metrics_pred.out"
+#     filename = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_"+str(n_models)+"_train_8njobs_8clfnjobs_100trees_1depth_None-1rawinput_sampling1_exacttreemethod_1maxbin_modize_par_removesharedornoisestags0/metrics_pred.out"
+#     # filename = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/data_0_results/cwd_ML_with_data_0_"+str(n_models)+"_train_8njobs_100trees_1depth_Nonerawinput_sampling1_exacttreemethod_1maxbin/metrics_pred.out"
+#     with open(filename) as file:
+#         for line in file:
+#             line_l = line.split()
+#             if len(line_l) == 7:
+#                 interested_lines_l.append(line.rstrip())
+#                 interested_value_l.append(float(line_l[1]))
+# print(interested_value_l)
+# # print(len(interested_lines_l))
+# # for interested_line, interested_value in zip(interested_lines_l,interested_value_l):
+# #     print(interested_line, interested_value)
