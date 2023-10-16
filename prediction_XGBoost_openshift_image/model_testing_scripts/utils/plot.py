@@ -598,31 +598,37 @@ if __name__ == "__main__":
     filename = "nerccostandtrainlatencypermodel_by_N_models_with_rawinput_data_3"
     xs=[str(xlabel) for xlabel in [500//50,500//25,500//20,500//15+1,500//10,500//5,500//1]]
     labels = ["model "+str(i+1) for i in range(46)]
-    ys0_l=[[round(0.1648/60/60*0.013*8, 2), round(0.665/60/60*0.013*8, 2), round(1.129/60/60*0.013*8, 2), round(2.287/60/60*0.013*8, 2), round(6.121/60/60*0.013*8, 2), round(45.595/60/60*0.013*8, 2), round(9103.478/60/60*0.013*8, 2)]]
+    ys0_l=[[0.1648/60/60*0.013*8, 0.665/60/60*0.013*8, 1.129/60/60*0.013*8, 2.287/60/60*0.013*8, 6.121/60/60*0.013*8, 45.595/60/60*0.013*8, 9103.478/60/60*0.013*8]]
     ys0mean_l = np.array(ys0_l).mean(axis=0).tolist()
     ys0std_l  = np.array(ys0_l).std(axis=0).tolist()
+    ys2_l=[[0.1648/60/60*0.306*8, 0.665/60/60*0.306*8, 1.129/60/60*0.306*8, 2.287/60/60*0.306*8, 6.121/60/60*0.306*8, 45.595/60/60*0.306*8, 9103.478/60/60*0.306*8]]
+    ys2mean_l = np.array(ys2_l).mean(axis=0).tolist()
+    ys2std_l  = np.array(ys2_l).std(axis=0).tolist()
     ys1_l=[[0.164, 0.665, 1.129, 2.287, 6.121, 45.595, 9103.478]]
     ys1mean_l = np.array(ys1_l).mean(axis=0).tolist()
     ys1std_l  = np.array(ys1_l).std(axis=0).tolist()
     # ys0conf_l = list(scipy.stats.t.interval(0.95, len(ys0_l)-1, loc=np.mean(ys0_l,axis=0), scale=scipy.stats.sem(ys0_l,axis=0)))
     fig, ax = plt.subplots(1, 1, figsize=(10, 7))
     # bottom = np.zeros(len(xs))
-    entry_count, width = 2, 0.4
-    p = ax.bar([idx-0.1 for idx, _ in enumerate(ys0mean_l)], ys0mean_l, width/entry_count, yerr=ys0std_l)
+    entry_count, width = 3, 0.4
+    p = ax.bar([idx-width/entry_count-width/entry_count/2 for idx, _ in enumerate(ys0mean_l)], ys0mean_l, width/entry_count, yerr=ys0std_l, color='#0067ff', edgecolor="black", hatch="x", label="NERC Openstack Cost ($)")
+    p2 = ax.bar([idx-width/entry_count/2 for idx, _ in enumerate(ys2mean_l)], ys2mean_l, width/entry_count, yerr=ys2std_l, color='#00ff67', edgecolor="black", hatch="-", label="AWS EC2 Cost ($)")
     # ax.bar_label(p)
     # ax.set_title("Training Latency by N Models with Data 3", fontsize=20)
-    # ax.legend(loc="best", prop={'size': 16})
+    ax.legend(loc="upper left", prop={'size': 16})
     ax.set_xticks(list(range(len(xs))))
     ax.set_xticklabels(xs)
     ax.tick_params(axis='both', which='major', labelsize=20)
     ax.tick_params(axis='both', which='minor', labelsize=18)
     ax.set_xlabel("Number of Labels", fontsize=20)
-    ax.set_ylabel("NERC Openstack Cost ($)", fontsize=20)
+    ax.set_ylabel("Resource Cost ($)", fontsize=20)
     ax1 = ax.twinx()
-    p = ax1.bar([idx+0.1 for idx, _ in enumerate(ys1mean_l)], ys1mean_l, width/entry_count, yerr=ys1std_l)
+    p = ax1.bar([idx+width/entry_count/2 for idx, _ in enumerate(ys1mean_l)], ys1mean_l, width/entry_count, yerr=ys1std_l, color='#ff6700', edgecolor="black", hatch="o", label="Time (s)")
     # ax1.bar_label(p)
+    ax1.tick_params(axis='both', which='major', labelsize=20)
+    ax1.tick_params(axis='both', which='minor', labelsize=18)
     ax1.set_ylabel("Training Time(s)", fontsize=20)
-    # plt.legend(prop={'size': 16})
+    ax1.legend(loc="upper center", prop={'size': 16})
     # plt.show()
     plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
