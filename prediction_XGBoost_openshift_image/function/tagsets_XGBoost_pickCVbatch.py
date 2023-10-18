@@ -51,10 +51,8 @@ def map_tagfilesl(tags_path, tag_files, cwd, inference_flag, tokens_filter_set=s
     data_instance_d_l = [read_tokens(tags_path, tag_file, cwd, inference_flag, tokens_filter_set=tokens_filter_set) for tag_file in tag_files]
     # data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
     for data_instance_d in data_instance_d_l:
-        if 'tag_file' not in data_instance_d:
-            print(0)
-        tagset_files.append(data_instance_d['tag_file'])
         if len(data_instance_d) ==4:
+                tagset_files.append(data_instance_d['tag_file'])
                 all_tags_set.update(data_instance_d['local_all_tags_set'])
                 tags_by_instance_l.append(data_instance_d['instance_feature_tags_d'])
                 all_label_set.update(data_instance_d['labels'])
@@ -106,7 +104,7 @@ def read_tokens(tags_path, tag_file, cwd, inference_flag, tokens_filter_set=set(
         logger.info('%s', e)
     return ret
 
-def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None, tag_index_mapping_path=None, index_label_mapping_path=None, label_index_mapping_path=None, cwd="/home/cc/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/", train_flag=False, inference_flag=True, iter_flag=False, packages_select_set=set(), tokens_filter_set=set(), input_size=None, compact_factor=1):
+def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None, tag_index_mapping_path=None, index_label_mapping_path=None, label_index_mapping_path=None, cwd="/home/cc/Praxi-study/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/", train_flag=False, inference_flag=True, iter_flag=False, packages_select_set=set(), tokens_filter_set=set(), input_size=None, compact_factor=1):
     if index_tag_mapping_path == None:
         index_tag_mapping_path=cwd+'index_tag_mapping'
         tag_index_mapping_path=cwd+'tag_index_mapping'
@@ -139,13 +137,12 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
     tag_files_l_of_l, step = [], len(tag_files_l)//mp.cpu_count()+1
     for i in range(0, len(tag_files_l), step):
         tag_files_l_of_l.append(tag_files_l[i:i+step])
-    pool = mp.Pool(processes=mp.cpu_count())
-    # pool = mp.Pool(processes=5)
+    # pool = mp.Pool(processes=mp.cpu_count())
+    pool = mp.Pool(processes=5)
     data_instance_d_l = [pool.apply_async(map_tagfilesl, args=(tags_path, tag_files_l, cwd, inference_flag), kwds={"tokens_filter_set": tokens_filter_set}) for tag_files_l in tqdm(tag_files_l_of_l)]
     data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
     pool.close()
     pool.join()
-    removed_tagsets = []
     for data_instance_d in data_instance_d_l:
         if len(data_instance_d) == 5:
                 tagset_files.extend(data_instance_d['tagset_files'])
@@ -153,8 +150,6 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
                 tags_by_instance_l.extend(data_instance_d['tags_by_instance_l'])
                 all_label_set.update(data_instance_d['all_label_set'])
                 labels_by_instance_l.extend(data_instance_d['labels_by_instance_l'])
-        else:
-            removed_tagsets.append(data_instance_d["tagset_files"])
     
 
     # pool = mp.Pool(processes=mp.cpu_count())
@@ -189,9 +184,10 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
     #                 all_label_set.add(tagset['label'])
     #                 labels_by_instance_l.append([tagset['label']])
         
-    # with open(cwd+'tagset_files.txt', 'w') as f:
-    #     for line in tagset_files:
-    #         f.write(f"{line}\n")
+    # with open(cwd+'tagset_files.yaml', 'w') as f:
+    #     yaml.dump(tagset_files, f)
+    #     # for line in tagset_files:
+    #     #     f.write(f"{line}\n")
 
     # Sorting instances
     if not inference_flag:
@@ -453,10 +449,10 @@ def print_metrics(cwd, outfile, y_true, y_pred, labels, op_durations=None):
             comments='')
 
 def run_init_train(train_tags_init_path, test_tags_path, cwd, train_tags_init_l=None, test_tags_l=None, n_jobs=64, n_estimators=100, train_packages_select_set=set(), highlight_label_set=set(), tokens_filter_set=set(), test_packages_select_set=set(), test_batch_count=1, input_size=None, compact_factor=1, depth=1, tree_method="auto", max_bin=6):
-    # train_tags_init_path = "/home/cc/Praxi-Pipeline/data/data_0&2/big_SL_biased_test/"
-    # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
-    # # cwd  ="/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_init/"
-    # cwd  ="/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0&2_SL/"
+    # train_tags_init_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_SL_biased_test/"
+    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0&2/big_ML_biased_test/"
+    # # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_init/"
+    # cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0&2_SL/"
     Path(cwd).mkdir(parents=True, exist_ok=True)
 
     op_durations = {}
@@ -706,9 +702,9 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, train_tags_init_l=
 
 
 def run_iter_train():
-    train_tags_iter_path = "/home/cc/Praxi-Pipeline/data/data_2/big_SL_biased_test/"
-    test_tags_path = "/home/cc/Praxi-Pipeline/data/data_2/big_SL_biased_test/"
-    cwd  ="/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_SL/"
+    train_tags_iter_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_2/big_SL_biased_test/"
+    test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_2/big_SL_biased_test/"
+    cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_SL/"
     Path(cwd).mkdir(parents=True, exist_ok=True)
 
     # Data
@@ -742,9 +738,9 @@ def run_iter_train():
 
 def run_pred(cwd, clf_path_l, test_tags_path, n_jobs=64, n_estimators=100, packages_select_set=set(), test_batch_count=1, input_size=None, compact_factor=1, depth=1, tree_method="auto"):
     # # cwd = "/pipelines/component/cwd/"
-    # cwd = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
-    # clf_path = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/model_init.json"
-    # test_tags_path = "/home/cc/Praxi-Pipeline/data/inference_test/"
+    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
+    # clf_path = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/model_init.json"
+    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/inference_test/"
     Path(cwd).mkdir(parents=True, exist_ok=True)
 
     op_durations = {}
@@ -855,7 +851,7 @@ if __name__ == "__main__":
     # p = psutil.Process()
     # p.cpu_affinity([0])
     # # ###################################
-    # cwd  = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_1_train/"
+    # cwd  = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_data_0_8_6_rm_tmp_1_train/"
     # BOW_XGB = load_model(cwd+"model_init.json")
     # # booster = BOW_XGB.get_booster()
     # # tree_df = booster.trees_to_dataframe()
@@ -892,17 +888,10 @@ if __name__ == "__main__":
     packages_l.extend(packages_l5)
     packages_l.extend(packages_l6)
     packages_ll["data_0"]=packages_l
-    # with open("/home/cc/Praxi-Pipeline/data/data_0/filters/big_train_tokenshares_filter_set", 'rb') as tf:
-    #     tokenshares_filter_set_d["data_0"] = yaml.load(tf, Loader=yaml.Loader)
-    # with open("/home/cc/Praxi-Pipeline/data/data_0/filters/big_train_tokennoises_filter_set", 'rb') as tf:
-    #     tokennoises_filter_set_d["data_0"] = yaml.load(tf, Loader=yaml.Loader)
+
     # ============= data_3
     packages_l = ['certifi', 'numpy', 'packaging', 'aiobotocore', 'protobuf', 'jmespath', 'googleapis-common-protos', 'platformdirs', 'google-auth', 'werkzeug', 'pydantic', 'filelock', 'pyparsing', 'async-timeout', 'aiohttp', 'docutils', 'pyarrow', 'exceptiongroup', 'pluggy', 'lxml', 'requests-oauthlib', 'tqdm', 'pyasn1-modules', 'azure-core', 'decorator', 'pyopenssl', 'greenlet', 'importlib-resources', 'multidict', 'pygments', 'websocket-client', 'pymysql', 'distlib', 'coverage', 'aiosignal', 'et-xmlfile', 'openpyxl', 'chardet', 'google-cloud-core', 'google-cloud-storage', 'asn1crypto', 'tabulate', 'google-api-python-client', 'referencing', 'iniconfig', 'tomlkit', 'rpds-py', 'paramiko', 'gitpython', 'jsonschema-specifications', 'requests-toolbelt', 'pynacl', 'more-itertools', 'proto-plus', 'psycopg2-binary', 'itsdangerous', 'azure-storage-blob', 'msal', 'google-resumable-media', 'bcrypt', 'pathspec', 'tzlocal', 'anyio', 'grpcio-tools', 'google-cloud-bigquery', 'docker', 'cython', 'mdit-py-plugins', 'joblib', 'regex', 'mypy-extensions', 'smmap', 'gitdb', 'sagemaker', 'sqlparse', 'msgpack', 'wcwidth', 'google-auth-oauthlib', 'poetry-core', 'sniffio', 'py', 'pycryptodomex', 'pyrsistent', 'azure-common', 'future', 'dnspython', 'pexpect', 'ptyprocess', 'msrest', 'jaraco-classes', 'dill', 'portalocker', 'ruamel-yaml', 'markdown', 'snowflake-connector-python', 'py4j', 'tornado', 'keyring', 'google-crc32c', 'prompt-toolkit', 'markdown-it-py', 'tenacity', 'cloudpickle', 'httplib2', 'rich', 'alembic', 'gunicorn', 'tzdata', 'awswrangler', 'fonttools', 'azure-identity', 'threadpoolctl', 'msal-extensions', 'xmltodict', 'kiwisolver', 'pycodestyle', 'termcolor', 'python-dotenv', 'tb-nightly', 'scramp', 'backoff', 'uritemplate', 'toml', 'jedi', 'webencodings', 'cachecontrol', 'marshmallow', 'poetry-plugin-export', 'ipython', 'h11', 'mccabe', 'nest-asyncio', 'cycler', 'ply', 'sortedcontainers', 'pycryptodome', 'pg8000', 'google-auth-httplib2', 'trove-classifiers', 'oscrypto', 'traitlets', 'mako', 'pyodbc', 'pkgutil-resolve-name', 'pyzmq', 'prometheus-client', 'redshift-connector', 'isort', 'toolz', 'jeepney', 'httpcore', 'secretstorage', 'adal', 'pytest-cov', 'shellingham', 'babel', 'blinker', 'datadog', 'typing-inspect', 'black', 'pymongo', 'jsonpointer', 'jupyter-client', 'defusedxml', 'google-cloud-pubsub', 'argcomplete', 'httpx', 'tensorboard', 'pyflakes', 'jupyter-core', 'sentry-sdk', 'xlrd', 'flake8', 'poetry', 'cfn-lint', 'pkginfo', 'fastapi', 'nbconvert', 'mdurl', 'requests-aws4auth', 'parso', 'asynctest', 'contourpy', 'pydantic-core', 'python-json-logger', 'absl-py', 'jsonpath-ng', 'databricks-cli', 'python-utils', 'google-cloud-bigquery-storage', 'nbformat', 'pickleshare', 'backcall', 'fastjsonschema', 'notebook', 'progressbar2', 'astroid', 'aioitertools', 'mistune', 'starlette', 'rapidfuzz', 'matplotlib-inline', 'opensearch-py', 'appdirs', 'lazy-object-proxy', 'jupyter-server', 'tensorflow', 'ipykernel', 'pbr', 'pylint', 'transformers', 'arrow', 'h5py', 'kubernetes', 'build', 'jsonpatch', 'imageio', 'setuptools-scm', 'bleach', 'huggingface-hub', 'asgiref', 'annotated-types', 'websockets', 'html5lib', 'debugpy', 'cattrs', 'pyproject-hooks', 'entrypoints', 'grpc-google-iam-v1', 'uvicorn', 'mlflow', 'smart-open', 'oauth2client', 'altair', 'msrestazure', 'multiprocess', 'numba', 'tinycss2', 'dulwich', 'llvmlite', 'tensorflow-estimator', 'zope-interface', 'lockfile', 'elasticsearch', 'mock', 'google-pasta', 'flatbuffers', 'retry', 'aiofiles', 'google-cloud-secret-manager', 'pygithub', 'mypy', 'humanfriendly', 'requests-file', 'shapely', 'orjson', 'crashtest', 'great-expectations', 'aenum', 'pysocks', 'cleo', 'comm', 'httptools', 'gast', 'querystring-parser', 'nodeenv', 'nbclient', 'tensorboard-data-server', 'contextlib2', 'identify', 'xlsxwriter', 'cached-property', 'azure-storage-file-datalake', 'croniter', 'tox', 'deepdiff', 'tokenizers', 'django', 'notebook-shim', 'send2trash', 'mysql-connector-python', 'ipywidgets', 'configparser', 'pendulum', 'execnet', 'jupyterlab-server', 'widgetsnbextension', 'text-unidecode', 'rfc3339-validator', 'overrides', 'pre-commit', 'typer', 'keras', 'json5', 'semver', 'watchdog', 'hvac', 'responses', 'torch', 'jupyterlab', 'pytzdata', 'aws-sam-translator', 'snowflake-sqlalchemy', 'python-slugify', 'cfgv', 'pipenv', 'asttokens', 'argon2-cffi', 'installer', 'dataclasses', 'sphinx', 'jupyterlab-widgets', 'executing', 'gremlinpython', 'distro', 'typeguard', 'azure-mgmt-core', 'selenium', 'jupyter-events', 'pytest-xdist', 'click-plugins', 'stack-data', 'pytest-mock', 'azure-storage-common', 'confluent-kafka', 'slack-sdk', 'pure-eval', 'opt-einsum', 'rfc3986', 'xgboost', 'tblib', 'dataclasses-json', 'opentelemetry-sdk', 'apache-airflow', 'uri-template', 'fastavro', 'tensorflow-serving-api', 'ipython-genutils', 'sentencepiece', 'futures', 'tensorflow-io-gcs-filesystem', 'sympy', 'unidecode', 'xxhash', 'safetensors', 'db-dtypes', 'pandocfilters', 'prettytable', 'patsy', 'opentelemetry-api', 'retrying', 'docopt', 'azure-mgmt-resource', 'mpmath', 'gcsfs', 'async-lru', 'jupyterlab-pygments', 'astunparse', 'setproctitle', 'terminado', 'libclang', 'pytest-runner', 'thrift', 'jsonpickle', 'semantic-version', 'ordered-set', 'azure-keyvault-secrets', 'pymssql', 'faker', 'pysftp', 'webcolors', 'argon2-cffi-bindings', 'jupyter-lsp', 'typing', 'rfc3986-validator', 'zeep', 'inflection', 'antlr4-python3-runtime', 'sphinxcontrib-serializinghtml', 'azure-datalake-store', 'graphviz', 'boto', 'fqdn', 'isoduration', 'jupyter-server-terminals', 'deprecation', 'moto', 'snowballstemmer', 'openai', 'opentelemetry-proto', 'distributed', 'azure-graphrbac', 'typed-ast', 'sphinxcontrib-htmlhelp', 'sphinxcontrib-applehelp', 'sphinxcontrib-devhelp', 'sphinxcontrib-qthelp', 'opencensus', 'ujson', 'opencensus-context', 'aioconsole', 'pathos', 'libcst', 'parsedatetime', 'stevedore', 'python-gnupg', 'google-cloud-firestore', 'pyproj', 'pandas-gbq', 'pox', 'trio', 'ppft', 'gspread', 'applicationinsights', 'numexpr', 'gevent', 'zope-event', 'kombu', 'shap', 'argparse', 'opentelemetry-exporter-otlp-proto-http', 'trio-websocket', 'google-cloud-appengine-logging', 'email-validator', 'structlog', 'loguru', 'watchtower', 'pyathena', 'torchvision', 'azure-mgmt-keyvault', 'azure-mgmt-storage', 'simple-salesforce', 'checkov', 'coloredlogs', 'apache-beam', 'tensorboard-plugin-wit', 'gsutil', 'kafka-python', 'mypy-boto3-rds', 'celery', 'pathlib2', 'pycrypto', 'wandb', 'colorlog', 'enum34', 'pybind11', 'tldextract', 'prometheus-flask-exporter', 'opentelemetry-semantic-conventions', 'types-urllib3', 'azure-cosmos', 'azure-eventhub', 'djangorestframework', 'opencensus-ext-azure', 'docstring-parser', 'lz4', 'pydata-google-auth', 'pywavelets', 'lightgbm', 'datetime', 'ecdsa', 'pyhcl', 'uamqp', 'cligj', 'google-cloud-resource-manager', 'slicer', 'fire', 'makefun', 'python-jose', 'azure-mgmt-containerregistry', 'imagesize', 'google-cloud-logging', 'keras-preprocessing', 'unittest-xml-reporting', 'alabaster', 'flask-cors', 'schema', 'hpack', 'nvidia-cudnn-cu11', 'partd', 'delta-spark', 'nvidia-cublas-cu11', 'wsproto', 'amqp', 'hypothesis', 'pytest-asyncio', 'python-http-client', 'validators', 'h2', 'azure-mgmt-authorization', 'databricks-sql-connector', 'sshtunnel', 'hyperframe', 'spacy', 'unicodecsv', 'brotli', 'fiona', 'locket', 'apache-airflow-providers-common-sql', 'holidays']
     packages_ll["data_3"]=packages_l
-    # with open("/home/cc/Praxi-Pipeline/data/data_3/filters/big_train_tokenshares_filter_set", 'rb') as tf:
-    #     tokenshares_filter_set_d["data_3"] = yaml.load(tf, Loader=yaml.Loader)
-    # with open("/home/cc/Praxi-Pipeline/data/data_3/filters/big_train_tokennoises_filter_set", 'rb') as tf:
-    #     tokennoises_filter_set_d["data_3"] = yaml.load(tf, Loader=yaml.Loader)
 
     # highlight_label_set = set(['pluggy', 'docutils', 'lxml', 'azure-core', 'multidict', 'pyopenssl', 'greenlet', 'google-cloud-core', 'et-xmlfile', 'coverage', 'google-cloud-storage', 'openpyxl', 'google-api-python-client', 'rpds-py', 'asn1crypto', 'bcrypt', 'itsdangerous', 'google-resumable-media', 'pynacl', 'google-cloud-bigquery', 'pathspec', 'regex', 'joblib', 'cython', 'mdit-py-plugins', 'sagemaker', 'smmap', 'mypy-extensions', 'msgpack', 'ptyprocess', 'azure-common', 'msrest', 'future', 'dnspython', 'py', 'snowflake-connector-python', 'portalocker', 'py4j', 'keyring', 'google-crc32c', 'awswrangler', 'fonttools', 'markdown-it-py', 'kiwisolver', 'azure-identity', 'xmltodict', 'threadpoolctl', 'ipython', 'backoff', 'poetry-plugin-export', 'google-auth-httplib2', 'sortedcontainers', 'oscrypto', 'nest-asyncio', 'mccabe', 'redshift-connector', 'mako', 'pkgutil-resolve-name', 'traitlets', 'pyodbc', 'black', 'typing-inspect', 'datadog', 'jsonpointer', 'argcomplete', 'defusedxml', 'pymongo', 'google-cloud-pubsub', 'xlrd', 'poetry', 'cfn-lint', 'requests-aws4auth', 'parso', 'jsonpath-ng', 'contourpy', 'python-json-logger', 'pydantic-core', 'fastjsonschema', 'backcall', 'notebook', 'astroid', 'nbformat', 'rapidfuzz', 'matplotlib-inline', 'tensorflow', 'pylint', 'transformers', 'setuptools-scm', 'h5py', 'kubernetes', 'jsonpatch', 'huggingface-hub', 'imageio', 'grpc-google-iam-v1', 'annotated-types', 'debugpy', 'entrypoints', 'smart-open', 'llvmlite', 'msrestazure', 'numba', 'dulwich', 'google-cloud-secret-manager', 'elasticsearch', 'tensorflow-estimator', 'lockfile', 'aiofiles', 'orjson', 'great-expectations', 'aenum', 'mypy', 'pygithub', 'requests-file', 'cleo', 'nodeenv', 'gast', 'identify', 'comm', 'nbclient', 'tokenizers', 'django', 'send2trash', 'cached-property', 'deepdiff', 'croniter', 'ipywidgets', 'execnet', 'overrides', 'widgetsnbextension', 'jupyterlab-server', 'jupyterlab', 'keras', 'typer', 'hvac', 'dataclasses', 'cfgv', 'asttokens', 'aws-sam-translator', 'selenium', 'distro', 'typeguard', 'executing', 'stack-data', 'xgboost', 'confluent-kafka', 'rfc3986', 'pure-eval', 'tblib', 'apache-airflow', 'fastavro', 'uri-template', 'db-dtypes', 'unidecode', 'prettytable', 'docopt', 'retrying', 'libclang', 'thrift', 'pymssql', 'zeep', 'rfc3986-validator', 'argon2-cffi-bindings', 'inflection', 'jupyter-lsp', 'openai', 'moto', 'opentelemetry-proto', 'snowballstemmer', 'ujson', 'sphinxcontrib-qthelp', 'sphinxcontrib-devhelp', 'azure-graphrbac', 'sphinxcontrib-applehelp', 'aioconsole', 'python-gnupg', 'parsedatetime', 'google-cloud-firestore', 'pox', 'pathos', 'libcst', 'kombu', 'applicationinsights', 'shap', 'zope-event', 'numexpr', 'trio', 'argparse', 'gevent', 'email-validator', 'torchvision', 'google-cloud-appengine-logging', 'kafka-python', 'checkov', 'tensorboard-plugin-wit', 'coloredlogs', 'apache-beam', 'azure-mgmt-storage', 'tldextract', 'colorlog', 'wandb', 'azure-eventhub', 'pywavelets', 'docstring-parser', 'datetime', 'fire', 'makefun', 'google-cloud-resource-manager', 'uamqp', 'ecdsa', 'slicer', 'hpack', 'imagesize', 'google-cloud-logging', 'wsproto', 'delta-spark', 'validators', 'fiona', 'databricks-sql-connector', 'sshtunnel', 'brotli', 'holidays', 'apache-airflow-providers-common-sql'])
     # highlight_label_set = set(['platformdirs', 'certifi', 'jmespath', 'aiohttp', 'async-timeout', 'pyparsing', 'pydantic', 'importlib-resources', 'websocket-client', 'aiosignal', 'distlib', 'gitpython', 'tabulate', 'proto-plus', 'msal', 'azure-storage-blob', 'tzlocal', 'docker', 'grpcio-tools', 'sqlparse', 'wcwidth', 'poetry-core', 'sniffio', 'google-auth-oauthlib', 'jaraco-classes', 'dill', 'alembic', 'httplib2', 'python-dotenv', 'scramp', 'tb-nightly', 'marshmallow', 'uritemplate', 'toml', 'trove-classifiers', 'cycler', 'jeepney', 'pyzmq', 'toolz', 'prometheus-client', 'httpcore', 'adal', 'shellingham', 'pyflakes', 'httpx', 'pkginfo', 'sentry-sdk', 'nbconvert', 'fastapi', 'flake8', 'python-utils', 'asynctest', 'google-cloud-bigquery-storage', 'databricks-cli', 'starlette', 'aioitertools', 'pickleshare', 'mistune', 'jupyter-server', 'pbr', 'ipykernel', 'build', 'arrow', 'asgiref', 'uvicorn', 'html5lib', 'pyproject-hooks', 'oauth2client', 'tinycss2', 'altair', 'multiprocess', 'zope-interface', 'retry', 'crashtest', 'httptools', 'querystring-parser', 'contextlib2', 'tensorboard-data-server', 'azure-storage-file-datalake', 'xlsxwriter', 'configparser', 'mysql-connector-python', 'pendulum', 'text-unidecode', 'semver', 'responses', 'pipenv', 'snowflake-sqlalchemy', 'python-slugify', 'pytest-xdist', 'sphinx', 'jupyterlab-widgets', 'gremlinpython', 'click-plugins', 'pytest-mock', 'azure-storage-common', 'dataclasses-json', 'futures', 'pandocfilters', 'patsy', 'xxhash', 'tensorflow-io-gcs-filesystem', 'jupyterlab-pygments', 'setproctitle', 'astunparse', 'async-lru', 'gcsfs', 'azure-keyvault-secrets', 'pysftp', 'ordered-set', 'faker', 'semantic-version', 'jsonpickle', 'pytest-runner', 'sphinxcontrib-serializinghtml', 'webcolors', 'azure-datalake-store', 'typing', 'isoduration', 'jupyter-server-terminals', 'deprecation', 'opencensus-context', 'typed-ast', 'opencensus', 'stevedore', 'pyproj', 'gspread', 'ppft', 'watchtower', 'trio-websocket', 'azure-mgmt-keyvault', 'structlog', 'opentelemetry-exporter-otlp-proto-http', 'opentelemetry-semantic-conventions', 'enum34', 'pathlib2', 'types-urllib3', 'pybind11', 'pydata-google-auth', 'lightgbm', 'opencensus-ext-azure', 'lz4', 'cligj', 'azure-mgmt-containerregistry', 'keras-preprocessing', 'unittest-xml-reporting', 'partd', 'schema', 'flask-cors', 'alabaster', 'azure-mgmt-authorization', 'h2', 'python-http-client', 'amqp', 'pytest-asyncio', 'locket', 'hyperframe'])
@@ -920,29 +909,40 @@ if __name__ == "__main__":
     # ###################### choose CV batch ######################
     # for test_sample_batch_idx, test_samples_select_set in enumerate(test_sample_batchsets_l):
     #     train_samples_select_set = all_samples_select_set - test_samples_select_set 
-    test_sample_batch_idx = 1
+    test_sample_batch_idx = 4
     # test_samples_select_set = test_sample_batchsets_l[test_sample_batch_idx]
     # train_samples_select_set = all_samples_select_set - test_samples_select_set
     # #############################################################
 
-    for dataset in ["data_0"]:
-        packages_l = packages_ll[dataset]
-        # tokens_filter_set = tokenshares_filter_set_d[dataset].union(tokennoises_filter_set_d[dataset])
-        tokens_filter_set = set()
+    for dataset in ["data_3"]:
+        # packages_l = packages_ll[dataset]
+        # #############################################################
+        # testing with filtered tagsetfilenames
+        with open("/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/filters/big_train_filtered_pair_tagsetfilenames_d_same_length", 'rb') as tf:
+            labels_tagfiles_d = yaml.load(tf, Loader=yaml.Loader)
+            packages_l = list(labels_tagfiles_d.keys())
+            n_samples = len(labels_tagfiles_d[packages_l[0]])
+        # #############################################################
+        with open("/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/filters/big_train_tokenshares_filter_set", 'rb') as tf:
+            tokenshares_filter_set_d[dataset] = yaml.load(tf, Loader=yaml.Loader)
+        with open("/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/filters/big_train_tokennoises_filter_set", 'rb') as tf:
+            tokennoises_filter_set_d[dataset] = yaml.load(tf, Loader=yaml.Loader)
+        tokens_filter_set = tokenshares_filter_set_d[dataset].union(tokennoises_filter_set_d[dataset])
+        # tokens_filter_set = set()
+
         # packages_l = list(set(packages_l)-highlight_label_set)
         # packages_l = list(highlight_label_set)
         # highlight_label_set = set()
         # packages_l = list([packages_l[0]])
         # print(packages_l)
 
-        for n_jobs in [8]:
-            for n_models, test_batch_count in zip([8,4,2,1],[1,1,1,1]): #([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # ([1,25,10],[8,1,1])
+        for n_jobs in [32]:
+            for n_models, test_batch_count in zip([1,25,10],[8,1,1]): #([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # ([1,25,10],[8,1,1])
                 for n_estimators in [100]:
                     for depth in [1]:
                         for tree_method in["exact"]: # "exact","approx","hist"
                             for max_bin in [1]:
-                                for input_size, dim_compact_factor in zip([None, 6832, 27329, 109319],[1,1,1,1]): # [None, 13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
-                                # for input_size, dim_compact_factor in zip([None,24267*8//2,24267*8//4, 24267*8//8, 24267*8//16, 24267*8//32],[1,1,1,1,1,1]): # [None, 13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
+                                for input_size, dim_compact_factor in zip([None, 500, 1000, 5000, 10000, 15000],[1,1,1,1,1,1]): # [None, 6832, 27329, 109319],[1,1,1,1] # [None, 500, 1000, 5000, 10000, 15000],[1,1,1,1,1,1]
                                     random_instance = random.Random(4)
                                     for shuffle_idx in range(3):
                                         # random.Random(4).shuffle(packages_l)
@@ -952,14 +952,17 @@ if __name__ == "__main__":
                                             package_subset.append(set(randomized_packages_l[i:i+step]))
 
                                         for i, train_subset in enumerate(package_subset):
-                                            train_tags_path = "/home/cc/Praxi-Pipeline/data/"+dataset+"/big_train/"
-                                            test_tags_path = "/home/cc/Praxi-Pipeline/data/"+dataset+"/big_train/" # Cross Validation: testing a portion of the SL dataset
+                                            train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_train/"
+                                            test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_train/" # Cross Validation: testing a portion of the SL dataset
                                             
-                                            labels_tagfiles_d = defaultdict(list)
-                                            for tag_file in os.listdir(train_tags_path):
-                                                if (tag_file[-3:] == 'tag') and (tag_file[:-4].rsplit('-', 1)[0] in train_subset):
-                                                    if len(labels_tagfiles_d[tag_file[:-4].rsplit('-', 1)[0]]) < n_samples:
-                                                        labels_tagfiles_d[tag_file[:-4].rsplit('-', 1)[0]].append(tag_file)
+                                            # ###########################################################################
+                                            # # if reading from the dir. When testing with filtered tagsetfilenames, this is not needed.
+                                            # labels_tagfiles_d = defaultdict(list)
+                                            # for tag_file in os.listdir(train_tags_path):
+                                            #     if (tag_file[-3:] == 'tag') and (tag_file[:-4].rsplit('-', 1)[0] in train_subset):
+                                            #         if len(labels_tagfiles_d[tag_file[:-4].rsplit('-', 1)[0]]) < n_samples:
+                                            #             labels_tagfiles_d[tag_file[:-4].rsplit('-', 1)[0]].append(tag_file)
+                                            # ###########################################################################
                                             test_tagfiles_set, train_tagfiles_set = set(), set()
                                             for label, traintagfiles in labels_tagfiles_d.items():
                                                 test_tagfiles_set.update(traintagfiles[int(test_sample_batch_idx*n_samples*test_portion): int((test_sample_batch_idx+1)*n_samples*test_portion)])
@@ -967,7 +970,7 @@ if __name__ == "__main__":
                                             
                                             train_tag_files_l = list(train_tagfiles_set)
                                             test_tag_files_l = list(test_tagfiles_set)
-                                            cwd  ="/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
+                                            cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
                                             run_init_train(train_tags_path, test_tags_path, cwd, train_tags_init_l=train_tag_files_l, test_tags_l=test_tag_files_l, n_jobs=n_jobs, n_estimators=n_estimators, tokens_filter_set=tokens_filter_set, test_batch_count=test_batch_count, input_size=input_size, compact_factor=dim_compact_factor, depth=depth, tree_method=tree_method)
                                             # break
 
@@ -979,24 +982,24 @@ if __name__ == "__main__":
     # ###################################
     # run_pred()
     # Testing the ML dataset
-    for dataset in ["data_0"]:
-        for n_jobs in [8]:
-            for clf_njobs in [8]:
-                for n_models, test_batch_count in zip([8,4,2,1],[1,1,1,1]): # zip([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]):
+    for dataset in ["data_3"]:
+        for n_jobs in [32]:
+            for clf_njobs in [32]:
+                for n_models, test_batch_count in zip([1,25,10],[8,1,1]): # zip([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]):
                     for n_estimators in [100]:
                         for depth in [1]:
                             for tree_method in["exact"]: # "exact","approx","hist"
                                 for max_bin in [1]:
-                                    for input_size, dim_compact_factor in zip([None, 6832, 27329, 109319],[1,1,1,1]):
+                                    for input_size, dim_compact_factor in zip([None, 500, 1000, 5000, 10000, 15000],[1,1,1,1,1,1]):
                                         for shuffle_idx in range(3):
 
                                             clf_path = []
                                             for i in range(n_models):
-                                                clf_pathname = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/model_init.json"
+                                                clf_pathname = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/model_init.json"
                                                 if os.path.isfile(clf_pathname):
                                                     clf_path.append(clf_pathname)
-                                            cwd = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
-                                            test_tags_path = "/home/cc/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
+                                            cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
+                                            test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
                             #    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
                                             run_pred(cwd, clf_path, test_tags_path, n_jobs=n_jobs, n_estimators=n_estimators, test_batch_count=test_batch_count, input_size=input_size, compact_factor=dim_compact_factor, depth=depth, tree_method=tree_method)
 
@@ -1009,3 +1012,13 @@ if __name__ == "__main__":
 
 
 
+
+# ########## some debugging scripts.
+# d = defaultdict(list)
+# for test_tag_file in tagset_files:
+#     d[test_tag_file[:-4].rsplit("-",1)[0]].append(test_tag_file)
+# for k,v in d.items():
+#     print(k,len(v))
+#     if len(v) != 16:
+#         print("!!!!!")
+#         break

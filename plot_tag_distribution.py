@@ -44,14 +44,14 @@ def plot_size():
     # target_dir = "big_ML_biased_test"
     # target_dir = "big_SL_biased_test"
     target_dir = "big_train"
-    dirname = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/"
+    dirname = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_3/"
     out_dirname = dirname+target_dir+"/"
     # print(out_dirname)
-    tagsets_l = [name for name in os.listdir(out_dirname) if os.path.isfile(out_dirname+name) and name[-4:]!=".obj"]
-    # print(tagsets_l)
-    # if len(tagsets_l) == 2:
-    pool = mp.Pool(processes=5)
-    data_instance_d_l = [pool.apply_async(read_tagset, args=(out_dirname+tagsets_name,)) for tagsets_name in tqdm(tagsets_l)]
+    tagsetfilenames_l = [name for name in os.listdir(out_dirname) if os.path.isfile(out_dirname+name) and name[-4:]!=".obj"]
+    # print(tagsetfilenames_l)
+    # if len(tagsetfilenames_l) == 2:
+    pool = mp.Pool(processes=10)
+    data_instance_d_l = [pool.apply_async(read_tagset, args=(out_dirname+tagsets_name,)) for tagsets_name in tqdm(tagsetfilenames_l)]
     data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
     pool.close()
     pool.join()
@@ -64,7 +64,7 @@ def plot_size():
             label_tags_d[data_instance_d["labels_str"]][tagname].append(tagoccurence)   # {"label":{"tagname":tagoccurence,},}
         # tagnames_set.update(set(data_instance_d["tags_d"].keys()))                      # all tagname; {"tagname",}
         label_tagsnameset_d[data_instance_d["labels_str"]].update(set(data_instance_d["tags_d"].keys())) # {"label":{"tagname",},}
-    # for tagsets_name in tqdm(tagsets_l):
+    # for tagsets_name in tqdm(tagsetfilenames_l):
     #     # print(out_dirname+tagsets_name)
         
     #     with open(out_dirname+tagsets_name, "r") as stream:
@@ -107,7 +107,7 @@ def plot_size():
     ax.tick_params(axis='both', which='minor', labelsize=10)
     # ax.bar_label(bar_plots, labels=yhats, fontsize=10)
     # ax.vlines(x=biggest_yhat_idx-0.5, ymin=min(proba_array), ymax=max(proba_array), color='black')
-    plt.savefig(dirname+plot_dir+target_dir+'_distribution_tags_count.png', bbox_inches='tight')
+    plt.savefig(dirname+plot_dir+target_dir+'_distribution_tags_count.pdf', bbox_inches='tight')
     plt.close()
 
     combination_length_d = {k: v for k, v in sorted(combination_length_d.items(), key=lambda item: item[1])}
@@ -126,14 +126,14 @@ def plot_size():
     ax.tick_params(axis='both', which='minor', labelsize=10)
     # ax.bar_label(bar_plots, labels=yhats, fontsize=10)
     # ax.vlines(x=biggest_yhat_idx-0.5, ymin=min(proba_array), ymax=max(proba_array), color='black')
-    plt.savefig(dirname+plot_dir+target_dir+'_distribution_combination_length.png', bbox_inches='tight')
+    plt.savefig(dirname+plot_dir+target_dir+'_distribution_combination_length.pdf', bbox_inches='tight')
     plt.close()
 
 
     # ######################## Plots below are for SL datasets only
     # Plot tag counts for each label pair
-    # highlight_label_l = ['platformdirs', 'certifi', 'jmespath', 'aiohttp', 'async-timeout', 'pyparsing', 'pydantic', 'importlib-resources', 'websocket-client', 'aiosignal', 'distlib', 'gitpython', 'tabulate', 'proto-plus', 'msal', 'azure-storage-blob', 'tzlocal', 'docker', 'grpcio-tools', 'sqlparse', 'wcwidth', 'poetry-core', 'sniffio', 'google-auth-oauthlib', 'jaraco-classes', 'dill', 'alembic', 'httplib2', 'python-dotenv', 'scramp', 'tb-nightly', 'marshmallow', 'uritemplate', 'toml', 'trove-classifiers', 'cycler', 'jeepney', 'pyzmq', 'toolz', 'prometheus-client', 'httpcore', 'adal', 'shellingham', 'pyflakes', 'httpx', 'pkginfo', 'sentry-sdk', 'nbconvert', 'fastapi', 'flake8', 'python-utils', 'asynctest', 'google-cloud-bigquery-storage', 'databricks-cli', 'starlette', 'aioitertools', 'pickleshare', 'mistune', 'jupyter-server', 'pbr', 'ipykernel', 'build', 'arrow', 'asgiref', 'uvicorn', 'html5lib', 'pyproject-hooks', 'oauth2client', 'tinycss2', 'altair', 'multiprocess', 'zope-interface', 'retry', 'crashtest', 'httptools', 'querystring-parser', 'contextlib2', 'tensorboard-data-server', 'azure-storage-file-datalake', 'xlsxwriter', 'configparser', 'mysql-connector-python', 'pendulum', 'text-unidecode', 'semver', 'responses', 'pipenv', 'snowflake-sqlalchemy', 'python-slugify', 'pytest-xdist', 'sphinx', 'jupyterlab-widgets', 'gremlinpython', 'click-plugins', 'pytest-mock', 'azure-storage-common', 'dataclasses-json', 'futures', 'pandocfilters', 'patsy', 'xxhash', 'tensorflow-io-gcs-filesystem', 'jupyterlab-pygments', 'setproctitle', 'astunparse', 'async-lru', 'gcsfs', 'azure-keyvault-secrets', 'pysftp', 'ordered-set', 'faker', 'semantic-version', 'jsonpickle', 'pytest-runner', 'sphinxcontrib-serializinghtml', 'webcolors', 'azure-datalake-store', 'typing', 'isoduration', 'jupyter-server-terminals', 'deprecation', 'opencensus-context', 'typed-ast', 'opencensus', 'stevedore', 'pyproj', 'gspread', 'ppft', 'watchtower', 'trio-websocket', 'azure-mgmt-keyvault', 'structlog', 'opentelemetry-exporter-otlp-proto-http', 'opentelemetry-semantic-conventions', 'enum34', 'pathlib2', 'types-urllib3', 'pybind11', 'pydata-google-auth', 'lightgbm', 'opencensus-ext-azure', 'lz4', 'cligj', 'azure-mgmt-containerregistry', 'keras-preprocessing', 'unittest-xml-reporting', 'partd', 'schema', 'flask-cors', 'alabaster', 'azure-mgmt-authorization', 'h2', 'python-http-client', 'amqp', 'pytest-asyncio', 'locket', 'hyperframe']
-    highlight_label_l = ['s3fs', 'cryptography', 'emoji']
+    highlight_label_l = ['platformdirs', 'certifi', 'jmespath', 'aiohttp', 'async-timeout', 'pyparsing', 'pydantic', 'importlib-resources', 'websocket-client', 'aiosignal', 'distlib', 'gitpython', 'tabulate', 'proto-plus', 'msal', 'azure-storage-blob', 'tzlocal', 'docker', 'grpcio-tools', 'sqlparse', 'wcwidth', 'poetry-core', 'sniffio', 'google-auth-oauthlib', 'jaraco-classes', 'dill', 'alembic', 'httplib2', 'python-dotenv', 'scramp', 'tb-nightly', 'marshmallow', 'uritemplate', 'toml', 'trove-classifiers', 'cycler', 'jeepney', 'pyzmq', 'toolz', 'prometheus-client', 'httpcore', 'adal', 'shellingham', 'pyflakes', 'httpx', 'pkginfo', 'sentry-sdk', 'nbconvert', 'fastapi', 'flake8', 'python-utils', 'asynctest', 'google-cloud-bigquery-storage', 'databricks-cli', 'starlette', 'aioitertools', 'pickleshare', 'mistune', 'jupyter-server', 'pbr', 'ipykernel', 'build', 'arrow', 'asgiref', 'uvicorn', 'html5lib', 'pyproject-hooks', 'oauth2client', 'tinycss2', 'altair', 'multiprocess', 'zope-interface', 'retry', 'crashtest', 'httptools', 'querystring-parser', 'contextlib2', 'tensorboard-data-server', 'azure-storage-file-datalake', 'xlsxwriter', 'configparser', 'mysql-connector-python', 'pendulum', 'text-unidecode', 'semver', 'responses', 'pipenv', 'snowflake-sqlalchemy', 'python-slugify', 'pytest-xdist', 'sphinx', 'jupyterlab-widgets', 'gremlinpython', 'click-plugins', 'pytest-mock', 'azure-storage-common', 'dataclasses-json', 'futures', 'pandocfilters', 'patsy', 'xxhash', 'tensorflow-io-gcs-filesystem', 'jupyterlab-pygments', 'setproctitle', 'astunparse', 'async-lru', 'gcsfs', 'azure-keyvault-secrets', 'pysftp', 'ordered-set', 'faker', 'semantic-version', 'jsonpickle', 'pytest-runner', 'sphinxcontrib-serializinghtml', 'webcolors', 'azure-datalake-store', 'typing', 'isoduration', 'jupyter-server-terminals', 'deprecation', 'opencensus-context', 'typed-ast', 'opencensus', 'stevedore', 'pyproj', 'gspread', 'ppft', 'watchtower', 'trio-websocket', 'azure-mgmt-keyvault', 'structlog', 'opentelemetry-exporter-otlp-proto-http', 'opentelemetry-semantic-conventions', 'enum34', 'pathlib2', 'types-urllib3', 'pybind11', 'pydata-google-auth', 'lightgbm', 'opencensus-ext-azure', 'lz4', 'cligj', 'azure-mgmt-containerregistry', 'keras-preprocessing', 'unittest-xml-reporting', 'partd', 'schema', 'flask-cors', 'alabaster', 'azure-mgmt-authorization', 'h2', 'python-http-client', 'amqp', 'pytest-asyncio', 'locket', 'hyperframe']
+    # highlight_label_l = ['s3fs', 'cryptography', 'emoji']
     pair_tag_count_d = {k: sum(v)/len(v) for k, v in pair_tag_count_d.items()}
     pair_tag_count_d = {k: v for k, v in sorted(pair_tag_count_d.items(), key=lambda item: item[1])}
     pair_tag_count_ktoidx = {}
@@ -154,7 +154,7 @@ def plot_size():
     ax.tick_params(axis='both', which='minor', labelsize=10)
     # ax.bar_label(bar_plots, labels=yhats, fontsize=10)
     # ax.vlines(x=biggest_yhat_idx-0.5, ymin=min(proba_array), ymax=max(proba_array), color='black')
-    plt.savefig(dirname+plot_dir+target_dir+'_distribution_tagsofpackagepair.png', bbox_inches='tight')
+    plt.savefig(dirname+plot_dir+target_dir+'_distribution_tagsofpackagepair.pdf', bbox_inches='tight')
     plt.close()
 
 
@@ -173,85 +173,86 @@ def plot_size():
     tokens_filter_l = sorted([tagname for tagname, reoccurentcount in highlight_labeltagnames_reoccurentcount_d.items() if reoccurentcount>1],key=lambda x: x[1], reverse=True)
     # print(tokens_filter_l)
     tokens_filter_set = set(tokens_filter_l)
-    with open(dirname+filter_dir+target_dir+"_tokenshares_filter_set", 'w') as f:
-        yaml.dump(tokens_filter_set, f)
-        # for s in tokens_filter_l:
-        #     f.write(s + '\n')
-    # print(json.dumps(highlight_labeltagnames_reoccurentcount_d,sort_keys=True, indent=4))
-    tagname_morethan1occurence_set = set([tagname for tagname, reoccurentcount in highlight_labeltagnames_reoccurentcount_d.items() if reoccurentcount>1])
-    label_tagsnameset_d_dropreoccurenttagnames = {}
-    for label, tagsnameset in label_tagsnameset_d.items():
-        label_tagsnameset_d_dropreoccurenttagnames[label] = tagsnameset-tagname_morethan1occurence_set
-    # print(sorted([(label, tagsnameset) for label, tagsnameset in label_tagsnameset_d_dropreoccurenttagnames.items() if len(tagsnameset)<1],key=lambda x: x[1], reverse=True))
-    # print(json.dumps(label_tagsnameset_d_dropreoccurenttagnames,sort_keys=True, indent=4))
-    # print()
-
-    tagnames_set = set()
-    for label in label_tagsnameset_d.keys():
-        tagnames_set.update(label_tagsnameset_d[label])
-    tagnames_reoccurentcount_d = defaultdict(int)
-    for label_pair_idx, label in enumerate(label_tagsnameset_d.keys()):
-        reoccurent_tagnames = tagnames_set.intersection(label_tagsnameset_d[label])
-        for tagname in list(reoccurent_tagnames):
-            tagnames_reoccurentcount_d[tagname] += 1
-    reoccurentcounts_l = sorted([reoccurentcount for reoccurentcount in tagnames_reoccurentcount_d.values()], reverse=True)
-    # reoccurentcounts_l_normalized = [round(reoccurentcounts_l_entry/sum(reoccurentcounts_l)*100, 2) for reoccurentcounts_l_entry in reoccurentcounts_l]
-    fig, ax = plt.subplots(1, 1, figsize=(6, 6), dpi=600)
-    # proba_array = proba_array.reshape(-1)
-    # c_l = [color_l[cluster_idx] for cluster_idx in yhats]
-    bar_plots = ax.bar(list(range(len(reoccurentcounts_l))), reoccurentcounts_l)
-    ax.bar_label(bar_plots)
-    ax.set_xlim(-1, 5.5)
-    ax.set_xticks([])
-    # ax.set_title('Probability Plot', fontdict={'fontsize': 30, 'fontweight': 'medium'})
-    ax.set_xlabel("Tokens", fontdict={'fontsize': 26})
-    ax.set_ylabel("Number of Packages", fontdict={'fontsize': 26})
-    ax.tick_params(axis='both', which='major', labelsize=12)
-    ax.tick_params(axis='both', which='minor', labelsize=10)
-    # ax.bar_label(bar_plots, labels=yhats, fontsize=10)
-    # ax.vlines(x=biggest_yhat_idx-0.5, ymin=min(proba_array), ymax=max(proba_array), color='black')
-    plt.savefig(dirname+plot_dir+target_dir+'_distribution_tagsreoccurentinpackagepair.png', bbox_inches='tight')
-    plt.close()
-
-    # plot count of token occurences
-    reoccurentcounts_counter = Counter(reoccurentcounts_l)
-    # reoccurentcounts_value_l = list(reoccurentcounts_counter.keys())
-    reoccurentcounts_valuecount_l = sorted(list(reoccurentcounts_counter.values()),reverse=True)
-    reoccurentcounts_valuecount_sum = sum(reoccurentcounts_valuecount_l)
-    reoccurentcounts_valuecount_l_nomalized = [reoccurentcounts_valuecount/reoccurentcounts_valuecount_sum for reoccurentcounts_valuecount in reoccurentcounts_valuecount_l]
-    fig, ax = plt.subplots(1, 1, figsize=(6, 6), dpi=600)
-    # proba_array = proba_array.reshape(-1)
-    # c_l = [color_l[cluster_idx] for cluster_idx in yhats]
-    bar_plots = ax.bar(list(range(len(reoccurentcounts_valuecount_l_nomalized))), reoccurentcounts_valuecount_l_nomalized)
-    ax.bar_label(bar_plots)
-    ax.set_xlim(-1, 5.5)
-    ax.set_xticks([])
-    # ax.set_title('Probability Plot', fontdict={'fontsize': 30, 'fontweight': 'medium'})
-    ax.set_xlabel("Count", fontdict={'fontsize': 26})
-    ax.set_ylabel("Tokens Occurences", fontdict={'fontsize': 26})
-    ax.tick_params(axis='both', which='major', labelsize=12)
-    ax.tick_params(axis='both', which='minor', labelsize=10)
-    # ax.bar_label(bar_plots, labels=yhats, fontsize=10)
-    # ax.vlines(x=biggest_yhat_idx-0.5, ymin=min(proba_array), ymax=max(proba_array), color='black')
-    plt.savefig(dirname+plot_dir+target_dir+'_distribution_countoftokenoccurences.png', bbox_inches='tight')
-    plt.close()
-
-    # tagname_morethan1occurence_set = set()
-    # tagname_reoccurentcount_d = defaultdict(int)
-    # for (highlight_label, label) in itertools.product(highlight_label_l, label_pairs_l):
-    #     if label != highlight_label:
-    #         reoccurent_tagnames = label_tagsnameset_d[highlight_label].intersection(label_tagsnameset_d[label])
-    #         tagname_morethan1occurence_set.update(reoccurent_tagnames)
-    #         for tagname in list(reoccurent_tagnames):
-    #             tagname_reoccurentcount_d[tagname] += 1
+    # with open(dirname+filter_dir+target_dir+"_tokenshares_filter_set", 'w') as f:
+    #     yaml.dump(tokens_filter_set, f)
+    #     # for s in tokens_filter_l:
+    #     #     f.write(s + '\n')
+    # # print(json.dumps(highlight_labeltagnames_reoccurentcount_d,sort_keys=True, indent=4))
+    # tagname_morethan1occurence_set = set([tagname for tagname, reoccurentcount in highlight_labeltagnames_reoccurentcount_d.items() if reoccurentcount>1])
     # label_tagsnameset_d_dropreoccurenttagnames = {}
     # for label, tagsnameset in label_tagsnameset_d.items():
     #     label_tagsnameset_d_dropreoccurenttagnames[label] = tagsnameset-tagname_morethan1occurence_set
-    # print(len([1 for tagnames_set in label_tagsnameset_d_dropreoccurenttagnames.values() if len(tagnames_set)==0]))
-    # print(tagname_morethan1occurence_set)
-    # print(json.dumps(tagname_reoccurentcount_d,sort_keys=True, indent=4))
-    # print(json.dumps(label_tagsnameset_d_dropreoccurenttagnames,sort_keys=True, indent=4))
-    # print()
+    # # print(sorted([(label, tagsnameset) for label, tagsnameset in label_tagsnameset_d_dropreoccurenttagnames.items() if len(tagsnameset)<1],key=lambda x: x[1], reverse=True))
+    # # print(json.dumps(label_tagsnameset_d_dropreoccurenttagnames,sort_keys=True, indent=4))
+    # # print()
+
+    # tagnames_set = set()
+    # for label in label_tagsnameset_d.keys():
+    #     tagnames_set.update(label_tagsnameset_d[label])
+    # tagnames_reoccurentcount_d = defaultdict(int)
+    # for label_pair_idx, label in enumerate(label_tagsnameset_d.keys()):
+    #     reoccurent_tagnames = tagnames_set.intersection(label_tagsnameset_d[label])
+    #     for tagname in list(reoccurent_tagnames):
+    #         tagnames_reoccurentcount_d[tagname] += 1
+    # reoccurentcounts_l = sorted([reoccurentcount for reoccurentcount in tagnames_reoccurentcount_d.values()], reverse=True)
+    # # reoccurentcounts_l_normalized = [round(reoccurentcounts_l_entry/sum(reoccurentcounts_l)*100, 2) for reoccurentcounts_l_entry in reoccurentcounts_l]
+    # fig, ax = plt.subplots(1, 1, figsize=(6, 6), dpi=600)
+    # # proba_array = proba_array.reshape(-1)
+    # # c_l = [color_l[cluster_idx] for cluster_idx in yhats]
+    # bar_plots = ax.bar(list(range(len(reoccurentcounts_l))), reoccurentcounts_l)
+    # ax.bar_label(bar_plots)
+    # ax.set_xlim(-1, 5.5)
+    # ax.set_xticks([])
+    # # ax.set_title('Probability Plot', fontdict={'fontsize': 30, 'fontweight': 'medium'})
+    # ax.set_xlabel("Tokens", fontdict={'fontsize': 26})
+    # ax.set_ylabel("Number of Packages", fontdict={'fontsize': 26})
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # # ax.bar_label(bar_plots, labels=yhats, fontsize=10)
+    # # ax.vlines(x=biggest_yhat_idx-0.5, ymin=min(proba_array), ymax=max(proba_array), color='black')
+    # plt.savefig(dirname+plot_dir+target_dir+'_distribution_tagsreoccurentinpackagepair.pdf', bbox_inches='tight')
+    # plt.close()
+
+    # # plot count of token occurences
+    # reoccurentcounts_counter = Counter(reoccurentcounts_l)
+    # # reoccurentcounts_value_l = list(reoccurentcounts_counter.keys())
+    # reoccurentcounts_valuecount_l = sorted(list(reoccurentcounts_counter.values()),reverse=True)
+    # reoccurentcounts_valuecount_sum = sum(reoccurentcounts_valuecount_l)
+    # reoccurentcounts_valuecount_l_nomalized = [round(reoccurentcounts_valuecount/reoccurentcounts_valuecount_sum*100,2) for reoccurentcounts_valuecount in reoccurentcounts_valuecount_l]
+    # fig, ax = plt.subplots(1, 1, figsize=(10, 3))
+    # # proba_array = proba_array.reshape(-1)
+    # # c_l = [color_l[cluster_idx] for cluster_idx in yhats]
+    # bar_plots = ax.bar(list(range(len(reoccurentcounts_valuecount_l_nomalized))), reoccurentcounts_valuecount_l_nomalized, hatch="*")
+    # ax.bar_label(bar_plots)
+    # ax.set_xlim(-1, 5.5)
+    # ax.grid()
+    # ax.set_xticks([])
+    # # ax.set_title('Probability Plot', fontdict={'fontsize': 30, 'fontweight': 'medium'})
+    # ax.set_xlabel("Number of Packages", fontdict={'fontsize': 20})
+    # ax.set_ylabel("% of tokens", fontdict={'fontsize': 20})
+    # ax.tick_params(axis='both', which='major', labelsize=20)
+    # ax.tick_params(axis='both', which='minor', labelsize=18)
+    # # ax.bar_label(bar_plots, labels=yhats, fontsize=10)
+    # # ax.vlines(x=biggest_yhat_idx-0.5, ymin=min(proba_array), ymax=max(proba_array), color='black')
+    # plt.savefig(dirname+plot_dir+target_dir+'_distribution_countoftokenoccurences.pdf', bbox_inches='tight')
+    # plt.close()
+
+    # # tagname_morethan1occurence_set = set()
+    # # tagname_reoccurentcount_d = defaultdict(int)
+    # # for (highlight_label, label) in itertools.product(highlight_label_l, label_pairs_l):
+    # #     if label != highlight_label:
+    # #         reoccurent_tagnames = label_tagsnameset_d[highlight_label].intersection(label_tagsnameset_d[label])
+    # #         tagname_morethan1occurence_set.update(reoccurent_tagnames)
+    # #         for tagname in list(reoccurent_tagnames):
+    # #             tagname_reoccurentcount_d[tagname] += 1
+    # # label_tagsnameset_d_dropreoccurenttagnames = {}
+    # # for label, tagsnameset in label_tagsnameset_d.items():
+    # #     label_tagsnameset_d_dropreoccurenttagnames[label] = tagsnameset-tagname_morethan1occurence_set
+    # # print(len([1 for tagnames_set in label_tagsnameset_d_dropreoccurenttagnames.values() if len(tagnames_set)==0]))
+    # # print(tagname_morethan1occurence_set)
+    # # print(json.dumps(tagname_reoccurentcount_d,sort_keys=True, indent=4))
+    # # print(json.dumps(label_tagsnameset_d_dropreoccurenttagnames,sort_keys=True, indent=4))
+    # # print()
 
 
     # Plot random noise tags in each labeltagset
@@ -263,71 +264,100 @@ def plot_size():
             if len(counts_l) < 5:
                 tagnamesbelowoccurence_set.add(tagname)
     
-    # print()
-    # print(tagnamesbelowoccurence_set)
-    with open(dirname+filter_dir+target_dir+"_tokennoises_filter_set", 'w') as f:
-        yaml.dump(tagnamesbelowoccurence_set, f)
-        # for s in list(tagnamesbelowoccurence_set):
-        #     f.write(s + '\n')
+    # # print()
+    # # print(tagnamesbelowoccurence_set)
+    # with open(dirname+filter_dir+target_dir+"_tokennoises_filter_set", 'w') as f:
+    #     yaml.dump(tagnamesbelowoccurence_set, f)
+    #     # for s in list(tagnamesbelowoccurence_set):
+    #     #     f.write(s + '\n')
 
-    # for tagsnameset_idx, (label, tagsname_set) in enumerate(label_tagsnameset_d.items()):
-    #     for tagsname in list(tagsname_set):
-    #         tagnames_reoccurentcount_d[label][tagsname] += 1
+    # # for tagsnameset_idx, (label, tagsname_set) in enumerate(label_tagsnameset_d.items()):
+    # #     for tagsname in list(tagsname_set):
+    # #         tagnames_reoccurentcount_d[label][tagsname] += 1
 
 
-    # plot count of token occurences after filter shared token
-    reoccurentcounts_l = sorted([reoccurentcount for tagname, reoccurentcount in tagnames_reoccurentcount_d.items() if tagname not in tokens_filter_set], reverse=True)
-    reoccurentcounts_counter = Counter(reoccurentcounts_l)
-    # reoccurentcounts_value_l = list(reoccurentcounts_counter.keys())
-    reoccurentcounts_valuecount_l = sorted(list(reoccurentcounts_counter.values()),reverse=True)
-    reoccurentcounts_valuecount_sum = sum(reoccurentcounts_valuecount_l)
-    reoccurentcounts_valuecount_l_nomalized = [reoccurentcounts_valuecount/reoccurentcounts_valuecount_sum*100 for reoccurentcounts_valuecount in reoccurentcounts_valuecount_l]
-    fig, ax = plt.subplots(1, 1, figsize=(6, 6), dpi=600)
-    # proba_array = proba_array.reshape(-1)
-    # c_l = [color_l[cluster_idx] for cluster_idx in yhats]
-    bar_plots = ax.bar(list(range(len(reoccurentcounts_valuecount_l_nomalized))), reoccurentcounts_valuecount_l_nomalized)
-    ax.bar_label(bar_plots)
-    ax.set_xlim(-1, 5.5)
-    ax.set_xticks([])
-    # ax.set_title('Probability Plot', fontdict={'fontsize': 30, 'fontweight': 'medium'})
-    ax.set_xlabel("Count", fontdict={'fontsize': 26})
-    ax.set_ylabel("% of Tokens", fontdict={'fontsize': 26})
-    ax.tick_params(axis='both', which='major', labelsize=12)
-    ax.tick_params(axis='both', which='minor', labelsize=10)
-    # ax.bar_label(bar_plots, labels=yhats, fontsize=10)
-    # ax.vlines(x=biggest_yhat_idx-0.5, ymin=min(proba_array), ymax=max(proba_array), color='black')
-    plt.savefig(dirname+plot_dir+target_dir+'_distribution_countoftokenoccurencesafterfiltersharedtoken.png', bbox_inches='tight')
-    plt.close()
+    # # plot count of token occurences after filter shared token
+    # reoccurentcounts_l = sorted([reoccurentcount for tagname, reoccurentcount in tagnames_reoccurentcount_d.items() if tagname not in tokens_filter_set], reverse=True)
+    # reoccurentcounts_counter = Counter(reoccurentcounts_l)
+    # # reoccurentcounts_value_l = list(reoccurentcounts_counter.keys())
+    # reoccurentcounts_valuecount_l = sorted(list(reoccurentcounts_counter.values()),reverse=True)
+    # reoccurentcounts_valuecount_sum = sum(reoccurentcounts_valuecount_l)
+    # reoccurentcounts_valuecount_l_nomalized = [round(reoccurentcounts_valuecount/reoccurentcounts_valuecount_sum*100,2) for reoccurentcounts_valuecount in reoccurentcounts_valuecount_l]
+    # fig, ax = plt.subplots(1, 1, figsize=(6, 6), dpi=600)
+    # # proba_array = proba_array.reshape(-1)
+    # # c_l = [color_l[cluster_idx] for cluster_idx in yhats]
+    # bar_plots = ax.bar(list(range(len(reoccurentcounts_valuecount_l_nomalized))), reoccurentcounts_valuecount_l_nomalized, hatch="*")
+    # ax.bar_label(bar_plots)
+    # ax.set_xlim(-1, 5.5)
+    # ax.grid()
+    # ax.set_xticks([])
+    # # ax.set_title('Probability Plot', fontdict={'fontsize': 30, 'fontweight': 'medium'})
+    # ax.set_xlabel("Count", fontdict={'fontsize': 26})
+    # ax.set_ylabel("% of Tokens", fontdict={'fontsize': 26})
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # # ax.bar_label(bar_plots, labels=yhats, fontsize=10)
+    # # ax.vlines(x=biggest_yhat_idx-0.5, ymin=min(proba_array), ymax=max(proba_array), color='black')
+    # plt.savefig(dirname+plot_dir+target_dir+'_distribution_countoftokenoccurencesafterfiltersharedtoken.pdf', bbox_inches='tight')
+    # plt.close()
 
     # plot count of token occurences after filter noise and shared token
     filternoiseandsharedtoken = tokens_filter_set.union(tagnamesbelowoccurence_set)
-    reoccurentcounts_l = sorted([reoccurentcount for tagname, reoccurentcount in tagnames_reoccurentcount_d.items() if tagname not in filternoiseandsharedtoken], reverse=True)
-    reoccurentcounts_counter = Counter(reoccurentcounts_l)
-    # reoccurentcounts_value_l = list(reoccurentcounts_counter.keys())
-    reoccurentcounts_valuecount_l = sorted(list(reoccurentcounts_counter.values()),reverse=True)
-    reoccurentcounts_valuecount_sum = sum(reoccurentcounts_valuecount_l)
-    reoccurentcounts_valuecount_l_nomalized = [reoccurentcounts_valuecount/reoccurentcounts_valuecount_sum*100 for reoccurentcounts_valuecount in reoccurentcounts_valuecount_l]
-    fig, ax = plt.subplots(1, 1, figsize=(6, 6), dpi=600)
-    # proba_array = proba_array.reshape(-1)
-    # c_l = [color_l[cluster_idx] for cluster_idx in yhats]
-    bar_plots = ax.bar(list(range(len(reoccurentcounts_valuecount_l_nomalized))), reoccurentcounts_valuecount_l_nomalized)
-    ax.bar_label(bar_plots)
-    ax.set_xlim(-1, 5.5)
-    ax.set_xticks([])
-    # ax.set_title('Probability Plot', fontdict={'fontsize': 30, 'fontweight': 'medium'})
-    ax.set_xlabel("Count", fontdict={'fontsize': 26})
-    ax.set_ylabel("% of Tokens", fontdict={'fontsize': 26})
-    ax.tick_params(axis='both', which='major', labelsize=12)
-    ax.tick_params(axis='both', which='minor', labelsize=10)
-    # ax.bar_label(bar_plots, labels=yhats, fontsize=10)
-    # ax.vlines(x=biggest_yhat_idx-0.5, ymin=min(proba_array), ymax=max(proba_array), color='black')
-    plt.savefig(dirname+plot_dir+target_dir+'_distribution_countoftokenoccurencesafterfilternoiseandsharedtoken.png', bbox_inches='tight')
-    plt.close()
+    # reoccurentcounts_l = sorted([reoccurentcount for tagname, reoccurentcount in tagnames_reoccurentcount_d.items() if tagname not in filternoiseandsharedtoken], reverse=True)
+    # reoccurentcounts_counter = Counter(reoccurentcounts_l)
+    # # reoccurentcounts_value_l = list(reoccurentcounts_counter.keys())
+    # reoccurentcounts_valuecount_l = sorted(list(reoccurentcounts_counter.values()),reverse=True)
+    # reoccurentcounts_valuecount_sum = sum(reoccurentcounts_valuecount_l)
+    # reoccurentcounts_valuecount_l_nomalized = [round(reoccurentcounts_valuecount/reoccurentcounts_valuecount_sum*100,2) for reoccurentcounts_valuecount in reoccurentcounts_valuecount_l]
+    # fig, ax = plt.subplots(1, 1, figsize=(6, 6), dpi=600)
+    # # proba_array = proba_array.reshape(-1)
+    # # c_l = [color_l[cluster_idx] for cluster_idx in yhats]
+    # bar_plots = ax.bar(list(range(len(reoccurentcounts_valuecount_l_nomalized))), reoccurentcounts_valuecount_l_nomalized, hatch="*")
+    # ax.bar_label(bar_plots)
+    # ax.set_xlim(-1, 5.5)
+    # ax.grid()
+    # ax.set_xticks([])
+    # # ax.set_title('Probability Plot', fontdict={'fontsize': 30, 'fontweight': 'medium'})
+    # ax.set_xlabel("Count", fontdict={'fontsize': 26})
+    # ax.set_ylabel("% of Tokens", fontdict={'fontsize': 26})
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # # ax.bar_label(bar_plots, labels=yhats, fontsize=10)
+    # # ax.vlines(x=biggest_yhat_idx-0.5, ymin=min(proba_array), ymax=max(proba_array), color='black')
+    # plt.savefig(dirname+plot_dir+target_dir+'_distribution_countoftokenoccurencesafterfilternoiseandsharedtoken.pdf', bbox_inches='tight')
+    # plt.close()
 
 
 
 
+    filtered_pair_tagsetfilenames_d = defaultdict(list)
+    filtered_tagsetfilenames_set = set()
+    for instance_idx, data_instance_d in enumerate(data_instance_d_l):
+        if len(data_instance_d["tagnames_set"] - filternoiseandsharedtoken) > 0:
+            filtered_pair_tagsetfilenames_d[data_instance_d["labels_str"]].append(tagsetfilenames_l[instance_idx])
+            filtered_tagsetfilenames_set.add(tagsetfilenames_l[instance_idx])
+    with open(dirname+filter_dir+target_dir+"_filtered_tagsets_set", 'w') as f:
+        yaml.dump(filtered_tagsetfilenames_set, f)
+
+    max_tagsetsperpairlength = 25
+    for k,v in filtered_pair_tagsetfilenames_d.items():
+        # print(k, len(v))
+        if len(v) < max_tagsetsperpairlength:
+            max_tagsetsperpairlength = len(v)
+    filtered_tagsets_set_same_length = set()
+    filtered_pair_tagsetfilenames_d_same_length = defaultdict(list)
+    for k,v in filtered_pair_tagsetfilenames_d.items():
+        filtered_tagsets_set_same_length.update(v[:max_tagsetsperpairlength])
+        filtered_pair_tagsetfilenames_d_same_length[k] = v[:max_tagsetsperpairlength]
+    with open(dirname+filter_dir+target_dir+"_filtered_tagsets_set_same_length", 'w') as f:
+        yaml.dump(filtered_tagsets_set_same_length, f)
+    with open(dirname+filter_dir+target_dir+"_filtered_pair_tagsetfilenames_d_same_length", 'w') as f:
+        yaml.dump(filtered_pair_tagsetfilenames_d_same_length, f)
     
+
+    # with open(dirname+filter_dir+"tagset_files.yaml", 'rb') as tf:
+    #     test_filtered_tagsets_set = yaml.load(tf, Loader=yaml.Loader)
+
 
     return
 
