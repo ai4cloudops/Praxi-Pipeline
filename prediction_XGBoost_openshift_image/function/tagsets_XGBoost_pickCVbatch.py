@@ -942,7 +942,7 @@ if __name__ == "__main__":
                     for depth in [1]:
                         for tree_method in["exact"]: # "exact","approx","hist"
                             for max_bin in [1]:
-                                for input_size, dim_compact_factor in zip([None, 500, 1000, 5000, 10000, 15000],[1,1,1,1,1,1]): # [None, 6832, 27329, 109319],[1,1,1,1] # [None, 500, 1000, 5000, 10000, 15000],[1,1,1,1,1,1]
+                                for input_size, dim_compact_factor in zip([None, 500, 5000, 10000],[1,1,1,1]): # [None, 6832, 27329, 109319],[1,1,1,1] # [None, 500, 1000, 5000, 10000, 15000],[1,1,1,1,1,1]
                                     random_instance = random.Random(4)
                                     for shuffle_idx in range(3):
                                         # random.Random(4).shuffle(packages_l)
@@ -990,7 +990,7 @@ if __name__ == "__main__":
                         for depth in [1]:
                             for tree_method in["exact"]: # "exact","approx","hist"
                                 for max_bin in [1]:
-                                    for input_size, dim_compact_factor in zip([None, 500, 1000, 5000, 10000, 15000],[1,1,1,1,1,1]):
+                                    for input_size, dim_compact_factor in zip([None, 500, 5000, 15000],[1,1,1,1]):
                                         for shuffle_idx in range(3):
 
                                             clf_path = []
