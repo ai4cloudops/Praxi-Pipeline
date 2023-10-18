@@ -51,6 +51,8 @@ def map_tagfilesl(tags_path, tag_files, cwd, inference_flag, tokens_filter_set=s
     data_instance_d_l = [read_tokens(tags_path, tag_file, cwd, inference_flag, tokens_filter_set=tokens_filter_set) for tag_file in tag_files]
     # data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
     for data_instance_d in data_instance_d_l:
+        if 'tag_file' not in data_instance_d:
+            print(0)
         tagset_files.append(data_instance_d['tag_file'])
         if len(data_instance_d) ==4:
                 all_tags_set.update(data_instance_d['local_all_tags_set'])
@@ -60,9 +62,9 @@ def map_tagfilesl(tags_path, tag_files, cwd, inference_flag, tokens_filter_set=s
     return {"tagset_files": tagset_files, "all_tags_set": all_tags_set, "tags_by_instance_l":tags_by_instance_l ,"all_label_set":all_label_set, "labels_by_instance_l":labels_by_instance_l}
 
 def read_tokens(tags_path, tag_file, cwd, inference_flag, tokens_filter_set=set()):
+    ret = {}
+    ret["tag_file"] = tag_file
     try:
-        ret = {}
-        ret["tag_file"] = tag_file
         # if(tag_file[-3:] == 'tag') and (tag_file[:-3].rsplit('-', 1)[0] in packages_select_set or packages_select_set == set()):
         with open(tags_path + tag_file, 'rb') as tf:
             # print(tag_file)
@@ -84,7 +86,7 @@ def read_tokens(tags_path, tag_file, cwd, inference_flag, tokens_filter_set=set(
             if local_all_tags_set == set():
                 logger = build_logger(tag_file, cwd+"logs/")
                 logger.info('%s', tag_file+" has empty tags after filtering: "+str(filtered_tags_l))
-                return {}
+                return ret
             ret["local_all_tags_set"] = local_all_tags_set
             ret["instance_feature_tags_d"] = instance_feature_tags_d
             # tags_by_instance_l.append(instance_feature_tags_d)
@@ -918,7 +920,7 @@ if __name__ == "__main__":
     # ###################### choose CV batch ######################
     # for test_sample_batch_idx, test_samples_select_set in enumerate(test_sample_batchsets_l):
     #     train_samples_select_set = all_samples_select_set - test_samples_select_set 
-    test_sample_batch_idx = 2
+    test_sample_batch_idx = 1
     # test_samples_select_set = test_sample_batchsets_l[test_sample_batch_idx]
     # train_samples_select_set = all_samples_select_set - test_samples_select_set
     # #############################################################
@@ -966,7 +968,7 @@ if __name__ == "__main__":
                                             train_tag_files_l = list(train_tagfiles_set)
                                             test_tag_files_l = list(test_tagfiles_set)
                                             cwd  ="/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
-                                            run_init_train(train_tags_path, test_tags_path, cwd, train_tags_init_l=train_tag_files_l, test_tags_l=test_tag_files_l, n_jobs=n_jobs, n_estimators=n_estimators, n_samples=n_samples, tokens_filter_set=tokens_filter_set, test_batch_count=test_batch_count, input_size=input_size, compact_factor=dim_compact_factor, depth=depth, tree_method=tree_method)
+                                            run_init_train(train_tags_path, test_tags_path, cwd, train_tags_init_l=train_tag_files_l, test_tags_l=test_tag_files_l, n_jobs=n_jobs, n_estimators=n_estimators, tokens_filter_set=tokens_filter_set, test_batch_count=test_batch_count, input_size=input_size, compact_factor=dim_compact_factor, depth=depth, tree_method=tree_method)
                                             # break
 
 
