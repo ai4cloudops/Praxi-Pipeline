@@ -937,7 +937,7 @@ if __name__ == "__main__":
         # print(packages_l)
 
         for n_jobs in [32]:
-            for n_models, test_batch_count in zip([1,25,10],[8,1,1]): #([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # ([1,25,10],[8,1,1])
+            for n_models, test_batch_count in zip([25,10,1],[1,1,8]): #([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # ([1,25,10],[8,1,1])
                 for n_estimators in [100]:
                     for depth in [1]:
                         for tree_method in["exact"]: # "exact","approx","hist"
@@ -947,7 +947,7 @@ if __name__ == "__main__":
                                     for shuffle_idx in range(3):
                                         # random.Random(4).shuffle(packages_l)
                                         randomized_packages_l = random_instance.sample(packages_l, len(packages_l))
-                                        package_subset, step = [], len(randomized_packages_l)//n_models
+                                        package_subset, step = [], len(randomized_packages_l)//n_models+1
                                         for i in range(0, len(randomized_packages_l), step):
                                             package_subset.append(set(randomized_packages_l[i:i+step]))
 
@@ -965,9 +965,12 @@ if __name__ == "__main__":
                                             # ###########################################################################
                                             test_tagfiles_set, train_tagfiles_set = set(), set()
                                             for label, traintagfiles in labels_tagfiles_d.items():
-                                                test_tagfiles_set.update(traintagfiles[int(test_sample_batch_idx*n_samples*test_portion): int((test_sample_batch_idx+1)*n_samples*test_portion)])
-                                                train_tagfiles_set.update(set(traintagfiles)-test_tagfiles_set)
-                                            
+                                                if label in train_subset:
+                                                    test_tagfiles_set.update(traintagfiles[int(test_sample_batch_idx*n_samples*test_portion): int((test_sample_batch_idx+1)*n_samples*test_portion)])
+                                                    train_tagfiles_set.update(set(traintagfiles)-test_tagfiles_set)
+                                            if len(test_tagfiles_set)==0:
+                                                print("error: got empty test_tagfiles_set")
+                                                sys.exit(-1)
                                             train_tag_files_l = list(train_tagfiles_set)
                                             test_tag_files_l = list(test_tagfiles_set)
                                             cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
@@ -1015,7 +1018,7 @@ if __name__ == "__main__":
 
 # ########## some debugging scripts.
 # d = defaultdict(list)
-# for test_tag_file in tagset_files:
+# for test_tag_file in train_tag_files_l:
 #     d[test_tag_file[:-4].rsplit("-",1)[0]].append(test_tag_file)
 # for k,v in d.items():
 #     print(k,len(v))
