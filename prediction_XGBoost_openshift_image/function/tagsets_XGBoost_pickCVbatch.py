@@ -137,8 +137,8 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
     tag_files_l_of_l, step = [], len(tag_files_l)//mp.cpu_count()+1
     for i in range(0, len(tag_files_l), step):
         tag_files_l_of_l.append(tag_files_l[i:i+step])
-    # pool = mp.Pool(processes=mp.cpu_count())
-    pool = mp.Pool(processes=5)
+    pool = mp.Pool(processes=mp.cpu_count())
+    # pool = mp.Pool(processes=5)
     data_instance_d_l = [pool.apply_async(map_tagfilesl, args=(tags_path, tag_files_l, cwd, inference_flag), kwds={"tokens_filter_set": tokens_filter_set}) for tag_files_l in tqdm(tag_files_l_of_l)]
     data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
     pool.close()
@@ -624,7 +624,8 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, train_tags_init_l=
     # with open(cwd+'index_label_mapping', 'rb') as fp:
     #     labels = np.array(pickle.load(fp))
     label_matrix_list, pred_label_matrix_list = [], []
-    # tag_files_l = [tag_file for tag_file in os.listdir(test_tags_path) if tag_file[-3:] == 'tag']
+    if test_tags_l == None:
+        test_tags_l = [tag_file for tag_file in os.listdir(test_tags_path) if tag_file[-3:] == 'tag']
     step = len(test_tags_l)//test_batch_count+1
     for batch_first_idx in range(0, len(test_tags_l), step):
         # Test Data
@@ -900,7 +901,7 @@ if __name__ == "__main__":
     # highlight_label_set = set(['cffi', 'PyJWT', 'attrs', 'pyasn1', 'click', 'pytz', 'MarkupSafe', 'grpcio-status', 'psutil', 'frozenlist', 'botocore', 'soupsieve', 'grpcio', 'awscli', 'yarl', 'idna', 'google-api-core', 'charset-normalizer', 'authlib', 'seaborn', 'colorama', 'pytest', 'NLTK', 'Flask', 'oauthlib', 'pycparser', 'nvidia-cuda-runtime-cu11', 'pandas', 'jinja2', 'scikit-learn', 'triton==2.0.0', 'deap', 'nvidia-cuda-nvrtc-cu11', 'cmake', 'astropy', 'bokeh', 'requests', 'biopython', 'redis', 'Scrapy', 'simplejson', 'opencv-python', 'opacus', 'scoop', 'plotly', 'Theano', 'mahotas', 'nilearn', 'beautifulsoup4', 'statsmodels', 'networkx', 's3transfer', 'scipy', 'SQLAlchemy', 'matplotlib', 'setuptools', 'rsa', 'urllib3', 'pillow', 'pyspark'])
     highlight_label_set = set()
 
-    n_samples = 25
+    n_samples = 21
     # all_samples_select_l = [str(sampleidx) for sampleidx in range(n_samples)]
     # all_samples_select_set = set(all_samples_select_l)
     test_portion = 0.2
@@ -988,12 +989,12 @@ if __name__ == "__main__":
     for dataset in ["data_3"]:
         for n_jobs in [32]:
             for clf_njobs in [32]:
-                for n_models, test_batch_count in zip([1,25,10],[8,1,1]): # zip([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]):
+                for n_models, test_batch_count in zip([25,10],[1,1]): # zip([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]):
                     for n_estimators in [100]:
                         for depth in [1]:
                             for tree_method in["exact"]: # "exact","approx","hist"
                                 for max_bin in [1]:
-                                    for input_size, dim_compact_factor in zip([None, 500, 5000, 15000],[1,1,1,1]):
+                                    for input_size, dim_compact_factor in zip([10000],[1]):
                                         for shuffle_idx in range(3):
 
                                             clf_path = []
