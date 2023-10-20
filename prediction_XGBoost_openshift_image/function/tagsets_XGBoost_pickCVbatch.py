@@ -901,7 +901,7 @@ if __name__ == "__main__":
     # highlight_label_set = set(['cffi', 'PyJWT', 'attrs', 'pyasn1', 'click', 'pytz', 'MarkupSafe', 'grpcio-status', 'psutil', 'frozenlist', 'botocore', 'soupsieve', 'grpcio', 'awscli', 'yarl', 'idna', 'google-api-core', 'charset-normalizer', 'authlib', 'seaborn', 'colorama', 'pytest', 'NLTK', 'Flask', 'oauthlib', 'pycparser', 'nvidia-cuda-runtime-cu11', 'pandas', 'jinja2', 'scikit-learn', 'triton==2.0.0', 'deap', 'nvidia-cuda-nvrtc-cu11', 'cmake', 'astropy', 'bokeh', 'requests', 'biopython', 'redis', 'Scrapy', 'simplejson', 'opencv-python', 'opacus', 'scoop', 'plotly', 'Theano', 'mahotas', 'nilearn', 'beautifulsoup4', 'statsmodels', 'networkx', 's3transfer', 'scipy', 'SQLAlchemy', 'matplotlib', 'setuptools', 'rsa', 'urllib3', 'pillow', 'pyspark'])
     highlight_label_set = set()
 
-    n_samples = 21
+    n_samples = 25
     # all_samples_select_l = [str(sampleidx) for sampleidx in range(n_samples)]
     # all_samples_select_set = set(all_samples_select_l)
     test_portion = 0.2
@@ -915,21 +915,21 @@ if __name__ == "__main__":
     # train_samples_select_set = all_samples_select_set - test_samples_select_set
     # #############################################################
 
-    for dataset in ["data_3"]:
-        # packages_l = packages_ll[dataset]
-        # #############################################################
-        # testing with filtered tagsetfilenames
-        with open("/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/filters/big_train_filtered_pair_tagsetfilenames_d_same_length", 'rb') as tf:
-            labels_tagfiles_d = yaml.load(tf, Loader=yaml.Loader)
-            packages_l = list(labels_tagfiles_d.keys())
-            n_samples = len(labels_tagfiles_d[packages_l[0]])
-        # #############################################################
-        with open("/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/filters/big_train_tokenshares_filter_set", 'rb') as tf:
-            tokenshares_filter_set_d[dataset] = yaml.load(tf, Loader=yaml.Loader)
-        with open("/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/filters/big_train_tokennoises_filter_set", 'rb') as tf:
-            tokennoises_filter_set_d[dataset] = yaml.load(tf, Loader=yaml.Loader)
-        tokens_filter_set = tokenshares_filter_set_d[dataset].union(tokennoises_filter_set_d[dataset])
-        # tokens_filter_set = set()
+    for dataset in ["data_0"]:
+        packages_l = packages_ll[dataset]
+        # # #############################################################
+        # # testing with filtered tagsetfilenames
+        # with open("/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/filters/big_train_filtered_pair_tagsetfilenames_d_same_length", 'rb') as tf:
+        #     labels_tagfiles_d = yaml.load(tf, Loader=yaml.Loader)
+        #     packages_l = list(labels_tagfiles_d.keys())
+        #     n_samples = len(labels_tagfiles_d[packages_l[0]])
+        # # #############################################################
+        # with open("/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/filters/big_train_tokenshares_filter_set", 'rb') as tf:
+        #     tokenshares_filter_set_d[dataset] = yaml.load(tf, Loader=yaml.Loader)
+        # with open("/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/filters/big_train_tokennoises_filter_set", 'rb') as tf:
+        #     tokennoises_filter_set_d[dataset] = yaml.load(tf, Loader=yaml.Loader)
+        # tokens_filter_set = tokenshares_filter_set_d[dataset].union(tokennoises_filter_set_d[dataset])
+        tokens_filter_set = set()
 
         # packages_l = list(set(packages_l)-highlight_label_set)
         # packages_l = list(highlight_label_set)
@@ -938,12 +938,12 @@ if __name__ == "__main__":
         # print(packages_l)
 
         for n_jobs in [32]:
-            for n_models, test_batch_count in zip([25,10,1],[1,1,8]): #([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # ([1,25,10],[8,1,1])
+            for n_models, test_batch_count in zip([1,2,4,8],[1,1,1,1]): #([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # ([1,25,10],[8,1,1])
                 for n_estimators in [100]:
                     for depth in [1]:
                         for tree_method in["exact"]: # "exact","approx","hist"
                             for max_bin in [1]:
-                                for input_size, dim_compact_factor in zip([None, 500, 5000, 10000],[1,1,1,1]): # [None, 6832, 27329, 109319],[1,1,1,1] # [None, 500, 1000, 5000, 10000, 15000],[1,1,1,1,1,1]
+                                for input_size, dim_compact_factor in zip([50, 100, 250, 18000, 60000],[1,1,1,1,1]): # [None, 6832, 27329, 109319],[1,1,1,1] # [None, 500, 1000, 5000, 10000, 15000],[1,1,1,1,1,1]
                                     random_instance = random.Random(4)
                                     for shuffle_idx in range(3):
                                         # random.Random(4).shuffle(packages_l)
@@ -956,14 +956,14 @@ if __name__ == "__main__":
                                             train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_train/"
                                             test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_train/" # Cross Validation: testing a portion of the SL dataset
                                             
-                                            # ###########################################################################
-                                            # # if reading from the dir. When testing with filtered tagsetfilenames, this is not needed.
-                                            # labels_tagfiles_d = defaultdict(list)
-                                            # for tag_file in os.listdir(train_tags_path):
-                                            #     if (tag_file[-3:] == 'tag') and (tag_file[:-4].rsplit('-', 1)[0] in train_subset):
-                                            #         if len(labels_tagfiles_d[tag_file[:-4].rsplit('-', 1)[0]]) < n_samples:
-                                            #             labels_tagfiles_d[tag_file[:-4].rsplit('-', 1)[0]].append(tag_file)
-                                            # ###########################################################################
+                                            ###########################################################################
+                                            # if reading from the dir. When testing with filtered tagsetfilenames, this is not needed.
+                                            labels_tagfiles_d = defaultdict(list)
+                                            for tag_file in os.listdir(train_tags_path):
+                                                if (tag_file[-3:] == 'tag') and (tag_file[:-4].rsplit('-', 1)[0] in train_subset):
+                                                    if len(labels_tagfiles_d[tag_file[:-4].rsplit('-', 1)[0]]) < n_samples:
+                                                        labels_tagfiles_d[tag_file[:-4].rsplit('-', 1)[0]].append(tag_file)
+                                            ###########################################################################
                                             test_tagfiles_set, train_tagfiles_set = set(), set()
                                             for label, traintagfiles in labels_tagfiles_d.items():
                                                 if label in train_subset:
@@ -986,15 +986,15 @@ if __name__ == "__main__":
     # ###################################
     # run_pred()
     # Testing the ML dataset
-    for dataset in ["data_3"]:
-        for n_jobs in [32]:
-            for clf_njobs in [32]:
-                for n_models, test_batch_count in zip([25,10],[1,1]): # zip([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]):
+    for dataset in ["data_0"]:
+        for n_jobs in [8]:
+            for clf_njobs in [8]:
+                for n_models, test_batch_count in zip([1,2,4,8],[1,1,1,1]): # zip([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]):
                     for n_estimators in [100]:
                         for depth in [1]:
                             for tree_method in["exact"]: # "exact","approx","hist"
                                 for max_bin in [1]:
-                                    for input_size, dim_compact_factor in zip([10000],[1]):
+                                    for input_size, dim_compact_factor in zip([50, 100, 250, 18000, 60000],[1,1,1,1,1]):
                                         for shuffle_idx in range(3):
 
                                             clf_path = []
