@@ -47,3 +47,4 @@ prediction_XGBoost_openshift_image/model_testing_scripts/400_estimator/
 prediction_XGBoost_openshift_image/model_testing_scripts/no_sampling/
 Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd*/
 prediction_XGBoost_openshift_image/model_testing_scripts/data_0_results/
+prediction_XGBoost_openshift_image/model_testing_scripts/data0_results/
