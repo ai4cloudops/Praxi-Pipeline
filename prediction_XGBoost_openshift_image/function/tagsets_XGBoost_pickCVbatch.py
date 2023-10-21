@@ -937,7 +937,7 @@ if __name__ == "__main__":
         # packages_l = list([packages_l[0]])
         # print(packages_l)
 
-        for n_jobs in [32]:
+        for n_jobs in [8]:
             for n_models, test_batch_count in zip([1,2,4,8],[1,1,1,1]): #([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # ([1,25,10],[8,1,1])
                 for n_estimators in [100]:
                     for depth in [1]:
