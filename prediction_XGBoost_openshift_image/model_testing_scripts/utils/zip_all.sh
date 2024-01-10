@@ -1,13 +1,13 @@
 set -e
 # backup data
 
-dirs=(cwd_ML_with_data_0*)
+dirs=(data0_results data3_results)
 for j in ${!dirs[@]};
 do
     echo $d "gdrive files upload '${dirs[$j]}'"
     # ls "${dirs[$j]}"
     echo "====================================="
-    zip -r "./data0_results/${dirs[$j]}.zip" "${dirs[$j]}" >/dev/null
+    zip -r "./results/${dirs[$j]}.zip" "${dirs[$j]}"
     # gdrive files upload "${dirs[$j]}.zip" --parent 1cSgYLRJsrZlviG_JaelrzjxkOr6YQIpA
     # rm "${dirs[$j]}-nerc-prod.zip"
 done

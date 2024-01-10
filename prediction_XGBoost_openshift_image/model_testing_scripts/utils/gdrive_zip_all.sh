@@ -1,13 +1,15 @@
 set -e
 # backup data
 
-dirs=(cwd_ML_with_data_0*2shuffleidx*)
+dirs=(archived_data_3_10-50_trees_False)
 for j in ${!dirs[@]};
 do
-    echo $d "mv '${dirs[$j]}' '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/data0_results/'"
+    echo $d "gdrive files upload '${dirs[$j]}'"
     # ls "${dirs[$j]}"
     echo "====================================="
-    mv "${dirs[$j]}" "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/data0_results/"
+    zip -r "${dirs[$j]}-praxibag.zip" "${dirs[$j]}"
+    gdrive files upload "${dirs[$j]}-praxibag.zip" --parent 1cSgYLRJsrZlviG_JaelrzjxkOr6YQIpA
+    rm "${dirs[$j]}-praxibag.zip"
 done
 # zip -r "Praxi-study.zip" "Praxi-study/"
 
