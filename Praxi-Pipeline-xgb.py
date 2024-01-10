@@ -243,7 +243,7 @@ def praxi_pipeline():
     #print(deployment.spec.template.spec.affinity)
 
     # create affinity objects
-    terms = kubernetes.client.models.V1NodeSelectorTerm(
+    terms = kubernetes.client.models.V1NodeSelectorTerm(    # GPU nodes had permission issues, so we enforce to use other nodes. Use this code to set node selector.
         match_expressions=[
             {'key': 'kubernetes.io/hostname',
             'operator': 'NotIn',
@@ -257,10 +257,11 @@ def praxi_pipeline():
     affinity = kubernetes.client.models.V1Affinity(node_affinity=node_affinity)
 
 
+    # Pipeline design
     model = generate_loadmod_op().apply(use_image_pull_policy()).add_affinity(affinity)
     change_test = generate_changeset_op("test").apply(use_image_pull_policy()).add_affinity(affinity)
     tag_test = generate_tagset_op(change_test.outputs["args"], change_test.outputs["cs"]).apply(use_image_pull_policy()).add_affinity(affinity)
-    prediction = gen_prediction_op(model.outputs["clf"],model.outputs["index_tag_mapping"],model.outputs["tag_index_mapping"],model.outputs["index_label_mapping"],model.outputs["label_index_mapping"], tag_test.outputs["output_text"]).apply(use_image_pull_policy()).add_affinity(affinity)
+    # prediction = gen_prediction_op(model.outputs["clf"],model.outputs["index_tag_mapping"],model.outputs["tag_index_mapping"],model.outputs["index_label_mapping"],model.outputs["label_index_mapping"], tag_test.outputs["output_text"]).apply(use_image_pull_policy()).add_affinity(affinity)
 
 if __name__ == "__main__":
 
