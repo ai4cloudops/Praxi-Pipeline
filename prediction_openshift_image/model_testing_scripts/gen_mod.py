@@ -13,10 +13,12 @@ args = main.get_inputs()
 
 # train_changes_path = "/home/cc/Praxi-study/praxi/demos/ic2e_demo/demo_tagsets/mix_train_tag/"
 # test_changes_path = "/home/cc/Praxi-study/praxi/demos/ic2e_demo/demo_tagsets/mix_test_tag/"
-train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/big_train/"
-test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/big_ML_biased_test/"
+# train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/big_train/"
+# test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/big_ML_biased_test/"
 # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/big_SL_biased_test/"
 # test_tags_path = "/home/cc/Praxi-study/praxi/demos/ic2e_demo/demo_tagsets/mix_test_tag/"
+train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_temp/big_train/"
+test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_temp/big_ML_biased_test/"
 
 cwd  = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/model_testing_scripts/cwd/"
 Path(cwd).mkdir(parents=True, exist_ok=True)

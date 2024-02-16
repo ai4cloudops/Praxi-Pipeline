@@ -48,7 +48,7 @@ def plot_size():
     # target_dir = "big_ML_biased_test"
     # target_dir = "big_SL_biased_test"
     target_dir = "big_train"
-    dirname = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0/"
+    dirname = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_0_temp/"
     out_dirname = dirname+target_dir+"/"
     # print(out_dirname)
     tagsetfilenames_l = [name for name in os.listdir(out_dirname) if os.path.isfile(out_dirname+name) and name[-4:]!=".obj"]

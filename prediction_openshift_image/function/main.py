@@ -261,9 +261,9 @@ def test(clf, test_data, args):
     # results = []
 
     #preds = clf.predict(test_tags)
-    # ntags = [len(y) if isinstance(y, list) else 1 for y in test_labels]
-    # preds, th = clf.top_k_tags(test_tags, test_labels, ntags)
-    preds, th = clf.cost_density(test_tags, test_labels)
+    ntags = [len(y) if isinstance(y, list) else 1 for y in test_labels]
+    preds, th = clf.top_k_tags(test_tags, test_labels, ntags)
+    # preds, th = clf.cost_density(test_tags, test_labels)
     max_f1 = -1
     best_res = -1
     # hold = preds
