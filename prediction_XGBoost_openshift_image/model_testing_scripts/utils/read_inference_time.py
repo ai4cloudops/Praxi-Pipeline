@@ -2,50 +2,127 @@ import os
 from collections import defaultdict
 
 
+# # Read all data
+# # # data 0 experiments
+# data_d = dict()
+# n_samples = 25
+# for dataset in ["data_0"]:
+#     data_dir = "data0_results/"
+#     for with_filter in [False]:
+#         for n_jobs in [1]:
+#             for clf_njobs in [8]:
+#                 for n_models, test_batch_count in zip([8,4,2,1],[1,1,1,1]): #([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # ([1,25,10],[8,1,1])
+#                     data_d[str(n_models)+"_models"] = dict()
+#                     for n_estimators in [100]:
+#                         data_d[str(n_models)+"_models"][n_estimators] = dict()
+#                         for depth in [1]:
+#                             for tree_method in["exact"]: # "exact","approx","hist"
+#                                 for max_bin in [1]:
+                                    
+#                                     for input_size, dim_compact_factor in zip([None, 13664, 27329, 54659, 109319],[1,1,1,1,1]): # [None, 10000, 1000, 500, 5000, 15000],[1,1,1,1,1,1] # [None, 13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319] [50, 100, 250, 6832, 18000, 27329, 60000, 109319]
+#                                         data_d[str(n_models)+"_models"][n_estimators][input_size] = defaultdict(list)
+                                        
+#                                         for shuffle_idx in range(3):
+#                                             for test_sample_batch_idx in [4,1,2,0,3]:
+#                                                 traintime_pertrail_l = []
+#                                                 for i in range(n_models):
+#                                                     filename  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/"+data_dir+"cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+"removesharedornoisestags/metrics_init.out"
+#                                                     if os.path.isfile(filename):
+#                                                         with open(filename) as file:
+#                                                             for line in file:
+#                                                                 line_l = line.rstrip().split(":")
+#                                                                 if line_l[0] == "BOW_XGB_init.fit":
+#                                                                     traintime_pertrail_l.append(float(line_l[1]))
+#                                                                     # data_d[str(n_models)+"_models"][n_estimators][input_size]["traintime"].append(float(line_l[1]))
+#                                                                 if line_l[0] == "tagsets_to_matrix-trainset_xsize":
+#                                                                     data_d[str(n_models)+"_models"][n_estimators][input_size]["samplesize"].append(float(line_l[1]))
+#                                                                 if line_l[0] == "tagsets_to_matrix-trainset_ysize":
+#                                                                     data_d[str(n_models)+"_models"][n_estimators][input_size]["dimensions"].append(float(line_l[1]))
+#                                                                 if line_l[0] == "F1 SCORE ":
+#                                                                     data_d[str(n_models)+"_models"][n_estimators][input_size]["CV-f1-score"].append(float(line_l[1].split(" ", 2)[1]))
+#                                                     else:
+#                                                         print(filename)
+#                                                 data_d[str(n_models)+"_models"][n_estimators][input_size]["traintime"].append(traintime_pertrail_l)
+#                                         for shuffle_idx in range(3):
+#                                             for test_sample_batch_idx in [0,1,2,3,4]:
+#                                                 # cwd =      "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/"+data_dir+"cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"_shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
+#                                                 filename  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/"+data_dir+"cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+"removesharedornoisestags/metrics_pred.out"
+#                                                 if os.path.isfile(filename):
+#                                                     try:
+#                                                         with open(filename, "r") as f:
+#                                                             inferencetime_in_a_bag = 0
+#                                                             for line in f:
+#                                                                 if line[:len(" BOW_XGB.predict_")] == " BOW_XGB.predict_":
+#                                                                     line_l = line.split(":")
+#                                                                     inferencetime_in_a_bag += round(float(line_l[1]),2)
+#                                                                 else:
+#                                                                     line_l = line.rstrip().split()
+#                                                                     if len(line_l) == 9:
+#                                                                         data_d[str(n_models)+"_models"][n_estimators][input_size]["f1-score"].append((float(line_l[3])))
+#                                                                         # data_d[str(n_models)+"_models"][n_estimators][input_size]["f1-score-config"].append(str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx")
+#                                                                     if len(line_l) == 7:
+#                                                                         data_d[str(n_models)+"_models"][n_estimators][input_size]["precision"].append((float(line_l[1])))
+#                                                                     if len(line_l) == 8:
+#                                                                         data_d[str(n_models)+"_models"][n_estimators][input_size]["recall"].append((float(line_l[2])))
+#                                                             data_d[str(n_models)+"_models"][n_estimators][input_size]["inferencetime"].append(round(inferencetime_in_a_bag,2))
+#                                                     except Exception as e:
+#                                                         print(e)
+#                                                 else:
+#                                                     print(filename)
+
+                                                    
+# for nmodel,datadict in data_d.items():
+#     print(nmodel)
+#     for metric, value in datadict.items():
+#         # print(metric, value)
+#         print(metric, value)
+#         print()
+#     print()
+
+
+
+
+
+
+
 # Read all data
-# # data 0 experiments
+# # data 3 experiments
 data_d = dict()
-n_samples = 25
-for dataset in ["data_0"]:
-    data_dir = "data0_results/"
-    for with_filter in [False]:
-        for n_jobs in [1]:
-            for clf_njobs in [8]:
-                for n_models, test_batch_count in zip([8,4,2,1],[1,1,1,1]): #([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # ([1,25,10],[8,1,1])
+n_samples = 21
+for dataset in ["data_3"]:
+    data_dir = "data3_results/"
+    for with_filter in ["True"]:
+        for n_jobs in [32]:
+            for clf_njobs in [32]:
+                for n_models, test_batch_count in zip([50,25,20,15,10,5,1],[1,1,1,1,1]): #([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # ([1,25,10],[8,1,1])
                     data_d[str(n_models)+"_models"] = dict()
-                    for n_estimators in [100]:
+                    for n_estimators in [100]: # 10,50,100
                         data_d[str(n_models)+"_models"][n_estimators] = dict()
                         for depth in [1]:
                             for tree_method in["exact"]: # "exact","approx","hist"
                                 for max_bin in [1]:
                                     
-                                    for input_size, dim_compact_factor in zip([None, 13664, 27329, 54659, 109319],[1,1,1,1,1]): # [None, 10000, 1000, 500, 5000, 15000],[1,1,1,1,1,1] # [None, 13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319] [50, 100, 250, 6832, 18000, 27329, 60000, 109319]
+                                    for input_size, dim_compact_factor in zip([None],[1]): # [None, 10000, 1000, 500, 5000, 15000],[1,1,1,1,1,1] # [None, 13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
                                         data_d[str(n_models)+"_models"][n_estimators][input_size] = defaultdict(list)
-                                        
-                                        for shuffle_idx in range(3):
-                                            for test_sample_batch_idx in [4,1,2,0,3]:
-                                                traintime_pertrail_l = []
-                                                for i in range(n_models):
+                                        for i in range(n_models):
+                                            for shuffle_idx in range(3):
+                                                for test_sample_batch_idx in [0,1,2,3,4]:
                                                     filename  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/"+data_dir+"cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+"removesharedornoisestags/metrics_init.out"
                                                     if os.path.isfile(filename):
                                                         with open(filename) as file:
                                                             for line in file:
                                                                 line_l = line.rstrip().split(":")
                                                                 if line_l[0] == "BOW_XGB_init.fit":
-                                                                    traintime_pertrail_l.append(float(line_l[1]))
-                                                                    # data_d[str(n_models)+"_models"][n_estimators][input_size]["traintime"].append(float(line_l[1]))
+                                                                    data_d[str(n_models)+"_models"][n_estimators][input_size]["traintime"].append(float(line_l[1]))
                                                                 if line_l[0] == "tagsets_to_matrix-trainset_xsize":
                                                                     data_d[str(n_models)+"_models"][n_estimators][input_size]["samplesize"].append(float(line_l[1]))
                                                                 if line_l[0] == "tagsets_to_matrix-trainset_ysize":
                                                                     data_d[str(n_models)+"_models"][n_estimators][input_size]["dimensions"].append(float(line_l[1]))
-                                                                if line_l[0] == "F1 SCORE ":
-                                                                    data_d[str(n_models)+"_models"][n_estimators][input_size]["CV-f1-score"].append(float(line_l[1].split(" ", 2)[1]))
                                                     else:
                                                         print(filename)
-                                                data_d[str(n_models)+"_models"][n_estimators][input_size]["traintime"].append(traintime_pertrail_l)
                                         for shuffle_idx in range(3):
                                             for test_sample_batch_idx in [0,1,2,3,4]:
-                                                # cwd =      "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/"+data_dir+"cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"_shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
+                                                # cwd =      "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"_shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
                                                 filename  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/"+data_dir+"cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+"removesharedornoisestags/metrics_pred.out"
                                                 if os.path.isfile(filename):
                                                     try:
@@ -74,82 +151,9 @@ for dataset in ["data_0"]:
 for nmodel,datadict in data_d.items():
     print(nmodel)
     for metric, value in datadict.items():
-        # print(metric, value)
         print(metric, value)
         print()
     print()
-
-
-
-
-
-
-
-# # Read all data
-# # # data 3 experiments
-# data_d = dict()
-# n_samples = 21
-# for dataset in ["data_3"]:
-#     data_dir = "data3_results/"
-#     for with_filter in [""]:
-#         for n_jobs in [32]:
-#             for clf_njobs in [32]:
-#                 for n_models, test_batch_count in zip([25,10],[1,1,1,1,1]): #([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]): # ([1,25,10],[8,1,1])
-#                     data_d[str(n_models)+"_models"] = dict()
-#                     for n_estimators in [10,50,100]:
-#                         data_d[str(n_models)+"_models"][n_estimators] = dict()
-#                         for depth in [1]:
-#                             for tree_method in["exact"]: # "exact","approx","hist"
-#                                 for max_bin in [1]:
-                                    
-#                                     for input_size, dim_compact_factor in zip([500],[1]): # [None, 10000, 1000, 500, 5000, 15000],[1,1,1,1,1,1] # [None, 13, 106, 284, 427, 854, 1138, 1708, 3416, 6832, 13664, 27329, 54659, 109319]
-#                                         data_d[str(n_models)+"_models"][n_estimators][input_size] = defaultdict(list)
-#                                         for i in range(n_models):
-#                                             for shuffle_idx in range(3):
-#                                                 for test_sample_batch_idx in [0,1,2,3,4]:
-#                                                     filename  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/"+data_dir+"cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+"removesharedornoisestags/metrics_init.out"
-#                                                     if os.path.isfile(filename):
-#                                                         with open(filename) as file:
-#                                                             for line in file:
-#                                                                 line_l = line.rstrip().split(":")
-#                                                                 if line_l[0] == "BOW_XGB_init.fit":
-#                                                                     data_d[str(n_models)+"_models"][n_estimators][input_size]["traintime"].append(float(line_l[1]))
-#                                                                 if line_l[0] == "tagsets_to_matrix-trainset_xsize":
-#                                                                     data_d[str(n_models)+"_models"][n_estimators][input_size]["samplesize"].append(float(line_l[1]))
-#                                                                 if line_l[0] == "tagsets_to_matrix-trainset_ysize":
-#                                                                     data_d[str(n_models)+"_models"][n_estimators][input_size]["dimensions"].append(float(line_l[1]))
-#                                                     else:
-#                                                         print(filename)
-#                                         for shuffle_idx in range(3):
-#                                             for test_sample_batch_idx in [0,1,2,3,4]:
-#                                                 # cwd =      "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"_shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_removesharedornoisestags/"
-#                                                 filename  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/"+data_dir+"cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+"removesharedornoisestags/metrics_pred.out"
-#                                                 if os.path.isfile(filename):
-#                                                     try:
-#                                                         with open(filename, "r") as f:
-#                                                             inferencetime_in_a_bag = 0
-#                                                             for line in f:
-#                                                                 if line[:len(" BOW_XGB.predict_")] == " BOW_XGB.predict_":
-#                                                                     line_l = line.split(":")
-#                                                                     inferencetime_in_a_bag += round(float(line_l[1]),2)
-#                                                                 else:
-#                                                                     line_l = line.rstrip().split()
-#                                                                     if len(line_l) == 9:
-#                                                                         data_d[str(n_models)+"_models"][n_estimators][input_size]["f1-score"].append((float(line_l[3])))
-#                                                                         # data_d[str(n_models)+"_models"][n_estimators][input_size]["f1-score-config"].append(str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx")
-#                                                             data_d[str(n_models)+"_models"][n_estimators][input_size]["inferencetime"].append(round(inferencetime_in_a_bag,2))
-#                                                     except Exception as e:
-#                                                         print(e)
-#                                                 else:
-#                                                     print(filename)
-
-                                                    
-# for nmodel,datadict in data_d.items():
-#     print(nmodel)
-#     for metric, value in datadict.items():
-#         print(metric, value)
-#         print()
-#     print()
 
 
 
