@@ -51,3 +51,5 @@ prediction_XGBoost_openshift_image/model_testing_scripts/data0_results/
 prediction_XGBoost_openshift_image/model_testing_scripts/archived_exprs/
 prediction_XGBoost_openshift_image/model_testing_scripts/data3_results/
 prediction_XGBoost_openshift_image/model_testing_scripts/results/
+gen_data_docker_image/python/dockerfiles/
+gen_data_docker_image/python/dockerfiles_failed/

@@ -1,0 +1,9 @@
+# DockerfileTemplate.txt
+FROM $base_image
+
+ENV PYTHONUNBUFFERED=1
+
+RUN  pip3 install --upgrade pip
+RUN  pip3 install $dependencies
+
+ENTRYPOINT ["tail", "-f", "/dev/null"]
