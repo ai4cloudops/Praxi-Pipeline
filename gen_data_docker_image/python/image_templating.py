@@ -1,23 +1,61 @@
 from string import Template
 from itertools import combinations
+import collections
 from pathlib import Path
+import subprocess
+import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-def load_package_rank(filter_l=set()):
+def list_package_versions(package_name):
+    try:
+        # Run the pip command and capture the output
+        result = subprocess.run(['pip', 'index', 'versions', package_name], check=True, text=True, capture_output=True)
+        
+        # Use a regular expression to find versions in the output
+        # print(result.stdout)
+        versions = re.findall(r'(\d+\.\d+(?:\.\d+)*)', result.stdout)[1:-2]
+        
+        return package_name, versions
+    except subprocess.CalledProcessError:
+        # If pip command fails, return package name and an empty list
+        return package_name, []
+
+def fetch_versions_for_multiple_packages(package_names):
+    # Dictionary to hold package versions
+    package_versions = {}
+    
+    # Use ThreadPoolExecutor to parallelize requests
+    with ThreadPoolExecutor(max_workers=128) as executor:
+        # Submit all the tasks and get a list of Future objects
+        future_to_package = {executor.submit(list_package_versions, pkg): pkg for pkg in package_names}
+        
+        # As each future completes, update the dictionary
+        for future in as_completed(future_to_package):
+            package_name, versions = future.result()
+            package_versions[package_name] = versions
+            
+    return package_versions
+
+
+def load_package_rank(filter_l=set(),count=1000):
     import json
     with open('/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/top-pypi-packages-30-days.min.json') as f:
         d = json.load(f)
-        project_l = []
+        project_l = set()
         for idx, row in enumerate(d["rows"]):
             if row["project"] not in filter_l:
-                project_l.append(row["project"])
-            if len(project_l) == 1000:
+                if row["project"] not in project_l:
+                    project_l.add(row["project"])
+                else:
+                    print(row["project"])
+            if len(project_l) == count:
                 break
-        return project_l
+        return list(project_l)
 
-def gen_dockerfile(filter_l=set()):
-    all_dep = load_package_rank(filter_l)
-    for base_image in ["python:3.9-slim-bullseye", "python:3.9-slim-bookworm", "python:3.9.18-bookworm"]:
-        for p_l_idx, (package_chk_l) in enumerate(combinations(all_dep, 1)):
+def gen_dockerfile(all_dep, choose=1, base_images=["python:3.9.18-bullseye", "python:3.9-slim-bullseye", "python:3.9-slim-bookworm", "python:3.9.18-bookworm"]): # python:3.12-bookworm
+    seen = set()
+    for base_image in base_images:
+        for p_l_idx, (package_chk_l) in enumerate(combinations(all_dep, choose)):
 
             # Assume 'dependency' is now a list of strings
             dependencies = package_chk_l
@@ -39,11 +77,16 @@ def gen_dockerfile(filter_l=set()):
             dockerfile_content = template.substitute(values)
 
             # Save the rendered Dockerfile
-            save_path = '/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles/Dockerfile.'+base_image.replace(":","")+'.'+"-".join(dependencies)
+            dependencies_str = (base_image.replace(":","")).replace(".","_")+'.'+("-".join([dep.replace("==", "_v") for dep in dependencies])).replace(".","_")
+            save_path = '/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles/Dockerfile.'+dependencies_str
             with open(save_path, 'w') as file:
                 file.write(dockerfile_content)
+            if save_path in seen:
+                print(save_path)
+            seen.add(save_path)
 
             # print("Dockerfile generated successfully.")
+    return seen
 
 
 def find_dockerfiles(directory):
@@ -54,6 +97,34 @@ def find_dockerfiles(directory):
 if __name__ == "__main__":
     dockerfiles = find_dockerfiles("/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles_failed")
     # print([dockerfile.name for dockerfile in dockerfiles])
+
     filter_l = set([dockerfile.name.split(".")[-1] for dockerfile in dockerfiles])
     # print(filter_l)
-    gen_dockerfile(filter_l)
+
+    all_dep = load_package_rank(filter_l)
+    # print(all_dep)
+
+    package_versions = fetch_versions_for_multiple_packages(all_dep)
+    # # Print the versions
+    # for package_name, versions in package_versions.items():
+    #     print(f"{package_name}: {versions}")
+
+    all_dep_with_ver = set()
+    for package_name, versions in package_versions.items():
+        count = 0
+        for version in versions:
+            formatted_version = f"{package_name}=={version}"
+            if formatted_version not in all_dep_with_ver and formatted_version.replace("==", "_v").replace(".","_") not in filter_l:
+                all_dep_with_ver.add(formatted_version)
+                count += 1
+                if count == 3:
+                    break
+        if count < 3:
+            print("count:", count,package_name, versions)
+            Path('/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles_failed/'+'Dockerfile..'+package_name).touch()
+    # print(all_dep_with_ver)
+
+    saved = gen_dockerfile(list(all_dep_with_ver))
+    # print(saved)
+
+    
