@@ -34,11 +34,23 @@ def is_tag_pushed(repo_name, tag, token):
     # TOKEN=$(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:zongshun96/python3_9_18-bookworm.prometheus-flask-exporter_v0_22_4:pull" | jq -r .token)
     # curl -s -H "Authorization: Bearer $TOKEN" https://index.docker.io/v2/zongshun96/python3_9_18-bookworm.prometheus-flask-exporter_v0_22_4/manifests/TAG
 
+def all_tag_pushed(dockerfile_path, token, idx):
+    """check all Docker image from a specified Dockerfile."""
+
+    dockerfile_name = dockerfile_path.name
+    # Create a tag using Docker Hub username and Dockerfile name, excluding 'Dockerfile.' prefix
+    tag = f"{USERNAME}/{dockerfile_name.replace('Dockerfile.', '')}"
+    if is_tag_pushed(dockerfile_name.replace('Dockerfile.', ''), "latest", token):
+        print(f"{idx} Tag {tag} already exists on Docker Hub, skipping push")
+        return True
+    else:
+        print(f"{idx} Tag {tag} miss on Docker Hub")
+        return False
 
 def build_push_remove_docker_image(dockerfile_path, token, idx):
     """Builds, pushes, and removes a Docker image from a specified Dockerfile."""
 
-    if idx % 20 == 0:
+    if idx % 10 == 0:
         # Removes all build cache objects.
         cleanup_build_cache()
 
@@ -85,10 +97,28 @@ def find_dockerfiles(directory):
     path = Path(directory)
     return list(path.glob('Dockerfile.*'))
 
+def all_tag_pushed_in_parallel(dockerfiles):
+    """check all Docker images in parallel from a list of Dockerfiles."""
+    token = rm_image_dockerhub.get_auth_token(USERNAME, PASSWORD)
+    ret = True
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future_to_dockerfile = {executor.submit(all_tag_pushed, df, token, idx): df for idx, df in enumerate(dockerfiles)}
+        for idx, future in enumerate(as_completed(future_to_dockerfile)):
+            dockerfile = future_to_dockerfile[future]
+            try:
+                result = future.result()
+                ret = ret and result
+                print(f"{idx} {result}")
+                if not ret:
+                    return ret
+            except Exception as exc:
+                print(f'{idx} {dockerfile} generated an exception: {exc}')
+        return ret
+
 def build_push_remove_images_in_parallel(dockerfiles):
     """Builds, pushes, and removes multiple Docker images in parallel from a list of Dockerfiles."""
     token = rm_image_dockerhub.get_auth_token(USERNAME, PASSWORD)
-    with ThreadPoolExecutor(max_workers=128) as executor:
+    with ThreadPoolExecutor(max_workers=64) as executor:
         future_to_dockerfile = {executor.submit(build_push_remove_docker_image, df, token, idx): df for idx, df in enumerate(dockerfiles)}
         for idx, future in enumerate(as_completed(future_to_dockerfile)):
             dockerfile = future_to_dockerfile[future]
@@ -113,6 +143,7 @@ def cleanup_build_cache():
 if __name__ == "__main__":
     dockerfiles = find_dockerfiles(directory_path)
     if dockerfiles:
+        # print("all tag pushed", all_tag_pushed_in_parallel(dockerfiles))
         build_push_remove_images_in_parallel(dockerfiles)
     else:
         print(f"No Dockerfiles found in {directory_path}.")

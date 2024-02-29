@@ -25,7 +25,7 @@ def fetch_versions_for_multiple_packages(package_names):
     package_versions = {}
     
     # Use ThreadPoolExecutor to parallelize requests
-    with ThreadPoolExecutor(max_workers=128) as executor:
+    with ThreadPoolExecutor(max_workers=192) as executor:
         # Submit all the tasks and get a list of Future objects
         future_to_package = {executor.submit(list_package_versions, pkg): pkg for pkg in package_names}
         
@@ -54,8 +54,15 @@ def load_package_rank(filter_l=set(),count=1000):
 
 def gen_dockerfile(all_dep, choose=1, base_images=["python:3.9.18-bullseye", "python:3.9-slim-bullseye", "python:3.9-slim-bookworm", "python:3.9.18-bookworm"]): # python:3.12-bookworm
     seen = set()
-    for base_image in base_images:
-        for p_l_idx, (package_chk_l) in enumerate(combinations(all_dep, choose)):
+    for p_l_idx, (package_chk_l) in enumerate(combinations(all_dep, choose)):
+        if p_l_idx == 48000:
+            break
+        for base_image in base_images:
+
+            # Avoid putting same packages in same images
+            diff_packages_set = set([package_chk.split("==")[0] for package_chk in package_chk_l])
+            if len(diff_packages_set) != choose:
+                continue
 
             # Assume 'dependency' is now a list of strings
             dependencies = package_chk_l
@@ -124,7 +131,7 @@ if __name__ == "__main__":
             Path('/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles_failed/'+'Dockerfile..'+package_name).touch()
     # print(all_dep_with_ver)
 
-    saved = gen_dockerfile(list(all_dep_with_ver))
+    saved = gen_dockerfile(list(all_dep_with_ver), choose=2)
     # print(saved)
 
     
