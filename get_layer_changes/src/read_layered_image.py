@@ -51,7 +51,9 @@ def run():
     # kube_pod_container_info = requests.get(grafana_addr, params=params, headers=headers)
     # image_name = "/".join(kube_pod_container_info.json()['data']['result'][0]['metric']['image'].split("/")[1:])
 
-    image_name = "zongshun96/introspected_container:0.01"
+    image_name = "zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0:latest"
+    # image_name = "zongshun96/introspected_container:0.01"
+
 
     cmd1 = "bash "+src+"download-frozen-image-v2.sh "+cwd+"introspected_container "+image_name
     p_cmd1 = subprocess.Popen(cmd1.split(" "), stdin=subprocess.PIPE)

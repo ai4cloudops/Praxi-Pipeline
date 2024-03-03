@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Directory where you want to search for files
-SEARCH_DIR="/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles_failed"
+SEARCH_DIR="/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/templating_image/dockerfiles_failed"
 
 # End time (files modified before this time will be considered)
 # Format: YYYY-MM-DD HH:MM:SS

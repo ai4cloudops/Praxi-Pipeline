@@ -39,7 +39,7 @@ def fetch_versions_for_multiple_packages(package_names):
 
 def load_package_rank(filter_l=set(),count=1000):
     import json
-    with open('/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/top-pypi-packages-30-days.min.json') as f:
+    with open('/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/templating_image/top-pypi-packages-30-days.min.json') as f:
         d = json.load(f)
         project_l = set()
         for idx, row in enumerate(d["rows"]):
@@ -77,7 +77,7 @@ def gen_dockerfile(all_dep, choose=1, base_images=["python:3.9.18-bullseye", "py
             }
 
             # Load the template
-            with open('/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/DockerfileTemplate.txt', 'r') as file:
+            with open('/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/templating_image/DockerfileTemplate.txt', 'r') as file:
                 template = Template(file.read())
 
             # Substitute placeholders with actual values
@@ -95,27 +95,7 @@ def gen_dockerfile(all_dep, choose=1, base_images=["python:3.9.18-bullseye", "py
             # print("Dockerfile generated successfully.")
     return seen
 
-
-def find_dockerfiles(directory):
-    """Finds Dockerfiles within the specified directory."""
-    path = Path(directory)
-    return list(path.glob('Dockerfile.*'))
-
-if __name__ == "__main__":
-    dockerfiles = find_dockerfiles("/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles_failed")
-    # print([dockerfile.name for dockerfile in dockerfiles])
-
-    filter_l = set([dockerfile.name.split(".")[-1] for dockerfile in dockerfiles])
-    # print(filter_l)
-
-    all_dep = load_package_rank(filter_l)
-    # print(all_dep)
-
-    package_versions = fetch_versions_for_multiple_packages(all_dep)
-    # # Print the versions
-    # for package_name, versions in package_versions.items():
-    #     print(f"{package_name}: {versions}")
-
+def format_dep_with_versions(package_versions, filter_l=set()):
     all_dep_with_ver = set()
     for package_name, versions in package_versions.items():
         count = 0
@@ -130,6 +110,32 @@ if __name__ == "__main__":
             print("count:", count,package_name, versions)
             Path('/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles_failed/'+'Dockerfile..'+package_name).touch()
     # print(all_dep_with_ver)
+    return all_dep_with_ver
+
+def find_dockerfiles(directory):
+    """Finds Dockerfiles within the specified directory."""
+    path = Path(directory)
+    return list(path.glob('Dockerfile.*'))
+
+if __name__ == "__main__":
+    dockerfiles_failed_dir = "/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles_failed"
+    if not Path(dockerfiles_failed_dir).exists():
+        Path(dockerfiles_failed_dir).mkdir()
+    dockerfiles = find_dockerfiles(dockerfiles_failed_dir)
+    # print([dockerfile.name for dockerfile in dockerfiles])
+
+    filter_l = set([dockerfile.name.split(".")[-1] for dockerfile in dockerfiles])
+    # print(filter_l)
+
+    all_dep = load_package_rank(filter_l)
+    # print(all_dep)
+
+    package_versions = fetch_versions_for_multiple_packages(all_dep)
+    # # Print the versions
+    # for package_name, versions in package_versions.items():
+    #     print(f"{package_name}: {versions}")
+
+    all_dep_with_ver = format_dep_with_versions(package_versions, filter_l)
 
     saved = gen_dockerfile(list(all_dep_with_ver), choose=2)
     # print(saved)
