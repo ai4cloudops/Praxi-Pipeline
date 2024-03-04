@@ -51,7 +51,7 @@ def gen_dockerfile(all_dep, choose=1, base_images=["python:3.9.18-bullseye", "py
             # print("Dockerfile generated successfully.")
     return images_l, labels_l, base_image_l
 
-def run(image_name, labels, base_image, src, cwd):
+def pull_save_image(image_name, labels, base_image, src, cwd):
     # image_name = "zongshun96/introspected_container:0.01"
     labels_str = (base_image.replace(":","")).replace(".","_")+'.'+("-".join([dep.replace("==", "_v") for dep in labels])).replace(".","_")
 
@@ -68,6 +68,12 @@ def run(image_name, labels, base_image, src, cwd):
         return None
 
     image_layer_dir = cwd+labels_str
+    return image_layer_dir
+
+def run(image_name, labels, base_image, src, cwd, image_layer_dir=None, labels_str=None):
+
+    if not image_layer_dir:
+        image_layer_dir = pull_save_image(image_name, labels, base_image, src, cwd)
 
     image_d = {}
     image_meta_d = {}
