@@ -24,10 +24,10 @@ def get_free_filename(stub, directory, suffix=''):
             counter += 1
         else:  # No match found
             print("get_free_filename no suffix")
-            Path(file_candidate).touch()
+            # Path(file_candidate).touch()
             return file_candidate
 
-def gen_dockerfile(all_dep, choose=1, base_images=["python:3.9.18-bullseye", "python:3.9-slim-bullseye", "python:3.9-slim-bookworm", "python:3.9.18-bookworm"], p_l_len = 2): # python:3.12-bookworm
+def gen_dockerfile(all_dep, choose=1, base_images=["python:3.9.18-bullseye", "python:3.9-slim-bullseye", "python:3.9-slim-bookworm", "python:3.9.18-bookworm"], p_l_len = -1): # python:3.12-bookworm
     images_l, labels_l, base_image_l = [], [], []
     for p_l_idx, (package_chk_l) in enumerate(combinations(all_dep, choose)):
         if p_l_idx == p_l_len:
@@ -68,12 +68,12 @@ def pull_save_image(image_name, labels, base_image, src, cwd):
         return None
 
     image_layer_dir = cwd+labels_str
-    return image_layer_dir
+    return image_layer_dir, labels_str
 
 def run(image_name, labels, base_image, src, cwd, image_layer_dir=None, labels_str=None):
 
     if not image_layer_dir:
-        image_layer_dir = pull_save_image(image_name, labels, base_image, src, cwd)
+        image_layer_dir, labels_str = pull_save_image(image_name, labels, base_image, src, cwd)
 
     image_d = {}
     image_meta_d = {}
@@ -129,6 +129,7 @@ def run(image_name, labels, base_image, src, cwd, image_layer_dir=None, labels_s
             # yaml_in = {'open_time': open_time, 'close_time': close_time, 'label': label, 'changes': changes}
             yaml_in = {'labels': list(labels), 'changes': image_d[layer.split("/")[0]]}
             changeset_filename = get_free_filename(labels_str, changesets_dir, ".yaml")
+            Path(changeset_filename).touch()
             with open(changeset_filename, 'w') as outfile:
                 print("gen_changeset", os.path.dirname(outfile.name))
                 print("gen_changeset", changeset_filename)
@@ -142,14 +143,14 @@ def download_images_in_parallel(images_l, labels_l, base_image_l, src, cwd):
     """Download multiple Docker images in parallel from a list of Dockerfiles."""
     # for image_name, labels, base_image in zip(images_l, labels_l, base_image_l):
     #     changesets_l = run(image_name, labels, base_image, src, cwd)
-    with ThreadPoolExecutor(max_workers=64) as executor:
+    with ThreadPoolExecutor(max_workers=8) as executor:
         future_to_dockerfile = {executor.submit(run, image_name, labels, base_image, src, cwd): (base_image.replace(":","")).replace(".","_")+'.'+("-".join([dep.replace("==", "_v") for dep in labels])).replace(".","_")
                                  for image_name, labels, base_image in zip(images_l, labels_l, base_image_l)}
         for idx, future in enumerate(as_completed(future_to_dockerfile)):
             dockerfile = future_to_dockerfile[future]
             try:
                 result = future.result()
-                print(f"{idx} {result}")
+                # print(f"{idx} {result}")
             except Exception as exc:
                 print(f'{idx} {dockerfile} generated an exception: {exc}')
 

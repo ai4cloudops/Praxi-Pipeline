@@ -57,3 +57,7 @@ gen_data_docker_image/python/dockerfiles_failed copy/
 gen_data_docker_image/python/dockerfiles_failed_bak/
 gen_data_docker_image/python/dockerfiles_failed copy 2/
 gen_data_docker_image/python/dockerfiles_SL/
+gen_data_docker_image/python/changeset_gen/cwd_bak/
+gen_data_docker_image/python/dockerfiles_copy/
+gen_data_docker_image/python/changeset_gen/cwd/
+gen_data_docker_image/python/dockerfiles_SL.zip

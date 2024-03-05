@@ -84,7 +84,7 @@ def gen_dockerfile(all_dep, choose=1, base_images=["python:3.9.18-bullseye", "py
             dockerfile_content = template.substitute(values)
 
             # Save the rendered Dockerfile
-            dependencies_str = (base_image.replace(":","")).replace(".","_")+'.'+("-".join([dep.replace("==", "_v") for dep in dependencies])).replace(".","_")
+            dependencies_str = (base_image.replace(":","")).replace(".","_")+'.'+("_p_".join([dep.replace("==", "_v") for dep in dependencies])).replace(".","_")
             save_path = '/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles/Dockerfile.'+dependencies_str
             with open(save_path, 'w') as file:
                 file.write(dockerfile_content)
