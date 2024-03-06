@@ -8,6 +8,16 @@ import read_layered_image
 
 # The directory containing the Dockerfiles
 directory_path = '/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles'
+cwd = "/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/"
+if not Path(cwd).exists():
+    Path(cwd).mkdir()
+changesets_dir = cwd+"changesets/"
+if not Path(changesets_dir).exists():
+    Path(changesets_dir).mkdir()
+failed_dockerfiles_dir = cwd+"failed_dockerfiles/"
+if not Path(failed_dockerfiles_dir).exists():
+    Path(failed_dockerfiles_dir).mkdir()
+
 # Your Docker Hub username
 USERNAME = 'zongshun96'
 PASSWORD = ''  # Consider using a Personal Access Token for better security
@@ -52,9 +62,9 @@ dockerhub_front_url = 'https://hub.docker.com/v2'
 def build_push_remove_docker_image(dockerfile_path, idx):
     """Builds, pushes, and removes a Docker image from a specified Dockerfile."""
 
-    if idx % 10 == 0:
-        # Removes all build cache objects.
-        cleanup_build_cache()
+    # if idx % 10 == 0:
+    #     # Removes all build cache objects.
+    #     cleanup_build_cache()
 
     dockerfile_name = dockerfile_path.name
     labels_str = dockerfile_name.split(".", 1)[1]
@@ -64,25 +74,28 @@ def build_push_remove_docker_image(dockerfile_path, idx):
     tag = f"{USERNAME}/{dockerfile_name.replace('Dockerfile.', '')}"
 
     # Define the save directory and tar file name
-    cwd = "/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/"
-    from pathlib import Path
-    if not Path(cwd).exists():
-        Path(cwd).mkdir()
-    changesets_dir = cwd+"changesets/"
-    # changeset_filename_l = read_layered_image.get_free_filename(labels_str, changesets_dir, ".yaml").split(".")
-    # # if changeset_filename_l[0].split("-")[1] == "slim"
-    if not Path(changesets_dir).exists():
-        Path(changesets_dir).mkdir()
-    failed_dockerfiles_dir = cwd+"failed_dockerfiles/"
-    if not Path(failed_dockerfiles_dir).exists():
-        Path(failed_dockerfiles_dir).mkdir()
+    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/"
+    # from pathlib import Path
+    # if not Path(cwd).exists():
+    #     Path(cwd).mkdir()
+    # changesets_dir = cwd+"changesets/"
+    # # changeset_filename_l = read_layered_image.get_free_filename(labels_str, changesets_dir, ".yaml").split(".")
+    # # # if changeset_filename_l[0].split("-")[1] == "slim"
+    # if not Path(changesets_dir).exists():
+    #     Path(changesets_dir).mkdir()
+    # failed_dockerfiles_dir = cwd+"failed_dockerfiles/"
+    # if not Path(failed_dockerfiles_dir).exists():
+    #     Path(failed_dockerfiles_dir).mkdir()
     save_dir = cwd  # Update this path to your desired directory
     tar_file = f"{save_dir}/{dockerfile_name.replace('Dockerfile.', '')}.tar"
     extracted_dir = f"{save_dir}/extracted/{dockerfile_name.replace('Dockerfile.', '')}"
 
-    build_cmd = ['docker', 'build', '-t', tag, '-f', str(dockerfile_path), str(dockerfile_path.parent)]
+    build_cmd = ['docker', 'build', '--label', f'mylabel={dockerfile_path.name}', '-t', tag, '-f', str(dockerfile_path), str(dockerfile_path.parent)]
     push_cmd = ['docker', 'save', '-o', tar_file, tag]
-    remove_cmd = ['docker', 'rmi', tag]
+    # remove_cmd = ['docker', 'rmi', tag]
+    filter_arg = f"label=mylabel={dockerfile_path.name}"
+    remove_cmd = ['docker', 'system', 'prune', '-af', '--filter', filter_arg]
+
     
     try:
         # Build the Docker image
@@ -122,6 +135,7 @@ def build_push_remove_docker_image(dockerfile_path, idx):
             # changeset[layer] = [member.name for member in tar.getmembers()]
             yaml_in = {'labels': labels, 'changes': [member.name for member in tar.getmembers()]}
             changeset_filename = read_layered_image.get_free_filename(labels_str, changesets_dir, ".yaml")
+            from pathlib import Path
             Path(changeset_filename).touch()
             with open(changeset_filename, 'w') as outfile:
                 print("gen_changeset", os.path.dirname(outfile.name))
@@ -179,7 +193,7 @@ def find_dockerfiles(directory):
 def build_push_remove_images_in_parallel(dockerfiles):
     """Builds, pushes, and removes multiple Docker images in parallel from a list of Dockerfiles."""
     # token = rm_image_dockerhub.get_auth_token(USERNAME, PASSWORD)
-    with ThreadPoolExecutor(max_workers=128) as executor:
+    with ThreadPoolExecutor(max_workers=2) as executor:
         future_to_dockerfile = {executor.submit(build_push_remove_docker_image, df, idx): df for idx, df in enumerate(dockerfiles)}
         for idx, future in enumerate(as_completed(future_to_dockerfile)):
             dockerfile = future_to_dockerfile[future]

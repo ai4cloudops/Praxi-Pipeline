@@ -55,7 +55,7 @@ def load_package_rank(filter_l=set(),count=1000):
 def gen_dockerfile(all_dep, choose=1, base_images=["python:3.9.18-bullseye", "python:3.9-slim-bullseye", "python:3.9-slim-bookworm", "python:3.9.18-bookworm"]): # python:3.12-bookworm
     seen = set()
     for p_l_idx, (package_chk_l) in enumerate(combinations(all_dep, choose)):
-        if p_l_idx == 48000:
+        if p_l_idx == -1:
             break
         for base_image in base_images:
 
@@ -84,7 +84,7 @@ def gen_dockerfile(all_dep, choose=1, base_images=["python:3.9.18-bullseye", "py
             dockerfile_content = template.substitute(values)
 
             # Save the rendered Dockerfile
-            dependencies_str = (base_image.replace(":","")).replace(".","_")+'.'+("_p_".join([dep.replace("==", "_v") for dep in dependencies])).replace(".","_")
+            dependencies_str = (base_image.split("/")[-1].replace(":","")).replace(".","_")+'.'+("_p_".join([dep.replace("==", "_v") for dep in dependencies])).replace(".","_")
             save_path = '/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles/Dockerfile.'+dependencies_str
             with open(save_path, 'w') as file:
                 file.write(dockerfile_content)
@@ -137,7 +137,7 @@ if __name__ == "__main__":
 
     all_dep_with_ver = format_dep_with_versions(package_versions, filter_l)
 
-    saved = gen_dockerfile(list(all_dep_with_ver), choose=2)
+    saved = gen_dockerfile(list(all_dep_with_ver), choose=1, base_images=["public.ecr.aws/docker/library/python:3.9.18-bullseye", "public.ecr.aws/docker/library/python:3.9-slim-bullseye", "public.ecr.aws/docker/library/python:3.9-slim-bookworm", "public.ecr.aws/docker/library/python:3.9.18-bookworm"])
     # print(saved)
 
     
