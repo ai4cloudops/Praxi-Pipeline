@@ -2,7 +2,7 @@
 import subprocess, os, tarfile, shutil, sys, json, yaml
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-import requests
+# import requests
 sys.path.insert(1, '/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen')
 import read_layered_image
 
@@ -72,6 +72,9 @@ def build_push_remove_docker_image(dockerfile_path, idx):
     # labels = [dockerfile_name.split(".")[2].replace("_v", "==").replace("_", ".")]
     # Create a tag using Docker Hub username and Dockerfile name, excluding 'Dockerfile.' prefix
     tag = f"{USERNAME}/{dockerfile_name.replace('Dockerfile.', '')}"
+    changeset_filename, new_sample_bool = read_layered_image.get_free_filename(labels_str, changesets_dir, ".yaml")
+    if not new_sample_bool:
+        return f"Skipped {tag}"
 
     # Define the save directory and tar file name
     # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/"
@@ -134,7 +137,7 @@ def build_push_remove_docker_image(dockerfile_path, idx):
             # for member in tar.getmembers():
             # changeset[layer] = [member.name for member in tar.getmembers()]
             yaml_in = {'labels': labels, 'changes': [member.name for member in tar.getmembers()]}
-            changeset_filename = read_layered_image.get_free_filename(labels_str, changesets_dir, ".yaml")
+            # changeset_filename = read_layered_image.get_free_filename(labels_str, changesets_dir, ".yaml")
             from pathlib import Path
             Path(changeset_filename).touch()
             with open(changeset_filename, 'w') as outfile:
@@ -193,7 +196,7 @@ def find_dockerfiles(directory):
 def build_push_remove_images_in_parallel(dockerfiles):
     """Builds, pushes, and removes multiple Docker images in parallel from a list of Dockerfiles."""
     # token = rm_image_dockerhub.get_auth_token(USERNAME, PASSWORD)
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    with ThreadPoolExecutor(max_workers=128) as executor:
         future_to_dockerfile = {executor.submit(build_push_remove_docker_image, df, idx): df for idx, df in enumerate(dockerfiles)}
         for idx, future in enumerate(as_completed(future_to_dockerfile)):
             dockerfile = future_to_dockerfile[future]

@@ -25,7 +25,7 @@ def get_free_filename(stub, directory, suffix=''):
         else:  # No match found
             print("get_free_filename no suffix")
             # Path(file_candidate).touch()
-            return file_candidate
+            return file_candidate, counter==0
 
 def gen_dockerfile(all_dep, choose=1, base_images=["python:3.9.18-bullseye", "python:3.9-slim-bullseye", "python:3.9-slim-bookworm", "python:3.9.18-bookworm"], p_l_len = -1): # python:3.12-bookworm
     images_l, labels_l, base_image_l = [], [], []
@@ -128,7 +128,7 @@ def run(image_name, labels, base_image, src, cwd, image_layer_dir=None, labels_s
 
             # yaml_in = {'open_time': open_time, 'close_time': close_time, 'label': label, 'changes': changes}
             yaml_in = {'labels': list(labels), 'changes': image_d[layer.split("/")[0]]}
-            changeset_filename = get_free_filename(labels_str, changesets_dir, ".yaml")
+            changeset_filename, new_sample_bool = get_free_filename(labels_str, changesets_dir, ".yaml")
             Path(changeset_filename).touch()
             with open(changeset_filename, 'w') as outfile:
                 print("gen_changeset", os.path.dirname(outfile.name))
