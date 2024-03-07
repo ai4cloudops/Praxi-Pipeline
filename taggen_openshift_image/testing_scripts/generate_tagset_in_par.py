@@ -1,44 +1,58 @@
-import os, sys
+import os
+import sys
 import yaml
-import pickle
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-sys.path.insert(1, '/home/ubuntu/Praxi-Pipeline/taggen_openshift_image/')
+sys.path.insert(1, '/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/')
 from columbus.columbus import columbus
 
-def load_changesets_from_yaml(directory):
-    """Load all changesets from YAML files in the specified directory."""
-    changesets_l = []
-    for yaml_file in Path(directory).glob('*.yaml'):
-        with open(yaml_file, 'r') as file:
-            changeset = yaml.safe_load(file)
-            changesets_l.append(changeset)
-    return changesets_l
+tagsets_directory = "/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/cwd/"
+os.makedirs(tagsets_directory, exist_ok=True)
 
-def process_changeset(changeset):
-    """Process a single changeset with the columbus function."""
+def process_yaml_file(filepath):
+    """Load a changeset from a YAML file, process it, and write the output dict to tagsets_directory with '.tag' postfix."""
+    # Construct the output filename (.yaml to .tag)
+    output_filename = filepath.name.rsplit('.', 1)[0] + '.tag'
+    output_path = Path(tagsets_directory) / output_filename
+    if Path(output_path).exists():
+        return f"Skipped {output_filename}"
+    
+    with open(filepath, 'r') as file:
+        changeset = yaml.safe_load(file)
+    
+    # Process the changeset
     tag_dict = columbus(changeset['changes'], freq_threshold=2)
     tags = ['{}:{}'.format(tag, freq) for tag, freq in tag_dict.items()]
-    return {'labels': changeset['labels'], 'tags': tags}
+    output_dict = {'labels': changeset['labels'], 'tags': tags}
+    
+    
+    # Write the output
+    with open(output_path, 'w') as output_file:
+        yaml.dump(output_dict, output_file, default_flow_style=False)
+    
+    return f"Done {output_filename}"
 
-def process_changesets_in_parallel(changesets_l):
-    """Process each changeset in parallel and return the list of tagsets."""
-    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-        tagsets_l = list(executor.map(process_changeset, changesets_l))
-    return tagsets_l
+def process_all_yaml_files_in_parallel(directory):
+    """Process each YAML file in the given directory in parallel."""
+    yaml_files = list(Path(directory).glob('*.yaml'))
+    with ThreadPoolExecutor(max_workers=128) as executor:
+        future_to_yaml_file = {executor.submit(process_yaml_file, df): df for idx, df in enumerate(yaml_files)}
+        for idx, future in enumerate(as_completed(future_to_yaml_file)):
+            yaml_file = future_to_yaml_file[future]
+            try:
+                result = future.result()
+                print(f"{idx} {result}")
+            except Exception as exc:
+                print(f'{idx} {yaml_file} generated an exception: {exc}')
+        # restuls = executor.map(process_yaml_file, yaml_files)
+        # for idx, result in enumerate(restuls):
+        #     try:
+        #         print(f"{idx} {result}")
+        #     except Exception as exc:
+        #         print(f'{idx} {result} generated an exception: {exc}')
 
 if __name__ == "__main__":
-    changesets_directory = "/home/ubuntu/Praxi-Pipeline/get_layer_changes/cwd/changesets"
-    changesets_l = load_changesets_from_yaml(changesets_directory)
-
-    # Process changesets in parallel
-    tagsets_l = process_changesets_in_parallel(changesets_l)
-
-    # Save tagsets to file
-    with open("/home/ubuntu/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets_l", 'wb') as writer:
-        pickle.dump(tagsets_l, writer)
-
-    # For debugging: Write each tagset to a separate file
-    for ind, tag_dict in enumerate(tagsets_l):
-        with open(f"/home/ubuntu/Praxi-Pipeline/taggen_openshift_image/cwd/tagsets_logging{ind}.tag", 'w') as writer:
-            yaml.dump(tag_dict, writer, default_flow_style=False)
+    changesets_directory = "/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/changesets/"
+    
+    # Process all YAML files in parallel
+    process_all_yaml_files_in_parallel(changesets_directory)

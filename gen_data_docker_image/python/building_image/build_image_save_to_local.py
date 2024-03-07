@@ -7,7 +7,7 @@ sys.path.insert(1, '/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/py
 import read_layered_image
 
 # The directory containing the Dockerfiles
-directory_path = '/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles'
+directory_path = '/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles_SL'
 cwd = "/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/"
 if not Path(cwd).exists():
     Path(cwd).mkdir()
@@ -95,9 +95,9 @@ def build_push_remove_docker_image(dockerfile_path, idx):
 
     build_cmd = ['docker', 'build', '--label', f'mylabel={dockerfile_path.name}', '-t', tag, '-f', str(dockerfile_path), str(dockerfile_path.parent)]
     push_cmd = ['docker', 'save', '-o', tar_file, tag]
-    # remove_cmd = ['docker', 'rmi', tag]
-    filter_arg = f"label=mylabel={dockerfile_path.name}"
-    remove_cmd = ['docker', 'system', 'prune', '-af', '--filter', filter_arg]
+    remove_cmd = ['docker', 'rmi', tag]
+    # filter_arg = f"label=mylabel={dockerfile_path.name}"
+    # remove_cmd = ['docker', 'system', 'prune', '-af', '--filter', filter_arg]
 
     
     try:
