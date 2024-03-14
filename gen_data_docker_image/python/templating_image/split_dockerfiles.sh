@@ -9,17 +9,17 @@ SUBDIR_BASE="subdir"
 # Number of subdirectories
 NUM_DIRS=5
 
-# Create subdirectories if they do not exist
-for i in $(seq 1 $NUM_DIRS); do
-  mkdir -p "$SOURCE_DIR/$SUBDIR_BASE$i"
-done
-
 # Get a list of files in the source directory
 files=($SOURCE_DIR/*)
 
 # Calculate the number of files to distribute evenly
 num_files=${#files[@]}
 files_per_dir=$(( (num_files + NUM_DIRS - 1) / NUM_DIRS ))
+
+# Create subdirectories if they do not exist
+for i in $(seq 1 $NUM_DIRS); do
+  mkdir -p "$SOURCE_DIR/$SUBDIR_BASE$i"
+done
 
 # Distribute files
 for ((i=0; i<num_files; i++)); do
