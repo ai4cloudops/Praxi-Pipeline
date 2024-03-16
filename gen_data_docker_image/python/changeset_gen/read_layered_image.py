@@ -23,7 +23,7 @@ def get_free_filename(stub, directory, suffix=''):
         if Path(file_candidate).exists():
             counter += 1
         else:  # No match found
-            print("get_free_filename no suffix")
+            # print("get_free_filename no suffix")
             # Path(file_candidate).touch()
             return file_candidate, counter==0
 

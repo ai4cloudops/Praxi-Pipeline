@@ -1,7 +1,7 @@
 import os
 import sys
 import yaml
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from pathlib import Path
 sys.path.insert(1, '/home/cc/Praxi-study/Praxi-Pipeline/taggen_openshift_image/')
 from columbus.columbus import columbus
@@ -35,7 +35,7 @@ def process_yaml_file(filepath):
 def process_all_yaml_files_in_parallel(directory):
     """Process each YAML file in the given directory in parallel."""
     yaml_files = list(Path(directory).glob('*.yaml'))
-    with ThreadPoolExecutor(max_workers=128) as executor:
+    with ProcessPoolExecutor(max_workers=128) as executor:
         future_to_yaml_file = {executor.submit(process_yaml_file, df): df for idx, df in enumerate(yaml_files)}
         for idx, future in enumerate(as_completed(future_to_yaml_file)):
             yaml_file = future_to_yaml_file[future]
@@ -52,7 +52,7 @@ def process_all_yaml_files_in_parallel(directory):
         #         print(f'{idx} {result} generated an exception: {exc}')
 
 if __name__ == "__main__":
-    changesets_directory = "/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/changesets/"
+    changesets_directory = "/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/changesets_SL/"
     
     # Process all YAML files in parallel
     process_all_yaml_files_in_parallel(changesets_directory)
