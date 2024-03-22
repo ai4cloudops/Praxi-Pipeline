@@ -13,7 +13,7 @@ import itertools
 import matplotlib
 # matplotlib.rcParams['pdf.fonttype'] = 42
 # matplotlib.rcParams['ps.fonttype'] = 42	
-matplotlib.rcParams['text.usetex'] = True
+# matplotlib.rcParams['text.usetex'] = True
 
 def read_tagset(tagset_pathname):
     with open(tagset_pathname, "r") as stream:
@@ -26,11 +26,13 @@ def read_tagset(tagset_pathname):
             else:
                 label_count = "1"
                 labels_str = tagset['label']
-            tags_d, tagnames_set = {}, set()
-            for tag in tagset['tags']:
-                tag_l = tag.split(":")
-                tags_d[tag_l[0]] = tag_l[1]
-                tagnames_set.add(tag_l[0])
+            # tags_d, tagnames_set = {}, set()
+            # for tag in tagset['tags']:
+            #     tag_l = tag.split(":")
+            #     tags_d[tag_l[0]] = tag_l[1]
+            #     tagnames_set.add(tag_l[0])
+            tagnames_set = set(tagset['tags'].keys())
+            tags_d = tagset['tags']
             tags_length = len(tagset['tags'])
             return {"label_count":label_count, "labels_str": labels_str, "tags_length": tags_length, "tags_d": tags_d, "tagnames_set": tagnames_set}
         except yaml.YAMLError as exc:
@@ -48,14 +50,15 @@ def plot_size():
     # target_dir = "big_ML_biased_test"
     # target_dir = "big_SL_biased_test"
     # target_dir = "big_train"
-    target_dir = "tagsets_SL"
+    # target_dir = "tagsets_SL"
+    target_dir = "tagsets_ML"
     dirname = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/"
     out_dirname = dirname+target_dir+"/"
     # print(out_dirname)
     tagsetfilenames_l = [name for name in os.listdir(out_dirname) if os.path.isfile(out_dirname+name) and name[-4:]!=".obj"]
     # print(tagsetfilenames_l)
     # if len(tagsetfilenames_l) == 2:
-    pool = mp.Pool(processes=20)
+    pool = mp.Pool(processes=mp.cpu_count())
     data_instance_d_l = [pool.apply_async(read_tagset, args=(out_dirname+tagsets_name,)) for tagsets_name in tqdm(tagsetfilenames_l)]
     data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
     pool.close()
@@ -200,6 +203,8 @@ def plot_size():
         reoccurent_tagnames = tagnames_set.intersection(label_tagsnameset_d[label])
         for tagname in list(reoccurent_tagnames):
             tagnames_reoccurentcount_d[tagname] += 1
+    with open(dirname+filter_dir+target_dir+"_tagnames_reoccurentcount_d", "w") as outfile:
+        yaml.dump(tagnames_reoccurentcount_d, outfile)
     reoccurentcounts_l = sorted([reoccurentcount for reoccurentcount in tagnames_reoccurentcount_d.values()], reverse=True)
     # reoccurentcounts_l_normalized = [round(reoccurentcounts_l_entry/sum(reoccurentcounts_l)*100, 2) for reoccurentcounts_l_entry in reoccurentcounts_l]
     fig, ax = plt.subplots(1, 1, figsize=(6, 6), dpi=600)
@@ -264,25 +269,25 @@ def plot_size():
     # print()
 
 
-    # Plot random noise tags in each labeltagset
-    label_tagnames_reoccurentcount_d = defaultdict(lambda: defaultdict(int))
-    tagnamesbelowoccurence_set = set()
-    for label, tags_d in label_tags_d.items():
-        for tagname, counts_l in tags_d.items():
-            label_tagnames_reoccurentcount_d[label][tagname] += len(counts_l)
-            if len(counts_l) < 5:
-                tagnamesbelowoccurence_set.add(tagname)
+    # # Plot random noise tags in each labeltagset
+    # label_tagnames_reoccurentcount_d = defaultdict(lambda: defaultdict(int))
+    # tagnamesbelowoccurence_set = set()
+    # for label, tags_d in label_tags_d.items():
+    #     for tagname, counts_l in tags_d.items():
+    #         label_tagnames_reoccurentcount_d[label][tagname] += len(counts_l)
+    #         if len(counts_l) < 5:
+    #             tagnamesbelowoccurence_set.add(tagname)
     
-    # print()
-    # print(tagnamesbelowoccurence_set)
-    with open(dirname+filter_dir+target_dir+"_tokennoises_filter_set", 'w') as f:
-        yaml.dump(tagnamesbelowoccurence_set, f)
-        # for s in list(tagnamesbelowoccurence_set):
-        #     f.write(s + '\n')
+    # # print()
+    # # print(tagnamesbelowoccurence_set)
+    # with open(dirname+filter_dir+target_dir+"_tokennoises_filter_set", 'w') as f:
+    #     yaml.dump(tagnamesbelowoccurence_set, f)
+    #     # for s in list(tagnamesbelowoccurence_set):
+    #     #     f.write(s + '\n')
 
-    # for tagsnameset_idx, (label, tagsname_set) in enumerate(label_tagsnameset_d.items()):
-    #     for tagsname in list(tagsname_set):
-    #         tagnames_reoccurentcount_d[label][tagsname] += 1
+    # # for tagsnameset_idx, (label, tagsname_set) in enumerate(label_tagsnameset_d.items()):
+    # #     for tagsname in list(tagsname_set):
+    # #         tagnames_reoccurentcount_d[label][tagsname] += 1
 
 
     # # plot count of token occurences after filter shared token

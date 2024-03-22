@@ -21,9 +21,9 @@ def process_yaml_file(filepath):
         changeset = yaml.safe_load(file)
     
     # Process the changeset
-    tag_dict = columbus(changeset['changes'], freq_threshold=2)
-    tags = ['{}:{}'.format(tag, freq) for tag, freq in tag_dict.items()]
-    output_dict = {'labels': changeset['labels'], 'tags': tags}
+    tag_dict = columbus(changeset['changes'], freq_threshold=1)
+    # tags = ['{}:{}'.format(tag, freq) for tag, freq in tag_dict.items()]
+    output_dict = {'labels': changeset['labels'], 'tags': tag_dict}
     
     
     # Write the output
@@ -52,7 +52,7 @@ def process_all_yaml_files_in_parallel(directory):
         #         print(f'{idx} {result} generated an exception: {exc}')
 
 if __name__ == "__main__":
-    changesets_directory = "/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/changesets_SL/"
+    changesets_directory = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/changesets_SL/"
     
     # Process all YAML files in parallel
     process_all_yaml_files_in_parallel(changesets_directory)
