@@ -275,8 +275,8 @@ def test(clf, test_data, args):
         results.append((test_labels, preds[ind]))
         # pickle.dump(results, resfile)
         # resfile.close()
-        f1 = get_metrics(results)
-        print("thresh, f1 score", thresh, f1)
+        (f1, p, r) = get_metrics(results)
+        print(f"thresh {thresh}, f1 score {f1}, precision {p}, recall {r}")
         if (f1 > max_f1):
             max_f1 = f1
             best_res = ind
@@ -491,7 +491,7 @@ def multilabel_train(train_dat, args):
 
     suffix = 'multi'
     # VW ARGS SHOULD BE PASSED IN
-    clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=True,
+    clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=False,
                  vw_args=vwargs, suffix=suffix, use_temp_files=False, vw_modelfile="./results/model.vw", outdir = outdir)
     #print(clf.vw_modelfile)
     with open(clf.vw_modelfile, 'wb') as mod_file:
@@ -505,7 +505,7 @@ def multilabel_train(train_dat, args):
         tagset_names = []
         for f in train_dat:
             if list(f)[2] == 'tags':
-                tagset_names.append(f[list(f)[0]])
+                tagset_names.append(f[list(f)[1]])
         if(len(tagset_names) == 0):
             logging.error("No tagsets found in provided training directory")
             raise ValueError("No tagsets in training directory!")
@@ -540,7 +540,7 @@ def multilabel_train(train_dat, args):
         logging.info("Starting multi label experiment") #
         train_names = []
         for f in train_dat:
-            if list(f)[2] == 'tags':
+            if list(f)[1] == 'tags':
                 train_names.append(f[list(f)[0]])
         print("train_names",len(train_names))
         if(len(train_names) == 0):
@@ -610,7 +610,7 @@ def get_metrics(results):
     ri = metrics.recall_score(y_true, y_pred, average='micro')
     ra = metrics.recall_score(y_true, y_pred, average='macro')
 
-    return f1w
+    return f1w, pw, rw
 
 
 def print_multilabel_results(results, retfile, result_type="", args=None, n_strats=1, summary=False):
@@ -702,7 +702,7 @@ def get_inputs():
     # run a single label experiment by default, if --multi flag is added, run a multilabel experiment!
     parser.add_argument('-m','--multi', dest='experiment', action='store_const', const='multi',
                         default='single', help="Type of experiment to run (single-label default).")
-    parser.add_argument('-w','--vwargs', dest='vw_args', default='-b 26 --learning_rate 1.5 --passes 30',
+    parser.add_argument('-w','--vwargs', dest='vw_args', default='-b 26 --learning_rate 1.5 --passes 10',
                         help="custom arguments for VW.")
     parser.add_argument('-n', '--nfolds', help='number of folds to use in cross validation', default=1) # make default 1?
     parser.add_argument('-f', '--fullres', help='generate full result file.', dest='result',

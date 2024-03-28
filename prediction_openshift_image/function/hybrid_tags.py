@@ -175,7 +175,13 @@ class Hybrid(BaseEstimator):
                         input_string += '{}:1.0 '.format(number)
             else:
                 input_string += '{} '.format(self.indexed_labels[labels[0]])
-            f.write('{}| {}\n'.format(input_string, ' '.join(tag)))
+            if isinstance(tag, list):
+                f.write('{}| {}\n'.format(input_string, ' '.join(tag)))
+            elif isinstance(tag, dict):
+                f.write('{}| {}\n'.format(input_string, ' '.join([f"{k}:{v}" for k, v in tag.items()])))
+            else:
+                print("wrong tag format!!!!!")
+            
         f.close()
         # write all tag/label combos into a file f ^^^
         ######## Call VW ML alg ##################################
@@ -243,12 +249,24 @@ class Hybrid(BaseEstimator):
             #     input_string = input_string[:-1] + " "
             #     f.write('{} | {}\n'.format(input_string, ' '.join(tag)))
             for tag in X:
-                f.write('{} | {}\n'.format(
-                    ' '.join([str(x) for x in self.reverse_labels.keys()]),
-                    ' '.join(tag)))
+                if isinstance(tag, list):
+                    f.write('{} | {}\n'.format(
+                        ' '.join([str(x) for x in self.reverse_labels.keys()]),
+                        ' '.join(tag)))
+                elif isinstance(tag, dict):
+                    f.write('{} | {}\n'.format(
+                        ' '.join([str(x) for x in self.reverse_labels.keys()]),
+                        ' '.join([f"{k}:{v}" for k, v in tag.items()])))
+                else:
+                    print("wrong tag format!")
         else:
             for tag in X:
-                f.write('| {}\n'.format(' '.join(tag)))
+                if isinstance(tag, list):
+                    f.write('| {}\n'.format(' '.join(tag)))
+                elif isinstance(tag, dict):
+                    f.write('| {}\n'.format(' '.join([f"{k}:{v}" for k, v in tag.items()])))
+                else:
+                    print("wrong tag format!")
         #f_debug.close()
         f.close()
         logging.info('vw input written to %s, starting testing', f.name)
@@ -371,49 +389,56 @@ class Hybrid(BaseEstimator):
         """
         probas = self.predict_proba(X, y)
         #print("probas", probas)
+        # ============================
         result = []
-        # for ntag, proba in zip(ntags, probas):
-        #     cur_top_k = []
-        #     for i in range(ntag):
-        #         if self.probability:
-        #             tag = min(proba.keys(), key=lambda key: proba[key])
-        #             print(proba)
-        #             #tag = max(proba.keys(), key=lambda key: proba[key])
-        #         else:
-        #             tag = max(proba.keys(), key=lambda key: proba[key])
-        #             #print(tag, self.reverse_labels[int(tag)])
-        #             #print(self.reverse_labels)
-        #         proba.pop(tag)
-        #         cur_top_k.append(self.reverse_labels[int(tag)])
-        #     result.append(cur_top_k)
-        result = []
-        thresholds = [1.6, 1.5, 1.4, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2]
-        for th in thresholds:
-            temp_res = []
-            isdone = False
-            probas = self.predict_proba(X,y)
-            for ntag, proba in zip(ntags, probas):
-                cur_top = [] 
-                #print(proba[tag])
-                print("prob",len(proba), proba)
-                if (len(proba) == 0):
-                    break
-                tag = min(proba.keys(), key=lambda key: proba[key])
-                val = proba[tag]
-                norm = val
-                print("norm",norm)
-                while ((val - norm) < th):
-                #while (val < th):
-                    proba.pop(tag)
-                    cur_top.append(self.reverse_labels[int(tag)])
-                    #print("here!", cur_top)
-                    if (len(proba) > 0):
-                        tag = min(proba.keys(), key=lambda key:proba[key])
-                        val = proba[tag]
-                    else:
-                        break
-                temp_res.append(cur_top)
-            result.append(temp_res)
+        thresholds = [-1]
+        temp_res = []
+        for ntag, proba in zip(ntags, probas):
+            cur_top_k = []
+            for i in range(ntag):
+                if self.probability:
+                    tag = min(proba.keys(), key=lambda key: proba[key])
+                    print(proba)
+                    #tag = max(proba.keys(), key=lambda key: proba[key])
+                else:
+                    tag = max(proba.keys(), key=lambda key: proba[key])
+                    #print(tag, self.reverse_labels[int(tag)])
+                    #print(self.reverse_labels)
+                proba.pop(tag)
+                cur_top_k.append(self.reverse_labels[int(tag)])
+            temp_res.append(cur_top_k)
+        result.append(temp_res)
+        # ============================
+        # # ============================
+        # result = []
+        # thresholds = [1e-19, 1e-16, 1e-13, 1e-12, 0.7, 0.6, 0.5, 0.4, 0.35, 0.3, 0.25, 0.2]
+        # for th in thresholds:
+        #     temp_res = []
+        #     isdone = False
+        #     probas = self.predict_proba(X,y)
+        #     for ntag, proba in zip(ntags, probas):
+        #         cur_top = [] 
+        #         #print(proba[tag])
+        #         print("prob",len(proba), proba)
+        #         if (len(proba) == 0):
+        #             break
+        #         tag = min(proba.keys(), key=lambda key: proba[key])
+        #         val = proba[tag]
+        #         norm = val
+        #         print("norm",norm)
+        #         while ((val - norm) < th):
+        #         #while (val < th):
+        #             proba.pop(tag)
+        #             cur_top.append(self.reverse_labels[int(tag)])
+        #             #print("here!", cur_top)
+        #             if (len(proba) > 0):
+        #                 tag = min(proba.keys(), key=lambda key:proba[key])
+        #                 val = proba[tag]
+        #             else:
+        #                 break
+        #         temp_res.append(cur_top)
+        #     result.append(temp_res)
+        # # ============================
         
         return result, thresholds
 
