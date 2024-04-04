@@ -52,7 +52,7 @@ def process_all_yaml_files_in_parallel(directory):
         #         print(f'{idx} {result} generated an exception: {exc}')
 
 if __name__ == "__main__":
-    changesets_directory = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/changesets_SL/"
+    changesets_directory = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/changesets_ML_2/"
     
     # Process all YAML files in parallel
     process_all_yaml_files_in_parallel(changesets_directory)
