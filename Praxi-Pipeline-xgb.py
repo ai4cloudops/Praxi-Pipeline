@@ -1,7 +1,7 @@
 
 
-kubeflow_endpoint="https://praxi-xgb-incremental-kfp-endpoint-praxi-xgb-incremental.apps.nerc-ocp-test.rc.fas.harvard.edu"
-bearer_token = "sha256~wwkawUJv8w3WqJlcoDfaotsiZQjpRtiVX5pdZoqcuMM" # oc whoami --show-token
+kubeflow_endpoint="https://ds-pipeline-pipelines-definition-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org"
+bearer_token = "sha256~0BJfe202nyTu6hCk35UEGv4Z_-uSrC56KY_6mAo7xDI" # oc whoami --show-token
 
 from typing import NamedTuple
 
@@ -85,7 +85,7 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
     with open(args_path, 'wb') as argfile:
         pickle.dump(user_in, argfile)
     # time.sleep(5000)
-generate_changeset_op = kfp.components.create_component_from_func(generate_changesets, output_component_file='generate_changeset_component.yaml', base_image="zongshun96/prom-get-layers:0.02")
+generate_changeset_op = kfp.components.create_component_from_func(generate_changesets, output_component_file='generate_changeset_component.yaml', base_image="zongshun96/prom-get-layers:0.03")
 
 def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(str), output_text_path: OutputPath(str), output_args_path: OutputPath(str)):
     '''generate tagset from the changeset'''
@@ -274,6 +274,8 @@ def praxi_pipeline():
     # Pipeline design
     model = generate_loadmod_op().apply(use_image_pull_policy()).add_affinity(affinity)
     change_test = generate_changeset_op("test").apply(use_image_pull_policy()).add_affinity(affinity)
+    change_test.set_cpu_limit('4')
+    change_test.set_memory_limit('4096Mi')
     tag_test = generate_tagset_op(change_test.outputs["args"], change_test.outputs["cs"]).apply(use_image_pull_policy()).add_affinity(affinity)
     prediction = gen_prediction_op(model.outputs["clf"],model.outputs["index_tag_mapping"],model.outputs["tag_index_mapping"],model.outputs["index_label_mapping"],model.outputs["label_index_mapping"], tag_test.outputs["output_text"]).apply(use_image_pull_policy()).add_affinity(affinity)
 
@@ -282,7 +284,7 @@ if __name__ == "__main__":
     client = kfp_tekton.TektonClient(
             host=kubeflow_endpoint,
             existing_token=bearer_token,
-            ssl_ca_cert = '/home/ubuntu/cert/ca.crt'
+            # ssl_ca_cert = '/home/ubuntu/cert/ca.crt'
         )
     # client = kfp.Client(host=kfp_endpoint)
     client.create_run_from_pipeline_func(praxi_pipeline, arguments={})
