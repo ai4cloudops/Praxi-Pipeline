@@ -25,8 +25,34 @@ def load_model(clf_path: OutputPath(str), index_tag_mapping_path: OutputPath(str
                         region_name='us-east-1', 
                         aws_access_key_id="AKIAXECNQISLAUNL67HV", 
                         aws_secret_access_key="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",)
+    
+    model_localpath = '/pipelines/component/src/model.json'
+    index_tag_mapping_localpath = '/pipelines/component/src/index_tag_mapping'
+    tag_index_mapping_localpath = '/pipelines/component/src/tag_index_mapping'
+    index_label_mapping_localpath = '/pipelines/component/src/index_label_mapping'
+    label_index_mapping_localpath = '/pipelines/component/src/label_index_mapping'
 
-    s3.Bucket('praxi-model-xgb-02').download_file(Key='True25_1000submodel_verpak.zip', Filename=clf_path)
+    s3.Bucket('praxi-model-xgb-02').download_file(Key='model.json', Filename=clf_path)
+    # os.popen('cp {0} {1}'.format(model_localpath, clf_path))
+    s3.Bucket('praxi-model-xgb-02').download_file(Key='index_tag_mapping', Filename=index_tag_mapping_path)
+    # os.popen('cp {0} {1}'.format(index_tag_mapping_localpath, index_tag_mapping_path))
+    s3.Bucket('praxi-model-xgb-02').download_file(Key='tag_index_mapping', Filename=tag_index_mapping_path)
+    # os.popen('cp {0} {1}'.format(tag_index_mapping_localpath, tag_index_mapping_path))
+    s3.Bucket('praxi-model-xgb-02').download_file(Key='index_label_mapping', Filename=index_label_mapping_path)
+    # os.popen('cp {0} {1}'.format(index_label_mapping_localpath, index_label_mapping_path))
+    s3.Bucket('praxi-model-xgb-02').download_file(Key='label_index_mapping', Filename=label_index_mapping_path)
+    # os.popen('cp {0} {1}'.format(label_index_mapping_localpath, label_index_mapping_path))
+
+    # s3.Bucket('praxi-model-xgb-02').download_file(Key='model.json', Filename=model_localpath)
+    # os.popen('cp {0} {1}'.format(model_localpath, clf_path))
+    # s3.Bucket('praxi-model-xgb-02').download_file(Key='index_tag_mapping', Filename=index_tag_mapping_localpath)
+    # os.popen('cp {0} {1}'.format(index_tag_mapping_localpath, index_tag_mapping_path))
+    # s3.Bucket('praxi-model-xgb-02').download_file(Key='tag_index_mapping', Filename=tag_index_mapping_localpath)
+    # os.popen('cp {0} {1}'.format(tag_index_mapping_localpath, tag_index_mapping_path))
+    # s3.Bucket('praxi-model-xgb-02').download_file(Key='index_label_mapping', Filename=index_label_mapping_localpath)
+    # os.popen('cp {0} {1}'.format(index_label_mapping_localpath, index_label_mapping_path))
+    # s3.Bucket('praxi-model-xgb-02').download_file(Key='label_index_mapping', Filename=label_index_mapping_localpath)
+    # os.popen('cp {0} {1}'.format(label_index_mapping_localpath, label_index_mapping_path))
     # # time.sleep(50000)
 
 generate_loadmod_op = kfp.components.create_component_from_func(load_model, output_component_file='generate_loadmod_op.yaml', base_image="zongshun96/load_model_s3:0.01")
@@ -114,22 +140,17 @@ def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(s
 generate_tagset_op = kfp.components.create_component_from_func(generate_tagset, output_component_file='generate_tagset_component.yaml', base_image="zongshun96/taggen_openshift:0.01")
 
 
-def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str), prediction_path: OutputPath(str)):
+def gen_prediction(clf_path: InputPath(str), index_tag_mapping_path: InputPath(str), tag_index_mapping_path: InputPath(str), index_label_mapping_path: InputPath(str), label_index_mapping_path: InputPath(str), test_tags_path: InputPath(str), prediction_path: OutputPath(str)):
 # def gen_prediction(model_path: InputPath(str), modfile_path: InputPath(str), test_tags_path: InputPath(str), created_tags_path: InputPath(str), prediction_path: OutputPath(str)):
     '''generate prediction given model'''
     # import main
-    import zipfile
-    import os, sys
+    import os
     import yaml
     import pickle
     import time
     import tagsets_XGBoost
     import xgboost as xgb
     import boto3
-    import numpy as np
-    import tqdm
-    import multiprocessing as mp
-    from collections import defaultdict
     # time.sleep(5000)
 
     # args = main.get_inputs()
@@ -140,117 +161,40 @@ def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str),
     cwd = "/pipelines/component/cwd/"
     # cwd = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
 
+    # # load from previous component
+    # with open(test_tags_path, 'rb') as reader:
+    #     tagsets_l = pickle.load(reader)
+    tagset_files, feature_matrix, label_matrix = tagsets_XGBoost.tagsets_to_matrix(test_tags_path, index_tag_mapping_path, tag_index_mapping_path, index_label_mapping_path, label_index_mapping_path, train_flag=False, cwd=cwd)
+    BOW_XGB = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
+                      booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
+                      subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
+    BOW_XGB.load_model(clf_path)
 
 
-    # Path to the zip file (include the full path if the file is not in the current directory)
-    zip_file_path = clf_zip_path
-    # Directory where you want to extract the files
-    extract_to_dir = cwd
-    # Check if the extraction directory exists, if not, create it
-    if not os.path.exists(extract_to_dir):
-        os.makedirs(extract_to_dir)
-    # Unzipping the file
-    with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
-        zip_ref.extractall(extract_to_dir)
-    print(f'Files extracted to {extract_to_dir}')
+    # # debug
+    # with open("/pipelines/component/cwd/tagsets.log", 'w') as writer:
+    #     for tag_dict in tagsets_l:
+    #         writer.write(json.dumps(tag_dict) + '\n')
+    # time.sleep(5000)
+    # print("labs",clf.all_labels)
 
-    dataset = "data_4"
-    n_models = 50
-    shuffle_idx = 0
-    test_sample_batch_idx = 0
-    n_samples = 4
-    clf_njobs = 32
-    n_estimators = 100
-    depth = 1
-    input_size = None
-    dim_compact_factor = 1
-    tree_method = "exact"
-    max_bin = 1
-    with_filter = True
-    freq = 25
+    # prediction
+    pred_label_matrix = BOW_XGB.predict(feature_matrix)
+    results = tagsets_XGBoost.one_hot_to_names(index_label_mapping_path, pred_label_matrix)
+    # print("output", results)
 
-
-    # Data 
-    # tag_files_l = [tag_file for tag_file in os.listdir(test_tags_path) if tag_file[-3:] == 'tag']
-    # tag_files_l_of_l, step = [], len(tag_files_l)//mp.cpu_count()+1
-    # for i in range(0, len(tag_files_l), step):
-    #     tag_files_l_of_l.append(tag_files_l[i:i+step])
-    # pool = mp.Pool(processes=1)
-    # data_instance_d_l = [pool.apply_async(tagsets_XGBoost.map_tagfilesl, args=(test_tags_path, tag_files_l, cwd, True, freq)) for tag_files_l in tqdm(tag_files_l_of_l)]
-    # data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
-    # pool.close()
-    # pool.join()
-    # all_tags_set, all_label_set = set(), set()
-    # tags_by_instance_l, labels_by_instance_l = [], []
-    # tagset_files = []
-    # for data_instance_d in data_instance_d_l:
-    #     if len(data_instance_d) == 5:
-    #             tagset_files.extend(data_instance_d['tagset_files'])
-    #             all_tags_set.update(data_instance_d['all_tags_set'])
-    #             tags_by_instance_l.extend(data_instance_d['tags_by_instance_l'])
-    #             all_label_set.update(data_instance_d['all_label_set'])
-    #             labels_by_instance_l.extend(data_instance_d['labels_by_instance_l'])
-    
-    all_tags_set, all_label_set = set(), set()
-    tags_by_instance_l, labels_by_instance_l = [], []
-    tagset_files = []
-    with open(test_tags_path, 'rb') as reader:
-        tagsets_l = pickle.load(reader)
-        for tagset in tagsets_l:
-            tagset_files.append("filename")
-            instance_feature_tags_d = defaultdict(int)
-            # feature 
-            for tag_vs_count in tagset['tags']:
-                k,v = tag_vs_count.split(":")
-                all_tags_set.add(k)
-                instance_feature_tags_d[k] += int(v)
-            tags_by_instance_l.append(instance_feature_tags_d)
-            # label
-            if 'labels' in tagset:
-                all_label_set.update(tagset['labels'])
-                labels_by_instance_l.append(tagset['labels'])
-            else:
-                all_label_set.add(tagset['label'])
-                labels_by_instance_l.append([tagset['label']])
-
-
-    # Models
-    clf_path_l = []
-    for i in range(n_models):
-        clf_pathname = f"{cwd}/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/model_init.json"
-        if os.path.isfile(clf_pathname):
-            clf_path_l.append(clf_pathname)
-        else:
-            print(f"clf is missing: {clf_pathname}")
-            sys.exit(-1)
-
-    # Make inference
-    results = defaultdict(list)
-    for clf_idx, clf_path in enumerate(clf_path_l):
-        BOW_XGB = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
-                        booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
-                        subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
-        BOW_XGB.load_model(clf_path)
-        BOW_XGB.set_params(n_jobs=1)
-        feature_importance = BOW_XGB.feature_importances_
-
-        tag_files_l = [tag_file for tag_file in os.listdir(test_tags_path) if tag_file[-3:] == 'tag']
-        step = len(tag_files_l)
-        for batch_first_idx in range(0, len(tag_files_l), step):
-            tagset_files_used, feature_matrix, label_matrix, instance_row_idx_set, instance_row_count = tagsets_XGBoost.tagsets_to_matrix(test_tags_path, tag_files_l = tag_files_l[batch_first_idx:batch_first_idx+step], cwd=clf_path[:-15], all_tags_set=all_tags_set,all_label_set=all_label_set,tags_by_instance_l=tags_by_instance_l,labels_by_instance_l=labels_by_instance_l,tagset_files=tagset_files, feature_importance=feature_importance)
-            # tagset_files, feature_matrix, label_matrix = tagsets_XGBoost.tagsets_to_matrix(test_tags_path, index_tag_mapping_path, tag_index_mapping_path, index_label_mapping_path, label_index_mapping_path, train_flag=False, cwd=cwd)
-            if feature_matrix.size != 0:
-                # prediction
-                pred_label_matrix = BOW_XGB.predict(feature_matrix)
-                results = tagsets_XGBoost.merge_preds(results, tagsets_XGBoost.one_hot_to_names(f"{clf_path[:-15]}index_label_mapping", pred_label_matrix))
-
-        
-        print("clf"+str(clf_idx)+" pred done")
+    # # debug
+    # with open("/pipelines/component/cwd/summary.log", 'w') as writer:
+    #     main.print_multilabel_results(results, writer, args=clf.get_args())
+    # with open(index_label_mapping_path, 'rb') as fp:
+    #     labels = np.array(pickle.load(fp))
+    # tagsets_XGBoost.print_metrics(cwd, 'metrics_iter.out', test_label_matrix_iter, pred_label_matrix_iter, labels)
 
     # Pass data to next component
     with open(prediction_path, 'wb') as writer:
         pickle.dump(results, writer) 
     with open(cwd+"pred_l_dump", 'w') as writer:
+        # for pred in results:
         for pred in results.values():
             writer.write(f"{pred}\n")
     with open(cwd+"pred_d_dump", 'w') as writer:
