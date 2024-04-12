@@ -4,6 +4,8 @@ import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
 import sklearn.metrics as metrics
+from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.metrics import accuracy_score, f1_score, hamming_loss
 import scipy
 from pathlib import Path
 import multiprocessing as mp
@@ -352,7 +354,7 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
         t_mat_builder_t = time.time()
         op_durations["mat_builder"] += t_mat_builder_t-t_mat_builder_0
     instance_row_count = instance_row_idx+1
-    instance_row_idx_set = set(instance_row_idx_set)
+    # instance_row_idx_set = set(instance_row_idx_set)
 
     t_list_to_mat_0 = time.time()
     if instance_row_list:
@@ -379,97 +381,102 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
 
     # Label Matrix Generation
     label_matrix = np.array([])
-    # if not inference_flag:
-    #     removed_label_l = []
-    #     ## Handling Mapping
+    if not inference_flag:
+        removed_label_l = []
+        ## Handling Mapping
 
-    #     if train_flag and not iter_flag:  # generate initial mapping.
-    #         all_label_l = list(all_label_set)
-    #         label_index_mapping = {}
-    #         for idx, tag in enumerate(all_label_l):
-    #             label_index_mapping[tag] = idx
-    #         with open(index_label_mapping_path, 'wb') as fp:
-    #             pickle.dump(all_label_l, fp)
-    #         with open(label_index_mapping_path, 'wb') as fp:
-    #             pickle.dump(label_index_mapping, fp)
-    #         # with open(cwd+'removed_tags_l.txt', 'w') as f:
-    #         #     for line in all_label_l:
-    #         #         f.write(f"{line}\n")
-    #     elif train_flag and iter_flag:  # adding mapping.
-    #         with open(index_label_mapping_path, 'rb') as fp:
-    #             loaded_all_label_l = pickle.load(fp)
-    #             loaded_all_label_set = set(loaded_all_label_l)
-    #             new_label_set = all_label_set.difference(loaded_all_label_set)
-    #             all_label_l = loaded_all_label_l + list(new_label_set)
-    #             with open(index_label_mapping_iter_path, 'wb') as fp:
-    #                 pickle.dump(all_label_l, fp)
-    #         with open(label_index_mapping_path, 'rb') as fp:
-    #             label_index_mapping = pickle.load(fp)
-    #             for idx, tag in enumerate(all_label_l[len(loaded_all_label_l):]):
-    #                 label_index_mapping[tag] = idx+len(loaded_all_label_l)
-    #             with open(label_index_mapping_iter_path, 'wb') as fp:
-    #                 pickle.dump(label_index_mapping, fp)
-    #     elif not train_flag and iter_flag:  # load iter mapping.
-    #         with open(index_label_mapping_iter_path, 'rb') as fp:
-    #             all_label_l = pickle.load(fp)
-    #         with open(label_index_mapping_iter_path, 'rb') as fp:
-    #             label_index_mapping = pickle.load(fp)
-    #         with open(cwd+'loaded_index_label_mapping_iter.txt', 'w') as f:
-    #             for line in all_label_l:
-    #                 f.write(f"{line}\n")
-    #     else:  # not train_flag and not iter_flag: load initial mapping.
-    #         with open(index_label_mapping_path, 'rb') as fp:
-    #             all_label_l = pickle.load(fp)
-    #         with open(label_index_mapping_path, 'rb') as fp:
-    #             label_index_mapping = pickle.load(fp)
-    #         with open(cwd+'loaded_index_label_mapping.txt', 'w') as f:
-    #             for line in all_label_l:
-    #                 f.write(f"{line}\n")
-    #     ## Handling Label Matrix
-    #     instance_row_list = []
-    #     # label_matrix = np.zeros(len(all_label_l))
-    #     for instance_row_idx, labels in enumerate(labels_by_instance_l):
-    #         if instance_row_idx not in instance_row_idx_set:
-    #             continue
-    #         instance_row = np.zeros(len(all_label_l))
-    #         for label in labels:
-    #             if label in label_index_mapping:    # remove new labels
-    #                 instance_row[label_index_mapping[label]] = 1
-    #             else:
-    #                 removed_label_l.append(label)
-    #         else:
-    #             # instance_row_list.append(scipy.sparse.csr_matrix(instance_row))
-    #             instance_row_list.append(instance_row)
-    #             # label_matrix = np.vstack([label_matrix, instance_row])
-    #     if instance_row_list:
-    #         label_matrix = np.vstack(instance_row_list)
-    #     else:
-    #         label_matrix = np.array([])
-    #     with open(cwd+'removed_label_l', 'wb') as fp:
-    #         pickle.dump(removed_label_l, fp)
-    #     with open(cwd+'removed_label_l.txt', 'w') as f:
-    #         for line in removed_label_l:
-    #             f.write(f"{line}\n")
+        if train_flag and not iter_flag:  # generate initial mapping.
+            all_label_l = list(all_label_set)
+            label_index_mapping = {}
+            for idx, tag in enumerate(all_label_l):
+                label_index_mapping[tag] = idx
+            with open(index_label_mapping_path, 'wb') as fp:
+                pickle.dump(all_label_l, fp)
+            with open(label_index_mapping_path, 'wb') as fp:
+                pickle.dump(label_index_mapping, fp)
+            # with open(cwd+'removed_tags_l.txt', 'w') as f:
+            #     for line in all_label_l:
+            #         f.write(f"{line}\n")
+        elif train_flag and iter_flag:  # adding mapping.
+            with open(index_label_mapping_path, 'rb') as fp:
+                loaded_all_label_l = pickle.load(fp)
+                loaded_all_label_set = set(loaded_all_label_l)
+                new_label_set = all_label_set.difference(loaded_all_label_set)
+                all_label_l = loaded_all_label_l + list(new_label_set)
+                with open(index_label_mapping_iter_path, 'wb') as fp:
+                    pickle.dump(all_label_l, fp)
+            with open(label_index_mapping_path, 'rb') as fp:
+                label_index_mapping = pickle.load(fp)
+                for idx, tag in enumerate(all_label_l[len(loaded_all_label_l):]):
+                    label_index_mapping[tag] = idx+len(loaded_all_label_l)
+                with open(label_index_mapping_iter_path, 'wb') as fp:
+                    pickle.dump(label_index_mapping, fp)
+        elif not train_flag and iter_flag:  # load iter mapping.
+            with open(index_label_mapping_iter_path, 'rb') as fp:
+                all_label_l = pickle.load(fp)
+            with open(label_index_mapping_iter_path, 'rb') as fp:
+                label_index_mapping = pickle.load(fp)
+            with open(cwd+'loaded_index_label_mapping_iter.txt', 'w') as f:
+                for line in all_label_l:
+                    f.write(f"{line}\n")
+        else:  # not train_flag and not iter_flag: load initial mapping.
+            with open(index_label_mapping_path, 'rb') as fp:
+                all_label_l = pickle.load(fp)
+            with open(label_index_mapping_path, 'rb') as fp:
+                label_index_mapping = pickle.load(fp)
+            with open(cwd+'loaded_index_label_mapping.txt', 'w') as f:
+                for line in all_label_l:
+                    f.write(f"{line}\n")
+        ## Handling Label Matrix
+        instance_row_list = []
+        # label_matrix = np.zeros(len(all_label_l))
+        for instance_row_idx, labels in enumerate(labels_by_instance_l):
+            # if instance_row_idx not in set(instance_row_idx_set):
+            #     continue
+            instance_row = np.zeros(len(all_label_l))
+            for label in labels:
+                if label in label_index_mapping:    # remove new labels
+                    instance_row[label_index_mapping[label]] = 1
+                else:
+                    removed_label_l.append(label)
+            else:
+                # instance_row_list.append(scipy.sparse.csr_matrix(instance_row))
+                instance_row_list.append(instance_row)
+                # label_matrix = np.vstack([label_matrix, instance_row])
+        if instance_row_list:
+            label_matrix = np.vstack(instance_row_list)
+        else:
+            label_matrix = np.array([])
+        with open(cwd+'removed_label_l', 'wb') as fp:
+            pickle.dump(removed_label_l, fp)
+        with open(cwd+'removed_label_l.txt', 'w') as f:
+            for line in removed_label_l:
+                f.write(f"{line}\n")
     
-    return [tagset_files[instance_row_idx] for instance_row_idx in list(instance_row_idx_set)], feature_matrix, label_matrix, instance_row_idx_set, instance_row_count, op_durations
+    return [tagset_files[instance_row_idx] for instance_row_idx in instance_row_idx_set], feature_matrix, label_matrix, instance_row_idx_set, instance_row_count, op_durations
     # return tagset_files, None, label_matrix
 
-def one_hot_to_names(mapping_path, one_hot_matrix):
-    with open(mapping_path, 'rb') as fp:
-        mapping = pickle.load(fp)
+def one_hot_to_names(mapping_path, one_hot_matrix, mapping=None):
+    if mapping==None:
+        with open(mapping_path, 'rb') as fp:
+            mapping = pickle.load(fp)
     idxs_yx = np.nonzero(one_hot_matrix)
     labels = defaultdict(list)
     for entry_idx, (row_idx, col_idx) in enumerate(zip(idxs_yx[0],idxs_yx[1])):
         labels[int(row_idx)].append(mapping[col_idx])
     return labels
 
-def merge_preds(labels_1, labels_2):
-    labels = defaultdict(list)
-    for idx in labels_1.keys():
-        labels[idx].extend(labels_1[idx])
-    for idx in labels_2.keys():
-        labels[idx].extend(labels_2[idx])
-    return labels
+def merge_preds(labels_1, labels_2, labels_2_real_instance_row_idx_set=None):
+    # labels = defaultdict(list)
+    # for idx in labels_1.keys():
+    #     labels[idx].extend(labels_1[idx])
+    if labels_2_real_instance_row_idx_set == None:
+        for idx in labels_2.keys():
+            labels_1[idx].extend(labels_2[idx])
+    else:
+        for idx, real_idx in enumerate(labels_2_real_instance_row_idx_set):
+            labels_1[real_idx].extend(labels_2[idx])
+    return labels_1
 
 def print_metrics(cwd, outfile, y_true, y_pred, labels, op_durations=None):
     # with open(cwd+'index_label_mapping', 'rb') as fp:
@@ -742,156 +749,216 @@ def load_model(clf_path):
 
 
 if __name__ == "__main__":
-    op_durations = defaultdict(int)
-    t_0 = time.time()
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML_test_120/"
-    test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML/"
+    for iter_idx in range(1):
+        op_durations = defaultdict(int)
+        t_0 = time.time()
+        # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML_test_60/"
+        test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML/"
 
-    # cwd = "/home/cc/test"
+        # cwd = "/home/cc/test"
 
-    dataset = "data_4"
-    n_models = 1
-    shuffle_idx = 0
-    test_sample_batch_idx = 0
-    n_samples = 4
-    n_jobs = 1
-    clf_njobs = 32
-    n_estimators = 100
-    depth = 1
-    input_size = None
-    dim_compact_factor = 1
-    tree_method = "exact"
-    max_bin = 1
-    with_filter = True
-    freq = 25
-    cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts_online/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak_on_demand_expert/"
-    cwd_clf = "/home/cc/test"
-    Path(cwd).mkdir(parents=True, exist_ok=True)
-
-
-    # Data 
-    t_data_0 = time.time()
-    tag_files_l = [tag_file for tag_file in os.listdir(test_tags_path) if tag_file[-3:] == 'tag']
-    tag_files_l_of_l, step = [], len(tag_files_l)//mp.cpu_count()+1
-    for i in range(0, len(tag_files_l), step):
-        tag_files_l_of_l.append(tag_files_l[i:i+step])
-    pool = mp.Pool(processes=32)
-    data_instance_d_l = [pool.apply_async(map_tagfilesl, args=(test_tags_path, tag_files_l, cwd, True, freq)) for tag_files_l in tqdm(tag_files_l_of_l)]
-    data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
-    pool.close()
-    pool.join()
-    all_tags_set, all_label_set = set(), set()
-    tags_by_instance_l, labels_by_instance_l = [], []
-    tagset_files = []
-    for data_instance_d in data_instance_d_l:
-        if len(data_instance_d) == 5:
-                tagset_files.extend(data_instance_d['tagset_files'])
-                all_tags_set.update(data_instance_d['all_tags_set'])
-                tags_by_instance_l.extend(data_instance_d['tags_by_instance_l'])
-                all_label_set.update(data_instance_d['all_label_set'])
-                labels_by_instance_l.extend(data_instance_d['labels_by_instance_l'])
-    t_data_t = time.time()
-    op_durations["total_data_load__time"] = t_data_t-t_data_0
-
-    # Models
-    t_clf_path_0 = time.time()
-    clf_path_l = []
-    for i in range(n_models):
-        clf_pathname = f"{cwd_clf}/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/model_init.json"
-        if os.path.isfile(clf_pathname):
-            clf_path_l.append(clf_pathname)
-        else:
-            print(f"clf is missing: {clf_pathname}")
-            sys.exit(-1)
-    t_clf_path_t = time.time()
-    op_durations["total_clf_path_load__time"] = t_clf_path_t-t_clf_path_0
-
-    # Make inference
-    # label_matrix_list, pred_label_matrix_list, labels_list = [], [], []
-    # values_l_, pos_x_l_, pos_y_l_ = [],[],[]
-    results = defaultdict(list)
-    for clf_idx, clf_path in enumerate(clf_path_l):
-        with open(clf_path[:-15]+'index_label_mapping', 'rb') as fp:
-            clf_labels_l = pickle.load(fp)
-            # labels_list.append(np.array(clf_labels_l))
+        dataset = "data_4"
+        n_models = 1
+        shuffle_idx = 0
+        test_sample_batch_idx = 0
+        n_samples = 4
+        n_jobs = 1
+        clf_njobs = 32
+        n_estimators = 100
+        depth = 1
+        input_size = None
+        dim_compact_factor = 1
+        tree_method = "exact"
+        max_bin = 1
+        with_filter = True
+        freq = 25
+        cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts_online/correctness/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak_on_demand_expert/"
+        cwd_clf = "/home/cc/test"
+        Path(cwd).mkdir(parents=True, exist_ok=True)
 
 
-        t_per_clf_0 = time.time()
+        # Data 
+        t_data_0 = time.time()
+        tag_files_l = [tag_file for tag_file in os.listdir(test_tags_path) if tag_file[-3:] == 'tag']
+        tag_files_l_of_l, step = [], len(tag_files_l)//mp.cpu_count()+1
+        for i in range(0, len(tag_files_l), step):
+            tag_files_l_of_l.append(tag_files_l[i:i+step])
+        pool = mp.Pool(processes=32)
+        data_instance_d_l = [pool.apply_async(map_tagfilesl, args=(test_tags_path, tag_files_l, cwd, True, freq)) for tag_files_l in tqdm(tag_files_l_of_l)]
+        data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
+        pool.close()
+        pool.join()
+        all_tags_set, all_label_set = set(), set()
+        tags_by_instance_l, labels_by_instance_l = [], []
+        tagset_files = []
+        for data_instance_d in data_instance_d_l:
+            if len(data_instance_d) == 5:
+                    tagset_files.extend(data_instance_d['tagset_files'])
+                    all_tags_set.update(data_instance_d['all_tags_set'])
+                    tags_by_instance_l.extend(data_instance_d['tags_by_instance_l'])
+                    all_label_set.update(data_instance_d['all_label_set'])
+                    labels_by_instance_l.extend(data_instance_d['labels_by_instance_l'])
+        t_data_t = time.time()
+        op_durations["total_data_load__time"] = t_data_t-t_data_0
 
-        BOW_XGB = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
-                        booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
-                        subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
-        BOW_XGB.load_model(clf_path)
-        BOW_XGB.set_params(n_jobs=n_jobs)
-        feature_importance = BOW_XGB.feature_importances_
+        # Models
+        t_clf_path_0 = time.time()
+        clf_path_l = []
+        for i in range(n_models):
+            clf_pathname = f"{cwd_clf}/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/model_init.json"
+            if os.path.isfile(clf_pathname):
+                clf_path_l.append(clf_pathname)
+            else:
+                print(f"clf is missing: {clf_pathname}")
+                sys.exit(-1)
+        t_clf_path_t = time.time()
+        op_durations["total_clf_path_load__time"] = t_clf_path_t-t_clf_path_0
 
-        t_per_clf_loading_t = time.time()
-        op_durations[f"clf{clf_idx}_load_time"] = t_per_clf_loading_t-t_per_clf_0
-        op_durations["total_clf_load__time"] += t_per_clf_loading_t-t_per_clf_0
+        # Make inference
+        # label_matrix_list, pred_label_matrix_list, labels_list = [], [], []
+        # values_l_, pos_x_l_, pos_y_l_ = [],[],[]
+        predicted_labels_dict, true_labels_dict = defaultdict(list), defaultdict(list)
+        for clf_idx, clf_path in enumerate(clf_path_l):
+            with open(clf_path[:-15]+'index_label_mapping', 'rb') as fp:
+                clf_labels_l = pickle.load(fp)
+                # labels_list.append(np.array(clf_labels_l))
 
-        # label_matrix_list_per_clf, pred_label_matrix_list_per_clf = [],[]
-        pred_label_matrix_list_per_clf = []
-        step = len(tag_files_l)
-        for batch_first_idx in range(0, len(tag_files_l), step):
-            t_encoder_0 = time.time()
-            tagset_files_used, feature_matrix, label_matrix, instance_row_idx_set, instance_row_count, encoder_op_durations = tagsets_to_matrix(test_tags_path, tag_files_l = tag_files_l, cwd=clf_path[:-15], all_tags_set=all_tags_set,all_label_set=all_label_set,tags_by_instance_l=tags_by_instance_l,labels_by_instance_l=labels_by_instance_l,tagset_files=tagset_files, feature_importance=feature_importance)
-            # values_l_.extend(values_l)
-            # pos_x_l_.extend(pos_x_l)
-            # pos_y_l_.extend(pos_y_l)
-            t_encoder_t = time.time()
-            op_durations[f"encoder{clf_idx}_op_durations"] = encoder_op_durations
-            op_durations[f"encoder{clf_idx}_time"] += t_encoder_t-t_encoder_0
-            op_durations["total_encoder_time"] += t_encoder_t-t_encoder_0
-            t_inference_0 = time.time()
-            if feature_matrix.size != 0:
-                # prediction
-                pred_label_matrix = BOW_XGB.predict(feature_matrix)
-            t_inference_t = time.time()
-            op_durations[f"inference{clf_idx}_time"] += t_inference_t-t_inference_0
-            op_durations["total_inference_time"] += t_inference_t-t_inference_0
-            # !!!!!!!!!!!!!!!!!!!!!!!! fill zeros for samples without recogonizable features by this clf
-            all_label_len = len(clf_labels_l)
-            # new_label_matrix = np.vstack(np.zeros((instance_row_count, all_label_len)))
-            # for instance_row_idx, new_instance_row_idx in enumerate(list(instance_row_idx_set)):
-            #     new_label_matrix[new_instance_row_idx, :] = label_matrix[instance_row_idx, :]
-            # label_matrix = new_label_matrix
 
-            new_pred_label_matrix = np.vstack(np.zeros((instance_row_count, all_label_len)))
-            for instance_row_idx, new_instance_row_idx in enumerate(list(instance_row_idx_set)):
-                new_pred_label_matrix[new_instance_row_idx, :] = pred_label_matrix[instance_row_idx, :]
-            pred_label_matrix = new_pred_label_matrix
+            t_per_clf_0 = time.time()
 
-            # label_matrix_list_per_clf.append(label_matrix)
-            pred_label_matrix_list_per_clf.append(pred_label_matrix)
+            BOW_XGB = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
+                            booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
+                            subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
+            BOW_XGB.load_model(clf_path)
+            BOW_XGB.set_params(n_jobs=n_jobs)
+            feature_importance = BOW_XGB.feature_importances_
 
+            t_per_clf_loading_t = time.time()
+            op_durations[f"clf{clf_idx}_load_time"] = t_per_clf_loading_t-t_per_clf_0
+            op_durations["total_clf_load__time"] += t_per_clf_loading_t-t_per_clf_0
+
+            # label_matrix_list_per_clf, pred_label_matrix_list_per_clf = [],[]
+            pred_label_matrix_list_per_clf = []
+            step = len(tag_files_l)
+            for batch_first_idx in range(0, len(tag_files_l), step):
+                t_encoder_0 = time.time()
+                tagset_files_used, feature_matrix, label_matrix, instance_row_idx_set, instance_row_count, encoder_op_durations = tagsets_to_matrix(test_tags_path, tag_files_l = tag_files_l, cwd=clf_path[:-15], all_tags_set=all_tags_set,all_label_set=all_label_set,tags_by_instance_l=tags_by_instance_l,labels_by_instance_l=labels_by_instance_l,tagset_files=tagset_files, feature_importance=feature_importance, inference_flag=False)
+                # values_l_.extend(values_l)
+                # pos_x_l_.extend(pos_x_l)
+                # pos_y_l_.extend(pos_y_l)
+                t_encoder_t = time.time()
+                op_durations[f"encoder{clf_idx}_op_durations"] = encoder_op_durations
+                op_durations[f"encoder{clf_idx}_time"] += t_encoder_t-t_encoder_0
+                op_durations["total_encoder_time"] += t_encoder_t-t_encoder_0
+                t_inference_0 = time.time()
+                if feature_matrix.size != 0:
+                    # prediction
+                    pred_label_matrix = BOW_XGB.predict(feature_matrix)
+                t_inference_t = time.time()
+                op_durations[f"inference{clf_idx}_time"] += t_inference_t-t_inference_0
+                op_durations["total_inference_time"] += t_inference_t-t_inference_0
+                # # !!!!!!!!!!!!!!!!!!!!!!!! fill zeros for samples without recogonizable features by this clf
+                t_decoding_batch_0 = time.time()
+                # all_label_len = len(clf_labels_l)
+                # # new_label_matrix = np.vstack(np.zeros((instance_row_count, all_label_len)))
+                # # for instance_row_idx, new_instance_row_idx in enumerate(list(instance_row_idx_set)):
+                # #     new_label_matrix[new_instance_row_idx, :] = label_matrix[instance_row_idx, :]
+                # # label_matrix = new_label_matrix
+
+                # new_pred_label_matrix = np.vstack(np.zeros((instance_row_count, all_label_len)))
+                # for instance_row_idx, new_instance_row_idx in enumerate(list(instance_row_idx_set)):
+                #     new_pred_label_matrix[new_instance_row_idx, :] = pred_label_matrix[instance_row_idx, :]
+                # pred_label_matrix = new_pred_label_matrix
+
+                # # label_matrix_list_per_clf.append(label_matrix)
+                # pred_label_matrix_list_per_clf.append(pred_label_matrix)
+
+                if instance_row_idx_set:
+                    pred_label_name_d = one_hot_to_names('index_label_mapping', pred_label_matrix, mapping=clf_labels_l)
+                    predicted_labels_dict = merge_preds(predicted_labels_dict, pred_label_name_d, instance_row_idx_set)
+                    # print(0)
+                label_name_d = one_hot_to_names('index_label_mapping', label_matrix, mapping=clf_labels_l)
+                true_labels_dict = merge_preds(true_labels_dict, label_name_d)
+                    
+                t_decoding_batch_t = time.time()
+                op_durations[f"decoding{clf_idx}_time"] += t_decoding_batch_t-t_decoding_batch_0
+
+            
+            t_decoding_0 = time.time()
+            # # label_matrix_list_per_clf = np.vstack(label_matrix_list_per_clf)
+            # pred_label_matrix_list_per_clf = np.vstack(pred_label_matrix_list_per_clf)
+            # results = merge_preds(results, one_hot_to_names(clf_path[:-15]+'index_label_mapping', pred_label_matrix_list_per_clf))
+            # # label_matrix_list.append(label_matrix_list_per_clf)
+            # # pred_label_matrix_list.append(pred_label_matrix_list_per_clf)
+            t_decoding_t = time.time()
+            op_durations[f"decoding{clf_idx}_time"] += t_decoding_t-t_decoding_0
+
+
+            
+            t_per_clf_t = time.time()
+            op_durations[f"clf{clf_idx}_time"] = t_per_clf_t-t_per_clf_0
+            op_durations["total_clf_time"] += t_per_clf_t-t_per_clf_0
+            # print("clf"+str(clf_idx)+" pred done")
         
-        # label_matrix_list_per_clf = np.vstack(label_matrix_list_per_clf)
-        pred_label_matrix_list_per_clf = np.vstack(pred_label_matrix_list_per_clf)
-        results = merge_preds(results, one_hot_to_names(clf_path[:-15]+'index_label_mapping', pred_label_matrix_list_per_clf))
-        # label_matrix_list.append(label_matrix_list_per_clf)
-        # pred_label_matrix_list.append(pred_label_matrix_list_per_clf)
-
-
         
-        t_per_clf_t = time.time()
-        op_durations[f"clf{clf_idx}_time"] = t_per_clf_t-t_per_clf_0
-        op_durations["total_clf_time"] += t_per_clf_t-t_per_clf_0
-        print("clf"+str(clf_idx)+" pred done")
-    
-    
-    t_t = time.time()
-    # op_durations["len(values_l_)"] = len(values_l_)
-    # op_durations["len(pos_x_l_)"] = len(pos_x_l_)
-    # op_durations["len(pos_y_l_)"] = len(pos_y_l_)
-    op_durations["total_time"] = t_t-t_0
-    with open(cwd+"metrics.yaml", 'w') as writer:
-        yaml.dump(op_durations, writer)
-    print(results)
-    # label_matrix = np.hstack(label_matrix_list)
-    # pred_label_matrix = np.hstack(pred_label_matrix_list)
-    # labels = np.hstack(labels_list)
-    # print_metrics(cwd, 'metrics_pred.out', label_matrix, pred_label_matrix, labels, op_durations)
-    # print(one_hot_to_names(f"{clf_path[:-15]}index_label_mapping", pred_label_matrix))
+        t_t = time.time()
+        # op_durations["len(values_l_)"] = len(values_l_)
+        # op_durations["len(pos_x_l_)"] = len(pos_x_l_)
+        # op_durations["len(pos_y_l_)"] = len(pos_y_l_)
+        op_durations["total_time"] = t_t-t_0
+        with open(f"{cwd}metrics{iter_idx}.yaml", 'w') as writer:
+            yaml.dump(op_durations, writer)
+        # print(results)
+
+        # Example dictionaries
+        # true_labels_dict = {0: ['label1', 'label2'], 1: ['label1']}
+        # predicted_labels_dict = {0: ['label1', 'label2'], 1: ['label2']}
+
+        # Assuming all possible labels are known
+        all_labels = sorted(set(label for labels in true_labels_dict.values() for label in labels) | set(label for labels in predicted_labels_dict.values() for label in labels))
+
+        # Initialize the MultiLabelBinarizer
+        mlb = MultiLabelBinarizer(classes=all_labels)
+
+        # Initialize lists
+        true_labels_list = []
+        predicted_labels_list = []
+
+        # Sort the keys of true_labels_dict to ensure consistent order
+        sorted_keys = sorted(true_labels_dict.keys())
+
+        # Iterate over sorted keys
+        for key in sorted_keys:
+            # Append true labels directly
+            true_labels_list.append(true_labels_dict[key])
+            
+            # Check if key exists in predicted_labels_dict, if not add an empty list (indicating no labels)
+            if key in predicted_labels_dict:
+                predicted_labels_list.append(predicted_labels_dict[key])
+            else:
+                # Add a list representing no predictions (this will be converted to all zeros later)
+                predicted_labels_list.append([])
+
+        # Binarize the labels
+        true_binarized = mlb.fit_transform(true_labels_list)
+        predicted_binarized = mlb.transform(predicted_labels_list)
+
+        # Calculate metrics
+        accuracy = accuracy_score(true_binarized, predicted_binarized)
+        f1 = f1_score(true_binarized, predicted_binarized, average='macro')  # Use 'micro' or 'weighted' for alternative averaging
+        hamming = hamming_loss(true_binarized, predicted_binarized)
+
+        print(f"Accuracy: {accuracy}")
+        print(f"F1 Score: {f1}")
+        print(f"Hamming Loss: {hamming}")
+        print_metrics(cwd, 'metrics_pred.out', true_binarized, predicted_binarized, all_labels)
+
+
+        # label_matrix = np.hstack(label_matrix_list)
+        # pred_label_matrix = np.hstack(pred_label_matrix_list)
+        # labels = np.hstack(labels_list)
+        # print_metrics(cwd, 'metrics_pred.out', label_matrix, pred_label_matrix, labels, op_durations)
+        # print(one_hot_to_names(f"{clf_path[:-15]}index_label_mapping", pred_label_matrix))
 
 
 
