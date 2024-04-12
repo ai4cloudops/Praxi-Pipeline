@@ -68,32 +68,32 @@ def read_tokens(tags_path, tag_file, cwd, inference_flag, freq=100, tokens_filte
         with open(tags_path + tag_file, 'rb') as tf:
             # print(tag_file)
             # tagset_files.append(tag_file)
-            # local_all_tags_set = set()
-            # instance_feature_tags_d = defaultdict(int)
+            local_all_tags_set = set()
+            instance_feature_tags_d = defaultdict(int)
             tagset = yaml.load(tf, Loader=yaml.Loader)
             # tagset = json.load(tf)   
 
             # feature 
-            local_all_tags_set = set(tagset['tags'].keys())
-            instance_feature_tags_d = tagset['tags']
-            # filtered_tags_l = list()
-            # for k,v in tagset['tags'].items():
-            # # for tag_vs_count in tagset['tags']:
-            # #     k,v = tag_vs_count.split(":")
-            #     # if k not in tokens_filter_set:
-            #     #     local_all_tags_set.add(k)
-            #     #     instance_feature_tags_d[k] += int(v)
-            #     # else:
-            #     #     filtered_tags_l.append(k)
-            #     if k not in tokens_filter_set or tokens_filter_set[k] < freq:
-            #         local_all_tags_set.add(k)
-            #         instance_feature_tags_d[k] += int(v)
-            #     else:
-            #         filtered_tags_l.append(k)
-            # if local_all_tags_set == set():
-            #     logger = build_logger(tag_file, cwd+"logs/")
-            #     logger.info('%s', tag_file+" has empty tags after filtering: "+str(filtered_tags_l))
-            #     return ret
+            # local_all_tags_set = set(tagset['tags'].keys())
+            # instance_feature_tags_d = tagset['tags']
+            filtered_tags_l = list()
+            for k,v in tagset['tags'].items():
+            # for tag_vs_count in tagset['tags']:
+            #     k,v = tag_vs_count.split(":")
+                # if k not in tokens_filter_set:
+                #     local_all_tags_set.add(k)
+                #     instance_feature_tags_d[k] += int(v)
+                # else:
+                #     filtered_tags_l.append(k)
+                if k not in tokens_filter_set or tokens_filter_set[k] < freq:
+                    local_all_tags_set.add(k)
+                    instance_feature_tags_d[k] += int(v)
+                else:
+                    filtered_tags_l.append(k)
+            if local_all_tags_set == set():
+                logger = build_logger(tag_file, cwd+"logs/")
+                logger.info('%s', tag_file+" has empty tags after filtering: "+str(filtered_tags_l))
+                return ret
             ret["local_all_tags_set"] = local_all_tags_set
             ret["instance_feature_tags_d"] = instance_feature_tags_d
             # tags_by_instance_l.append(instance_feature_tags_d)
@@ -148,7 +148,7 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
         for i in range(0, len(tag_files_l), step):
             tag_files_l_of_l.append(tag_files_l[i:i+step])
         # pool = mp.Pool(processes=mp.cpu_count())
-        pool = mp.Pool(processes=32)
+        pool = mp.Pool(processes=1)
         data_instance_d_l = [pool.apply_async(map_tagfilesl, args=(tags_path, tag_files_l, cwd, inference_flag, freq), kwds={"tokens_filter_set": tokens_filter_set}) for tag_files_l in tqdm(tag_files_l_of_l)]
         data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
         pool.close()
@@ -830,14 +830,14 @@ def run_pred(cwd, clf_path_l, test_tags_path, n_jobs=64, n_estimators=100, packa
             #     tagsets_l = pickle.load(reader)
             t0 = time.time()
             # ########### convert from tag:count strings to encoding format
-            tagset_files, feature_matrix, label_matrix = tagsets_to_matrix(test_tags_path, tag_files_l = tag_files_l[batch_first_idx:batch_first_idx+step], inference_flag=False, cwd=clf_path[:-15], packages_select_set=packages_select_set, input_size=input_size, compact_factor=compact_factor, all_tags_set=all_tags_set,all_label_set=all_label_set,tags_by_instance_l=tags_by_instance_l,labels_by_instance_l=labels_by_instance_l,tagset_files=tagset_files) # get rid of "model_init.json" in the clf_path.
+            tagset_files_used, feature_matrix, label_matrix = tagsets_to_matrix(test_tags_path, tag_files_l = tag_files_l[batch_first_idx:batch_first_idx+step], inference_flag=False, cwd=clf_path[:-15], packages_select_set=packages_select_set, input_size=input_size, compact_factor=compact_factor, all_tags_set=all_tags_set,all_label_set=all_label_set,tags_by_instance_l=tags_by_instance_l,labels_by_instance_l=labels_by_instance_l,tagset_files=tagset_files) # get rid of "model_init.json" in the clf_path.
             # # ########### load a previously converted encoding format data obj
             # with open(test_tags_path+"feature_matrix.obj","rb") as filehandler:
             #     feature_matrix = pickle.load(filehandler)
             # with open(test_tags_path+"label_matrix.obj","rb") as filehandler:
             #     label_matrix = pickle.load(filehandler)
-            # with open(test_tags_path+"tagset_files.obj","rb") as filehandler:
-            #     tagset_files = pickle.load(filehandler)
+            # with open(test_tags_path+"tagset_files_used.obj","rb") as filehandler:
+            #     tagset_files_used = pickle.load(filehandler)
             # # ############################################
             t1 = time.time()
             op_durations[clf_path+"\n tagsets_to_matrix-testset"+str(batch_first_idx)+"/"+str(test_batch_count)] = t1-t0
@@ -845,7 +845,7 @@ def run_pred(cwd, clf_path_l, test_tags_path, n_jobs=64, n_estimators=100, packa
             op_durations[clf_path+"\n feature_matrix_size_1_"+str(batch_first_idx)+"/"+str(test_batch_count)] = feature_matrix.shape[1]
             op_durations[clf_path+"\n label_matrix_size_0_"+str(batch_first_idx)+"/"+str(test_batch_count)] = label_matrix.shape[0]
             op_durations[clf_path+"\n label_matrix_size_1_"+str(batch_first_idx)+"/"+str(test_batch_count)] = label_matrix.shape[1]
-            # op_durations[clf_path+"\n tagset_files"] = tagset_files
+            # op_durations[clf_path+"\n tagset_files_used"] = tagset_files_used
             # ######## save train_feature_matrix_init
             # with open(cwd+"train_feature_matrix_init_"+str(clf_idx)+".mat","wb") as filehandler:
             #     np.save(filehandler, feature_matrix)
@@ -896,8 +896,8 @@ def run_pred(cwd, clf_path_l, test_tags_path, n_jobs=64, n_estimators=100, packa
     #     pickle.dump(feature_matrix,filehandler)
     # with open(test_tags_path+"label_matrix.obj","wb") as filehandler:
     #     pickle.dump(label_matrix,filehandler)
-    # with open(test_tags_path+"tagset_files.obj","wb") as filehandler:
-    #     pickle.dump(tagset_files,filehandler)
+    # with open(test_tags_path+"tagset_files_used.obj","wb") as filehandler:
+    #     pickle.dump(tagset_files_used,filehandler)
     # # ############################################
 
     label_matrix = np.hstack(label_matrix_list)
@@ -985,7 +985,7 @@ if __name__ == "__main__":
             n_samples = n_samples_d[dataset]
             test_portion = test_portion_d[dataset]
             packages_l = packages_ll[dataset]
-            for (with_filter, freq) in [(True, 75), (True, 100)]:  # [(False, 100), (True, 50), (True, 75), (True, 100)]
+            for (with_filter, freq) in [[(False, 100),(True, 50),(True, 25),(True, 15)][2]]:  # [(False, 100), (True, 50), (True, 75), (True, 100)]
                 if with_filter:
                     # Consider a set with tokens to filter
                     with open(f"/home/cc/Praxi-study/Praxi-Pipeline/data/{dataset}/filters/tagsets_SL_tagnames_reoccurentcount_d", 'rb') as tf:
@@ -993,7 +993,7 @@ if __name__ == "__main__":
                 else:
                     tokens_filter_set = set()
                 for n_jobs in [32]:
-                    for n_models, test_batch_count in zip([[50,25,10,1][0]],[1,1,1,1,1,1,1,1,1,1]): # zip([50,25,10,1],[1,1,1,1]):
+                    for n_models, test_batch_count in zip([[50,25,10,1][3]],[1,1,1,1,1,1,1,1,1,1]): # zip([1000,750,500,50,25,10,1],[1,1,1,1]):
                         for n_estimators in [100]:
                             for depth in [1]:
                                 for tree_method in["exact"]: # "exact","approx","hist"
@@ -1080,8 +1080,8 @@ if __name__ == "__main__":
                                                             clf_path.append(clf_pathname)
                                                         else:
                                                             print(f"clf is missing! {clf_pathname}")
-                                                            # sys.exit(-1)
-                                                            break
+                                                            sys.exit(-1)
+                                                            # break
                                                     cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/"
                                                     # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
                                                     test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/tagsets_ML/"
