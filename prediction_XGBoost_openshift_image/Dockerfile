@@ -19,7 +19,8 @@ RUN  pip3 install --upgrade pip && pip3 install -r requirements.txt
 
 # Copy model and files into container image
 # COPY model /pipelines/component/src/model
-COPY function /pipelines/component/src
+# COPY /home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML_test /pipelines/component/src/data
+COPY function/verpak /pipelines/component/src
 RUN mkdir /pipelines/component/cwd
 RUN chmod 777 /pipelines/component/cwd
 # RUN mkdir /pipelines/component/cwd/model
