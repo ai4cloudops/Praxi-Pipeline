@@ -1,7 +1,7 @@
 
 
 kubeflow_endpoint="https://ds-pipeline-pipelines-definition-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org"
-bearer_token = "sha256~0BJfe202nyTu6hCk35UEGv4Z_-uSrC56KY_6mAo7xDI" # oc whoami --show-token
+bearer_token = "" # oc whoami --show-token
 
 from typing import NamedTuple
 
@@ -10,11 +10,12 @@ import kfp, kfp_tekton, kubernetes
 import kfp.dsl as dsl
 from kfp.components import InputPath, InputTextFile, OutputPath, OutputTextFile
 from kfp.components import func_to_container_op
+from kubernetes import client as k8s_client
 
 os.environ["DEFAULT_STORAGE_CLASS"] = "ocs-external-storagecluster-ceph-rbd"
 os.environ["DEFAULT_ACCESSMODES"] = "ReadWriteOnce"
 
-def load_model(clf_path: OutputPath(str), index_tag_mapping_path: OutputPath(str), tag_index_mapping_path: OutputPath(str), index_label_mapping_path: OutputPath(str), label_index_mapping_path: OutputPath(str)):
+def load_model(clf_path: OutputPath(str)):
     '''Loads the vw model file and Hybrid class object '''
     import boto3
     import os
@@ -23,43 +24,151 @@ def load_model(clf_path: OutputPath(str), index_tag_mapping_path: OutputPath(str
     
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
-                        aws_access_key_id="AKIAXECNQISLAUNL67HV", 
-                        aws_secret_access_key="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",)
+                        aws_access_key_id="", 
+                        aws_secret_access_key="",)
 
     s3.Bucket('praxi-model-xgb-02').download_file(Key='True25_1000submodel_verpak.zip', Filename=clf_path)
-    # # time.sleep(50000)
 
-generate_loadmod_op = kfp.components.create_component_from_func(load_model, output_component_file='generate_loadmod_op.yaml', base_image="zongshun96/load_model_s3:0.01")
+generate_loadmod_op = kfp.components.create_component_from_func(load_model, output_component_file='generate_loadmod_op.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/load_model_s3:0.01")
 
 
 def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: OutputPath(str)):
-    import read_layered_image
+    # import read_layered_image
     import pickle
     import time
     import yaml
     import boto3
-    # import os
-    # import json
+    import tarfile, json, os
+    # import requests
+    from pathlib import Path
+    from pprint import pprint
+    # sys.path.insert(0, "/home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/src")
+    import image_downloader
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
-                        aws_access_key_id="AKIAXECNQISLAUNL67HV", 
-                        aws_secret_access_key="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",)
-    
-    changesets_l = read_layered_image.run()
+                        aws_access_key_id="", 
+                        aws_secret_access_key="",)
+    # time.sleep(5000)
+
+    def get_free_filename(stub, directory, suffix=''):
+        """ Get a file name that is unique in the given directory
+        input: the "stub" (string you would like to be the beginning of the file
+            name), the name of the directory, and the suffix (denoting the file type)
+        output: file name using the stub and suffix that is currently unused
+            in the given directory
+        """
+        counter = 0
+        while True:
+            file_candidate = '{}{}-{}{}'.format(
+                str(directory), stub, counter, suffix)
+            if Path(file_candidate).exists():
+                counter += 1
+            else:  # No match found
+                print("get_free_filename no suffix")
+                Path(file_candidate).touch()
+                return file_candidate
+
+
+    # homed = "/home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/"
+    homed = "/pipelines/component/"
+    src = homed+"src/"
+    if not Path(src).exists():
+        Path(src).mkdir()
+        # os.chmod(src, 777)
+    cwd = homed+"cwd/"
+    if not Path(cwd).exists():
+        Path(cwd).mkdir()
+        # os.chmod(cwd, 777)
+
+    # # LOKI_TOKEN=$(oc whoami -t)
+    # # curl -H "Authorization: Bearer $LOKI_TOKEN" "https://grafana-open-cluster-management-observability.apps.nerc-ocp-infra.rc.fas.harvard.edu/api/datasources/proxy/1/api/v1/query" --data-urlencode 'query=kube_pod_container_info{namespace="ai4cloudops-f7f10d9"}' | jq
+
+    # grafana_addr = 'https://grafana-open-cluster-management-observability.apps.nerc-ocp-infra.rc.fas.harvard.edu/api/datasources/proxy/1/api/v1/query'
+
+    # headers={
+    #     'Authorization': 'Bearer sha256~1GInrC-5iKWU-HpwVLRmAzefAm64vsgEp3wNewZPNBw',
+    #     'Content-Type': 'application/x-www-form-urlencoded'
+    #     }
+
+    # name_space = "ai4cloudops-f7f10d9"
+    # params = {
+    #     "query": "kube_pod_container_info{namespace='"+name_space+"'}"
+    #     }
+
+    # kube_pod_container_info = requests.get(grafana_addr, params=params, headers=headers)
+    # image_name = "/".join(kube_pod_container_info.json()['data']['result'][0]['metric']['image'].split("/")[1:])
+
+    # image_name = "zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0"
+    image_name = "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4"
+    # image_name = "zongshun96/introspected_container:0.01"
+
+
+    image_layer_dir = cwd+"introspected_container"
+    image_downloader.download_image(repository=image_name, tag="latest", output_dir=image_layer_dir)
+
+
+    image_d = {}
+    image_meta_d = {}
+    with open(cwd+"logfile_reading_tar_introspected.log", "w") as log_file:
+        for root, subdirs, files in os.walk(image_layer_dir):
+            for file_name in files:
+                print(os.path.join(root, file_name))
+                # print(file_name)
+                if file_name == "manifest.json":
+                    # json_file = tar.extractfile(member)
+                    with open(os.path.join(root, file_name), "r") as json_file:
+                        content = json.load(json_file)
+                        image_meta_d[file_name] = content
+                        pprint(file_name, log_file)
+                        pprint(content, log_file)
+                        pprint("\n", log_file)
+                elif file_name[-6:] == "tar.gz":
+                    # tar_bytes = io.BytesIO(tar.extractfile(member).read())
+                    tar_file = os.path.join(root, file_name)
+                    inner_tar = tarfile.open(tar_file)
+                    image_d[file_name] = inner_tar.getnames()
+                    pprint(tar_file, log_file)
+                    pprint(inner_tar.getnames(), log_file)
+                    pprint("\n", log_file)
+                    inner_tar.close()
+
+    changesets_l = []             
+    changesets_dir = cwd+"changesets/"
+    if not Path(changesets_dir).exists():
+        Path(changesets_dir).mkdir()
+        # os.chmod(changesets_dir, 777)
+    with open(cwd+"logfile_changeset_gen_introspected.log", "w") as log_file:
+        for layer in image_meta_d["manifest.json"]["layers"]:
+            # yaml_in = {'open_time': open_time, 'close_time': close_time, 'label': label, 'changes': changes}
+            yaml_in = {'labels': ['unknown'], 'changes': image_d[f"{layer['digest'].replace(':', '_')}.tar.gz"]}
+            changeset_filename = get_free_filename("unknown", changesets_dir, ".yaml")
+            with open(changeset_filename, 'w') as outfile:
+                print("gen_changeset", os.path.dirname(outfile.name))
+                print("gen_changeset", changeset_filename)
+                yaml.dump(yaml_in, outfile, default_flow_style=False)
+            changesets_l.append(yaml_in)
+
+    # cs_dump_path = "/home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/cwd/changesets_l_dump"
+    # # cs_path = "/home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/cwd/unknown"
+    # with open(cs_dump_path, 'wb') as writer:
+    #     pickle.dump(changesets_l, writer)
+    # # for idx, changeset in enumerate(changesets_l):
+    # #     with open(cs_path+"-{%d}.yaml".format(idx), 'w') as writer:
+    # #         yaml.dump(changeset, writer, default_flow_style=False)
+
     # time.sleep(5000)
     # debug
     for ind, changeset in enumerate(changesets_l):
         with open("/pipelines/component/cwd/changesets/changesets_l"+str(ind)+".yaml", 'w') as writer:
             # yaml.dump(changesets_l, writer)
             yaml.dump(changeset, writer, default_flow_style=False)
-        s3.Bucket('praxi-interm-1').upload_file("/pipelines/component/cwd/changesets/changesets_l"+str(ind)+".yaml", "changesets_l"+str(ind)+".yaml")
+        # s3.Bucket('praxi-interm-1').upload_file("/pipelines/component/cwd/changesets/changesets_l"+str(ind)+".yaml", "changesets_l"+str(ind)+".yaml")
     # pass data to next component
     with open(cs_path, 'wb') as writer:
         pickle.dump(changesets_l, writer)
     with open(args_path, 'wb') as argfile:
         pickle.dump(user_in, argfile)
-    # time.sleep(5000)
-generate_changeset_op = kfp.components.create_component_from_func(generate_changesets, output_component_file='generate_changeset_component.yaml', base_image="zongshun96/prom-get-layers:0.03")
+generate_changeset_op = kfp.components.create_component_from_func(generate_changesets, output_component_file='generate_changeset_component.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/prom-get-layers:1.0")
 
 def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(str), output_text_path: OutputPath(str), output_args_path: OutputPath(str)):
     '''generate tagset from the changeset'''
@@ -73,8 +182,8 @@ def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(s
     # from function import changeset_gen
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
-                        aws_access_key_id="AKIAXECNQISLAUNL67HV", 
-                        aws_secret_access_key="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",)
+                        aws_access_key_id="", 
+                        aws_secret_access_key="",)
 
     # Load data from previous component
     with open(input_args_path, 'rb') as in_argfile:
@@ -85,10 +194,13 @@ def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(s
     # Tagset Generator
     tagsets_l = []
     for changeset in changesets_l:
-        # tags = tagset_gen.get_columbus_tags(changeset['changes'])
-        tag_dict = columbus(changeset['changes'], freq_threshold=2)
-        tags = ['{}:{}'.format(tag, freq) for tag, freq in tag_dict.items()]
-        cur_dict = {'labels': changeset['labels'], 'tags': tags}
+        # # tags = tagset_gen.get_columbus_tags(changeset['changes'])
+        # tag_dict = columbus(changeset['changes'], freq_threshold=2)
+        # tags = ['{}:{}'.format(tag, freq) for tag, freq in tag_dict.items()]
+        # cur_dict = {'labels': changeset['labels'], 'tags': tags}
+        tag_dict = columbus(changeset['changes'], freq_threshold=1)
+        # tags = ['{}:{}'.format(tag, freq) for tag, freq in tag_dict.items()]
+        cur_dict = {'labels': changeset['labels'], 'tags': tag_dict}
         tagsets_l.append(cur_dict)
 
     # Debug
@@ -98,9 +210,9 @@ def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(s
     for ind, tag_dict in enumerate(tagsets_l):
         with open("/pipelines/component/cwd/tagsets_"+str(ind)+".tag", 'w') as writer:
             writer.write(json.dumps(tag_dict) + '\n')
-        s3.Bucket('praxi-interm-1').upload_file("/pipelines/component/cwd/tagsets_"+str(ind)+".tag", "tagsets_"+str(ind)+".tag")
-    # time.sleep(5000)
+        # s3.Bucket('praxi-interm-1').upload_file("/pipelines/component/cwd/tagsets_"+str(ind)+".tag", "tagsets_"+str(ind)+".tag")
 
+    # time.sleep(5000)
     # Pass data to next component
     # for ind, tag_dict in enumerate(tagsets_l):
     #     with open(output_text_path+"/tagsets_"+str(ind)+".tag", 'w') as writer:
@@ -111,7 +223,7 @@ def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(s
         pickle.dump(tagsets_l, writer)
     with open(output_args_path, 'wb') as argfile:
         pickle.dump(user_in, argfile)
-generate_tagset_op = kfp.components.create_component_from_func(generate_tagset, output_component_file='generate_tagset_component.yaml', base_image="zongshun96/taggen_openshift:0.01")
+generate_tagset_op = kfp.components.create_component_from_func(generate_tagset, output_component_file='generate_tagset_component.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/taggen_openshift:0.01")
 
 
 def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str), prediction_path: OutputPath(str)):
@@ -120,23 +232,28 @@ def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str),
     # import main
     import zipfile
     import os, sys
+    from pathlib import Path
     import yaml
     import pickle
     import time
-    import tagsets_XGBoost
+    import tagsets_XGBoost_pickCVbatch_on_demand_expert
     import xgboost as xgb
     import boto3
     import numpy as np
-    import tqdm
+    # import tqdm
     import multiprocessing as mp
     from collections import defaultdict
     # time.sleep(5000)
 
+
+    op_durations = defaultdict(int)
+    t_0 = time.time()
+
     # args = main.get_inputs()
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
-                        aws_access_key_id="AKIAXECNQISLAUNL67HV", 
-                        aws_secret_access_key="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",)
+                        aws_access_key_id="", 
+                        aws_secret_access_key="",)
     cwd = "/pipelines/component/cwd/"
     # cwd = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
 
@@ -145,20 +262,22 @@ def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str),
     # Path to the zip file (include the full path if the file is not in the current directory)
     zip_file_path = clf_zip_path
     # Directory where you want to extract the files
-    extract_to_dir = cwd
+    cwd_clf = cwd
     # Check if the extraction directory exists, if not, create it
-    if not os.path.exists(extract_to_dir):
-        os.makedirs(extract_to_dir)
+    if not os.path.exists(cwd_clf):
+        os.makedirs(cwd_clf)
     # Unzipping the file
     with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
-        zip_ref.extractall(extract_to_dir)
-    print(f'Files extracted to {extract_to_dir}')
+        zip_ref.extractall(cwd_clf)
+    print(f'Files extracted to {cwd_clf}')
+
 
     dataset = "data_4"
-    n_models = 50
+    n_models = 1000
     shuffle_idx = 0
     test_sample_batch_idx = 0
     n_samples = 4
+    n_jobs = 1
     clf_njobs = 32
     n_estimators = 100
     depth = 1
@@ -168,15 +287,18 @@ def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str),
     max_bin = 1
     with_filter = True
     freq = 25
+    output_cwd = f"{cwd}/output/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak_on_demand_expert/"
+    Path(output_cwd).mkdir(parents=True, exist_ok=True)
 
 
     # Data 
+    # t_data_0 = time.time()
     # tag_files_l = [tag_file for tag_file in os.listdir(test_tags_path) if tag_file[-3:] == 'tag']
     # tag_files_l_of_l, step = [], len(tag_files_l)//mp.cpu_count()+1
     # for i in range(0, len(tag_files_l), step):
     #     tag_files_l_of_l.append(tag_files_l[i:i+step])
     # pool = mp.Pool(processes=1)
-    # data_instance_d_l = [pool.apply_async(tagsets_XGBoost.map_tagfilesl, args=(test_tags_path, tag_files_l, cwd, True, freq)) for tag_files_l in tqdm(tag_files_l_of_l)]
+    # data_instance_d_l = [pool.apply_async(map_tagfilesl, args=(test_tags_path, tag_files_l, cwd, True, freq)) for tag_files_l in tqdm(tag_files_l_of_l)]
     # data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
     # pool.close()
     # pool.join()
@@ -191,6 +313,7 @@ def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str),
     #             all_label_set.update(data_instance_d['all_label_set'])
     #             labels_by_instance_l.extend(data_instance_d['labels_by_instance_l'])
     
+    t_data_0 = time.time()
     all_tags_set, all_label_set = set(), set()
     tags_by_instance_l, labels_by_instance_l = [], []
     tagset_files = []
@@ -199,9 +322,12 @@ def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str),
         for tagset in tagsets_l:
             tagset_files.append("filename")
             instance_feature_tags_d = defaultdict(int)
-            # feature 
-            for tag_vs_count in tagset['tags']:
-                k,v = tag_vs_count.split(":")
+            # # feature 
+            # for tag_vs_count in tagset['tags']:
+            #     k,v = tag_vs_count.split(":")
+            #     all_tags_set.add(k)
+            #     instance_feature_tags_d[k] += int(v)
+            for k, v in tagset['tags'].items():
                 all_tags_set.add(k)
                 instance_feature_tags_d[k] += int(v)
             tags_by_instance_l.append(instance_feature_tags_d)
@@ -212,58 +338,147 @@ def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str),
             else:
                 all_label_set.add(tagset['label'])
                 labels_by_instance_l.append([tagset['label']])
+    t_data_t = time.time()
+    op_durations["total_data_load__time"] = t_data_t-t_data_0
+    # debugging
+    with open(f"{output_cwd}/labels_by_instance_l.yaml", 'w') as writer:
+        yaml.dump(labels_by_instance_l, writer)
+    with open(f"{output_cwd}/tags_by_instance_l.yaml", 'w') as writer:
+        yaml.dump(tags_by_instance_l, writer)
 
+    # time.sleep(5000)
 
     # Models
+    t_clf_path_0 = time.time()
     clf_path_l = []
     for i in range(n_models):
-        clf_pathname = f"{cwd}/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/model_init.json"
+        clf_pathname = f"{cwd_clf}/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/model_init.json"
         if os.path.isfile(clf_pathname):
             clf_path_l.append(clf_pathname)
         else:
             print(f"clf is missing: {clf_pathname}")
             sys.exit(-1)
+    t_clf_path_t = time.time()
+    op_durations["total_clf_path_load__time"] = t_clf_path_t-t_clf_path_0
+    with open(f"{output_cwd}/clf_path_l.yaml", 'w') as writer:
+        yaml.dump(clf_path_l, writer)
+    # print(clf_path_l)
+    
+    # time.sleep(5000)
 
     # Make inference
-    results = defaultdict(list)
+    # label_matrix_list, pred_label_matrix_list, labels_list = [], [], []
+    # values_l_, pos_x_l_, pos_y_l_ = [],[],[]
+    predicted_labels_dict, true_labels_dict = defaultdict(list), defaultdict(list)
     for clf_idx, clf_path in enumerate(clf_path_l):
+        with open(clf_path[:-15]+'index_label_mapping', 'rb') as fp:
+            clf_labels_l = pickle.load(fp)
+            # labels_list.append(np.array(clf_labels_l))
+
+
+        t_per_clf_0 = time.time()
+
         BOW_XGB = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
                         booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
                         subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
         BOW_XGB.load_model(clf_path)
-        BOW_XGB.set_params(n_jobs=1)
+        BOW_XGB.set_params(n_jobs=n_jobs)
         feature_importance = BOW_XGB.feature_importances_
 
-        tag_files_l = [tag_file for tag_file in os.listdir(test_tags_path) if tag_file[-3:] == 'tag']
-        step = len(tag_files_l)
-        for batch_first_idx in range(0, len(tag_files_l), step):
-            tagset_files_used, feature_matrix, label_matrix, instance_row_idx_set, instance_row_count = tagsets_XGBoost.tagsets_to_matrix(test_tags_path, tag_files_l = tag_files_l[batch_first_idx:batch_first_idx+step], cwd=clf_path[:-15], all_tags_set=all_tags_set,all_label_set=all_label_set,tags_by_instance_l=tags_by_instance_l,labels_by_instance_l=labels_by_instance_l,tagset_files=tagset_files, feature_importance=feature_importance)
-            # tagset_files, feature_matrix, label_matrix = tagsets_XGBoost.tagsets_to_matrix(test_tags_path, index_tag_mapping_path, tag_index_mapping_path, index_label_mapping_path, label_index_mapping_path, train_flag=False, cwd=cwd)
+        t_per_clf_loading_t = time.time()
+        op_durations[f"clf{clf_idx}_load_time"] = t_per_clf_loading_t-t_per_clf_0
+        op_durations["total_clf_load__time"] += t_per_clf_loading_t-t_per_clf_0
+
+        # # label_matrix_list_per_clf, pred_label_matrix_list_per_clf = [],[]
+        # pred_label_matrix_list_per_clf = []
+        # step = len(tag_files_l)
+        for batch_first_idx in range(0, 1):
+            t_encoder_0 = time.time()
+            tagset_files_used, feature_matrix, label_matrix, instance_row_idx_set, instance_row_count, encoder_op_durations = tagsets_XGBoost_pickCVbatch_on_demand_expert.tagsets_to_matrix(test_tags_path, cwd=clf_path[:-15], all_tags_set=all_tags_set,all_label_set=all_label_set,tags_by_instance_l=tags_by_instance_l,labels_by_instance_l=labels_by_instance_l,tagset_files=tagset_files, feature_importance=feature_importance)
+            # values_l_.extend(values_l)
+            # pos_x_l_.extend(pos_x_l)
+            # pos_y_l_.extend(pos_y_l)
+            t_encoder_t = time.time()
+            op_durations[f"encoder{clf_idx}_op_durations"] = encoder_op_durations
+            op_durations[f"encoder{clf_idx}_time"] += t_encoder_t-t_encoder_0
+            op_durations["total_encoder_time"] += t_encoder_t-t_encoder_0
+            t_inference_0 = time.time()
             if feature_matrix.size != 0:
                 # prediction
                 pred_label_matrix = BOW_XGB.predict(feature_matrix)
-                results = tagsets_XGBoost.merge_preds(results, tagsets_XGBoost.one_hot_to_names(f"{clf_path[:-15]}index_label_mapping", pred_label_matrix))
+            t_inference_t = time.time()
+            op_durations[f"inference{clf_idx}_time"] += t_inference_t-t_inference_0
+            op_durations["total_inference_time"] += t_inference_t-t_inference_0
+            # # !!!!!!!!!!!!!!!!!!!!!!!! fill zeros for samples without recogonizable features by this clf
+            t_decoding_batch_0 = time.time()
+            # all_label_len = len(clf_labels_l)
+            # # new_label_matrix = np.vstack(np.zeros((instance_row_count, all_label_len)))
+            # # for instance_row_idx, new_instance_row_idx in enumerate(list(instance_row_idx_set)):
+            # #     new_label_matrix[new_instance_row_idx, :] = label_matrix[instance_row_idx, :]
+            # # label_matrix = new_label_matrix
+
+            # new_pred_label_matrix = np.vstack(np.zeros((instance_row_count, all_label_len)))
+            # for instance_row_idx, new_instance_row_idx in enumerate(list(instance_row_idx_set)):
+            #     new_pred_label_matrix[new_instance_row_idx, :] = pred_label_matrix[instance_row_idx, :]
+            # pred_label_matrix = new_pred_label_matrix
+
+            # # label_matrix_list_per_clf.append(label_matrix)
+            # pred_label_matrix_list_per_clf.append(pred_label_matrix)
+
+            if instance_row_idx_set:
+                pred_label_name_d = tagsets_XGBoost_pickCVbatch_on_demand_expert.one_hot_to_names('index_label_mapping', pred_label_matrix, mapping=clf_labels_l)
+                predicted_labels_dict = tagsets_XGBoost_pickCVbatch_on_demand_expert.merge_preds(predicted_labels_dict, pred_label_name_d, instance_row_idx_set)
+                # print(0)
+            # label_name_d = one_hot_to_names('index_label_mapping', label_matrix, mapping=clf_labels_l)
+            # true_labels_dict = merge_preds(true_labels_dict, label_name_d)
+                
+            t_decoding_batch_t = time.time()
+            op_durations[f"decoding{clf_idx}_time"] += t_decoding_batch_t-t_decoding_batch_0
 
         
-        print("clf"+str(clf_idx)+" pred done")
+        t_decoding_0 = time.time()
+        # # label_matrix_list_per_clf = np.vstack(label_matrix_list_per_clf)
+        # pred_label_matrix_list_per_clf = np.vstack(pred_label_matrix_list_per_clf)
+        # results = merge_preds(results, one_hot_to_names(clf_path[:-15]+'index_label_mapping', pred_label_matrix_list_per_clf))
+        # # label_matrix_list.append(label_matrix_list_per_clf)
+        # # pred_label_matrix_list.append(pred_label_matrix_list_per_clf)
+        t_decoding_t = time.time()
+        op_durations[f"decoding{clf_idx}_time"] += t_decoding_t-t_decoding_0
+
+
+        
+        t_per_clf_t = time.time()
+        op_durations[f"clf{clf_idx}_time"] = t_per_clf_t-t_per_clf_0
+        op_durations["total_clf_time"] += t_per_clf_t-t_per_clf_0
+        # print("clf"+str(clf_idx)+" pred done")
+        
+        
+    t_t = time.time()
+    # op_durations["len(values_l_)"] = len(values_l_)
+    # op_durations["len(pos_x_l_)"] = len(pos_x_l_)
+    # op_durations["len(pos_y_l_)"] = len(pos_y_l_)
+    op_durations["total_time"] = t_t-t_0
+    with open(f"{output_cwd}metrics.yaml", 'w') as writer:
+        yaml.dump(op_durations, writer)
+    # print(predicted_labels_dict)
 
     # Pass data to next component
     with open(prediction_path, 'wb') as writer:
-        pickle.dump(results, writer) 
-    with open(cwd+"pred_l_dump", 'w') as writer:
-        for pred in results.values():
+        pickle.dump(predicted_labels_dict, writer) 
+    with open(output_cwd+"pred_l_dump", 'w') as writer:
+        for pred in predicted_labels_dict.values():
             writer.write(f"{pred}\n")
-    with open(cwd+"pred_d_dump", 'w') as writer:
+    with open(output_cwd+"pred_d_dump", 'w') as writer:
         results_d = {}
-        for k,v in results.items():
+        for k,v in predicted_labels_dict.items():
             results_d[int(k)] = v
         yaml.dump(results_d, writer)
-    s3.Bucket('praxi-interm-1').upload_file(cwd+"pred_l_dump", "pred_l_dump")
-    s3.Bucket('praxi-interm-1').upload_file(cwd+"pred_d_dump", "pred_d_dump")
+    s3.Bucket('praxi-interm-1').upload_file(output_cwd+"pred_l_dump", "pred_l_dump")
+    s3.Bucket('praxi-interm-1').upload_file(output_cwd+"pred_d_dump", "pred_d_dump")
 
     # debug
     # time.sleep(5000)
-gen_prediction_op = kfp.components.create_component_from_func(gen_prediction, output_component_file='generate_pred_component.yaml', base_image="zongshun96/prediction_xgb_openshift:0.01") 
+gen_prediction_op = kfp.components.create_component_from_func(gen_prediction, output_component_file='generate_pred_component.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/prediction_xgb_openshift:1.0") 
 
 
 # # Reading bigger data
@@ -277,8 +492,17 @@ gen_prediction_op = kfp.components.create_component_from_func(gen_prediction, ou
 def add_node_selector(label_name: str, label_value: str, container_op: dsl.ContainerOp) -> None:
     container_op.add_node_selector_constraint(label_name=label_name, label_values=label_value)
 
+def use_image_pull_secret(op):
+    """Function to apply the imagePullSecrets to the pod spec."""
+    from kubernetes.client.models import V1Pod, V1PodSpec, V1ObjectMeta
+
+    pod_spec = V1Pod(spec=V1PodSpec(image_pull_secrets=[{"name": "my-registry-secret"}]))
+    op.pod_spec = pod_spec
+    return op
+
 def use_image_pull_policy(image_pull_policy='Always'):
     def _use_image_pull_policy(task):
+        # task.container.apply(use_image_pull_secret)
         task.container.set_image_pull_policy(image_pull_policy)
         return task
     return _use_image_pull_policy
@@ -327,13 +551,25 @@ def praxi_pipeline():
     affinity = kubernetes.client.models.V1Affinity(node_affinity=node_affinity)
 
 
+    dsl.get_pipeline_conf().set_image_pull_secrets([k8s_client.V1ObjectReference(name="my-registry-secret"),k8s_client.V1ObjectReference(name="regcred")])
+
     # Pipeline design
     model = generate_loadmod_op().apply(use_image_pull_policy()).add_affinity(affinity)
     change_test = generate_changeset_op("test").apply(use_image_pull_policy()).add_affinity(affinity)
     change_test.set_cpu_limit('4')
-    change_test.set_memory_limit('4096Mi')
+    change_test.set_cpu_request('4')
+    change_test.set_memory_limit('5120Mi')
+    change_test.set_memory_request('5120Mi')
     tag_test = generate_tagset_op(change_test.outputs["args"], change_test.outputs["cs"]).apply(use_image_pull_policy()).add_affinity(affinity)
-    prediction = gen_prediction_op(model.outputs["clf"],model.outputs["index_tag_mapping"],model.outputs["tag_index_mapping"],model.outputs["index_label_mapping"],model.outputs["label_index_mapping"], tag_test.outputs["output_text"]).apply(use_image_pull_policy()).add_affinity(affinity)
+    tag_test.set_cpu_limit('4')
+    tag_test.set_cpu_request('4')
+    tag_test.set_memory_limit('5120Mi')
+    tag_test.set_memory_request('5120Mi')
+    prediction = gen_prediction_op(model.outputs["clf"], tag_test.outputs["output_text"]).apply(use_image_pull_policy()).add_affinity(affinity)
+    prediction.set_cpu_limit('4')
+    prediction.set_cpu_request('4')
+    prediction.set_memory_limit('5120Mi')
+    prediction.set_memory_request('5120Mi')
 
 if __name__ == "__main__":
 

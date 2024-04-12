@@ -1,7 +1,7 @@
 
 
 kubeflow_endpoint="https://ds-pipeline-pipelines-definition-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org"
-bearer_token = "sha256~0BJfe202nyTu6hCk35UEGv4Z_-uSrC56KY_6mAo7xDI" # oc whoami --show-token
+bearer_token = "" # oc whoami --show-token
 
 from typing import NamedTuple
 
@@ -10,6 +10,7 @@ import kfp, kfp_tekton, kubernetes
 import kfp.dsl as dsl
 from kfp.components import InputPath, InputTextFile, OutputPath, OutputTextFile
 from kfp.components import func_to_container_op
+from kubernetes import client as k8s_client
 
 os.environ["DEFAULT_STORAGE_CLASS"] = "ocs-external-storagecluster-ceph-rbd"
 os.environ["DEFAULT_ACCESSMODES"] = "ReadWriteOnce"
@@ -23,8 +24,8 @@ def load_model(clf_path: OutputPath(str), index_tag_mapping_path: OutputPath(str
     
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
-                        aws_access_key_id="AKIAXECNQISLAUNL67HV", 
-                        aws_secret_access_key="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",)
+                        aws_access_key_id="", 
+                        aws_secret_access_key="",)
     
     model_localpath = '/pipelines/component/src/model.json'
     index_tag_mapping_localpath = '/pipelines/component/src/index_tag_mapping'
@@ -55,7 +56,7 @@ def load_model(clf_path: OutputPath(str), index_tag_mapping_path: OutputPath(str
     # os.popen('cp {0} {1}'.format(label_index_mapping_localpath, label_index_mapping_path))
     # # time.sleep(50000)
 
-generate_loadmod_op = kfp.components.create_component_from_func(load_model, output_component_file='generate_loadmod_op.yaml', base_image="zongshun96/load_model_s3:0.01")
+generate_loadmod_op = kfp.components.create_component_from_func(load_model, output_component_file='generate_loadmod_op.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/load_model_s3:0.01")
 
 
 def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: OutputPath(str)):
@@ -68,8 +69,8 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
     # import json
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
-                        aws_access_key_id="AKIAXECNQISLAUNL67HV", 
-                        aws_secret_access_key="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",)
+                        aws_access_key_id="", 
+                        aws_secret_access_key="",)
     
     changesets_l = read_layered_image.run()
     # time.sleep(5000)
@@ -85,7 +86,7 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
     with open(args_path, 'wb') as argfile:
         pickle.dump(user_in, argfile)
     # time.sleep(5000)
-generate_changeset_op = kfp.components.create_component_from_func(generate_changesets, output_component_file='generate_changeset_component.yaml', base_image="zongshun96/prom-get-layers:0.03")
+generate_changeset_op = kfp.components.create_component_from_func(generate_changesets, output_component_file='generate_changeset_component.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/prom-get-layers:0.03")
 
 def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(str), output_text_path: OutputPath(str), output_args_path: OutputPath(str)):
     '''generate tagset from the changeset'''
@@ -99,8 +100,8 @@ def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(s
     # from function import changeset_gen
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
-                        aws_access_key_id="AKIAXECNQISLAUNL67HV", 
-                        aws_secret_access_key="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",)
+                        aws_access_key_id="", 
+                        aws_secret_access_key="",)
 
     # Load data from previous component
     with open(input_args_path, 'rb') as in_argfile:
@@ -137,7 +138,7 @@ def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(s
         pickle.dump(tagsets_l, writer)
     with open(output_args_path, 'wb') as argfile:
         pickle.dump(user_in, argfile)
-generate_tagset_op = kfp.components.create_component_from_func(generate_tagset, output_component_file='generate_tagset_component.yaml', base_image="zongshun96/taggen_openshift:0.01")
+generate_tagset_op = kfp.components.create_component_from_func(generate_tagset, output_component_file='generate_tagset_component.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/taggen_openshift:0.01")
 
 
 def gen_prediction(clf_path: InputPath(str), index_tag_mapping_path: InputPath(str), tag_index_mapping_path: InputPath(str), index_label_mapping_path: InputPath(str), label_index_mapping_path: InputPath(str), test_tags_path: InputPath(str), prediction_path: OutputPath(str)):
@@ -156,8 +157,8 @@ def gen_prediction(clf_path: InputPath(str), index_tag_mapping_path: InputPath(s
     # args = main.get_inputs()
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
-                        aws_access_key_id="AKIAXECNQISLAUNL67HV", 
-                        aws_secret_access_key="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",)
+                        aws_access_key_id="", 
+                        aws_secret_access_key="",)
     cwd = "/pipelines/component/cwd/"
     # cwd = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
 
@@ -207,7 +208,7 @@ def gen_prediction(clf_path: InputPath(str), index_tag_mapping_path: InputPath(s
 
     # debug
     # time.sleep(5000)
-gen_prediction_op = kfp.components.create_component_from_func(gen_prediction, output_component_file='generate_pred_component.yaml', base_image="zongshun96/prediction_xgb_openshift:0.01") 
+gen_prediction_op = kfp.components.create_component_from_func(gen_prediction, output_component_file='generate_pred_component.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/prediction_xgb_openshift:0.01") 
 
 
 # # Reading bigger data
@@ -270,12 +271,13 @@ def praxi_pipeline():
     )
     affinity = kubernetes.client.models.V1Affinity(node_affinity=node_affinity)
 
+    dsl.get_pipeline_conf().set_image_pull_secrets([k8s_client.V1ObjectReference(name="my-registry-secret")])
 
     # Pipeline design
     model = generate_loadmod_op().apply(use_image_pull_policy()).add_affinity(affinity)
     change_test = generate_changeset_op("test").apply(use_image_pull_policy()).add_affinity(affinity)
-    change_test.set_cpu_limit('4')
-    change_test.set_memory_limit('4096Mi')
+    # change_test.set_cpu_limit('4')
+    # change_test.set_memory_limit('4096Mi')
     tag_test = generate_tagset_op(change_test.outputs["args"], change_test.outputs["cs"]).apply(use_image_pull_policy()).add_affinity(affinity)
     prediction = gen_prediction_op(model.outputs["clf"],model.outputs["index_tag_mapping"],model.outputs["tag_index_mapping"],model.outputs["index_label_mapping"],model.outputs["label_index_mapping"], tag_test.outputs["output_text"]).apply(use_image_pull_policy()).add_affinity(affinity)
 
