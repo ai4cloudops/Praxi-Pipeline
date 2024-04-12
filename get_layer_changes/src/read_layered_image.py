@@ -25,13 +25,13 @@ def run():
     homed = "/home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/"
     # homed = "/pipelines/component/"
     src = homed+"src/"
-    if not Path(src).exists():
-        Path(src).mkdir()
-        # os.chmod(src, 777)
+    # if not Path(src).exists():
+    #     Path(src).mkdir()
+    #     # os.chmod(src, 777)
     cwd = homed+"cwd/"
-    if not Path(cwd).exists():
-        Path(cwd).mkdir()
-        # os.chmod(cwd, 777)
+    # if not Path(cwd).exists():
+    #     Path(cwd).mkdir()
+    #     # os.chmod(cwd, 777)
 
     # # LOKI_TOKEN=$(oc whoami -t)
     # # curl -H "Authorization: Bearer $LOKI_TOKEN" "https://grafana-open-cluster-management-observability.apps.nerc-ocp-infra.rc.fas.harvard.edu/api/datasources/proxy/1/api/v1/query" --data-urlencode 'query=kube_pod_container_info{namespace="ai4cloudops-f7f10d9"}' | jq
@@ -51,7 +51,7 @@ def run():
     # kube_pod_container_info = requests.get(grafana_addr, params=params, headers=headers)
     # image_name = "/".join(kube_pod_container_info.json()['data']['result'][0]['metric']['image'].split("/")[1:])
 
-    image_name = "zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0:latest"
+    image_name = "registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0:latest"
     # image_name = "zongshun96/introspected_container:0.01"
 
 
