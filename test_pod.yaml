@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-private-registry-pod
+spec:
+  containers:
+    - name: my-container
+      command: ["sleep", "infinity"]
+      # image: registry:5000/zongshun96/load_model_s3:0.01
+      image: registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/load_model_s3:0.01
+  imagePullSecrets:
+    - name: my-registry-secret
+
+
+# oc create secret docker-registry my-registry-secret \
+# --docker-server=<your-registry-server> \
+# --docker-username=<your-username> \
+# --docker-password=<your-password> \
+# --docker-email=<your-email>
+
+# oc create secret docker-registry my-registry-secret \
+# --docker-server=registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org \
+# --docker-username=myuser \
+# --docker-password='!QAZ2wsx' \
+# --docker-email=zhangzs@bu.edu
