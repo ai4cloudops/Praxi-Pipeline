@@ -6,8 +6,6 @@ import os
 registry_url = 'https://registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org'
 username = 'myuser'
 password = '!QAZ2wsx'
-repository = 'zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0'  # e.g., 'myorg/myimage'
-tag = 'latest'
 
 
 def get_image_manifest(repository, tag='latest'):
@@ -20,7 +18,7 @@ def get_image_manifest(repository, tag='latest'):
     response.raise_for_status()
     return response.json()
 
-def download_layer(layer_digest, output_dir):
+def download_layer(repository, layer_digest, output_dir):
     """ Download an image layer based on its digest from the private registry. """
     layer_url = f"{registry_url}/v2/{repository}/blobs/{layer_digest}"
     try:
@@ -49,13 +47,16 @@ def download_image(repository, tag, output_dir='/home/cc/tmp'):
     for layer in manifest['layers']:
         digest = layer['digest']
         print(f"Downloading layer {digest}")
-        file_path = download_layer(digest, output_dir)
+        file_path = download_layer(repository, digest, output_dir)
         print(f"Layer downloaded and saved to {file_path}")
 
 # Example usage
 if __name__ == '__main__':
+    # repository = 'zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0'  # e.g., 'myorg/myimage'
+    repository = 'zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4'  # e.g., 'myorg/myimage'
+    tag = 'latest'
     try:
-        download_image(repository=repository, tag="latest")
+        download_image(repository=repository, tag=tag)
         print("Download completed successfully.")
     except Exception as e:
         print(f"An error occurred: {e}")
