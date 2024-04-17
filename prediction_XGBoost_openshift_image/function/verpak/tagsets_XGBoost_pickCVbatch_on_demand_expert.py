@@ -752,13 +752,13 @@ if __name__ == "__main__":
     for iter_idx in range(1):
         op_durations = defaultdict(int)
         t_0 = time.time()
-        # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML_test_60/"
-        test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML/"
+        test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML_test/"
+        # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML/"
 
         # cwd = "/home/cc/test"
 
         dataset = "data_4"
-        n_models = 1
+        n_models = 1000
         shuffle_idx = 0
         test_sample_batch_idx = 0
         n_samples = 4
@@ -772,7 +772,7 @@ if __name__ == "__main__":
         max_bin = 1
         with_filter = True
         freq = 25
-        cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts_online/correctness/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak_on_demand_expert/"
+        cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts_online/verification/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak_on_demand_expert/"
         cwd_clf = "/home/cc/test"
         Path(cwd).mkdir(parents=True, exist_ok=True)
 
@@ -837,12 +837,12 @@ if __name__ == "__main__":
             op_durations[f"clf{clf_idx}_load_time"] = t_per_clf_loading_t-t_per_clf_0
             op_durations["total_clf_load__time"] += t_per_clf_loading_t-t_per_clf_0
 
-            # label_matrix_list_per_clf, pred_label_matrix_list_per_clf = [],[]
-            pred_label_matrix_list_per_clf = []
-            step = len(tag_files_l)
-            for batch_first_idx in range(0, len(tag_files_l), step):
+            # # label_matrix_list_per_clf, pred_label_matrix_list_per_clf = [],[]
+            # pred_label_matrix_list_per_clf = []
+            # step = len(tag_files_l)
+            for batch_first_idx in range(0, 1):
                 t_encoder_0 = time.time()
-                tagset_files_used, feature_matrix, label_matrix, instance_row_idx_set, instance_row_count, encoder_op_durations = tagsets_to_matrix(test_tags_path, tag_files_l = tag_files_l, cwd=clf_path[:-15], all_tags_set=all_tags_set,all_label_set=all_label_set,tags_by_instance_l=tags_by_instance_l,labels_by_instance_l=labels_by_instance_l,tagset_files=tagset_files, feature_importance=feature_importance, inference_flag=False)
+                tagset_files_used, feature_matrix, label_matrix, instance_row_idx_set, instance_row_count, encoder_op_durations = tagsets_to_matrix(test_tags_path, cwd=clf_path[:-15], all_tags_set=all_tags_set,all_label_set=all_label_set,tags_by_instance_l=tags_by_instance_l,labels_by_instance_l=labels_by_instance_l,tagset_files=tagset_files, feature_importance=feature_importance)
                 # values_l_.extend(values_l)
                 # pos_x_l_.extend(pos_x_l)
                 # pos_y_l_.extend(pos_y_l)
@@ -877,8 +877,8 @@ if __name__ == "__main__":
                     pred_label_name_d = one_hot_to_names('index_label_mapping', pred_label_matrix, mapping=clf_labels_l)
                     predicted_labels_dict = merge_preds(predicted_labels_dict, pred_label_name_d, instance_row_idx_set)
                     # print(0)
-                label_name_d = one_hot_to_names('index_label_mapping', label_matrix, mapping=clf_labels_l)
-                true_labels_dict = merge_preds(true_labels_dict, label_name_d)
+                # label_name_d = one_hot_to_names('index_label_mapping', label_matrix, mapping=clf_labels_l)
+                # true_labels_dict = merge_preds(true_labels_dict, label_name_d)
                     
                 t_decoding_batch_t = time.time()
                 op_durations[f"decoding{clf_idx}_time"] += t_decoding_batch_t-t_decoding_batch_0
@@ -899,66 +899,66 @@ if __name__ == "__main__":
             op_durations[f"clf{clf_idx}_time"] = t_per_clf_t-t_per_clf_0
             op_durations["total_clf_time"] += t_per_clf_t-t_per_clf_0
             # print("clf"+str(clf_idx)+" pred done")
-        
-        
+            
+            
         t_t = time.time()
         # op_durations["len(values_l_)"] = len(values_l_)
         # op_durations["len(pos_x_l_)"] = len(pos_x_l_)
         # op_durations["len(pos_y_l_)"] = len(pos_y_l_)
         op_durations["total_time"] = t_t-t_0
-        with open(f"{cwd}metrics{iter_idx}.yaml", 'w') as writer:
+        with open(f"{cwd}metrics.yaml", 'w') as writer:
             yaml.dump(op_durations, writer)
-        # print(results)
+        print(predicted_labels_dict)
 
-        # Example dictionaries
-        # true_labels_dict = {0: ['label1', 'label2'], 1: ['label1']}
-        # predicted_labels_dict = {0: ['label1', 'label2'], 1: ['label2']}
+        # # Example dictionaries
+        # # true_labels_dict = {0: ['label1', 'label2'], 1: ['label1']}
+        # # predicted_labels_dict = {0: ['label1', 'label2'], 1: ['label2']}
 
-        # Assuming all possible labels are known
-        all_labels = sorted(set(label for labels in true_labels_dict.values() for label in labels) | set(label for labels in predicted_labels_dict.values() for label in labels))
+        # # Assuming all possible labels are known
+        # all_labels = sorted(set(label for labels in true_labels_dict.values() for label in labels) | set(label for labels in predicted_labels_dict.values() for label in labels))
 
-        # Initialize the MultiLabelBinarizer
-        mlb = MultiLabelBinarizer(classes=all_labels)
+        # # Initialize the MultiLabelBinarizer
+        # mlb = MultiLabelBinarizer(classes=all_labels)
 
-        # Initialize lists
-        true_labels_list = []
-        predicted_labels_list = []
+        # # Initialize lists
+        # true_labels_list = []
+        # predicted_labels_list = []
 
-        # Sort the keys of true_labels_dict to ensure consistent order
-        sorted_keys = sorted(true_labels_dict.keys())
+        # # Sort the keys of true_labels_dict to ensure consistent order
+        # sorted_keys = sorted(true_labels_dict.keys())
 
-        # Iterate over sorted keys
-        for key in sorted_keys:
-            # Append true labels directly
-            true_labels_list.append(true_labels_dict[key])
+        # # Iterate over sorted keys
+        # for key in sorted_keys:
+        #     # Append true labels directly
+        #     true_labels_list.append(true_labels_dict[key])
             
-            # Check if key exists in predicted_labels_dict, if not add an empty list (indicating no labels)
-            if key in predicted_labels_dict:
-                predicted_labels_list.append(predicted_labels_dict[key])
-            else:
-                # Add a list representing no predictions (this will be converted to all zeros later)
-                predicted_labels_list.append([])
+        #     # Check if key exists in predicted_labels_dict, if not add an empty list (indicating no labels)
+        #     if key in predicted_labels_dict:
+        #         predicted_labels_list.append(predicted_labels_dict[key])
+        #     else:
+        #         # Add a list representing no predictions (this will be converted to all zeros later)
+        #         predicted_labels_list.append([])
 
-        # Binarize the labels
-        true_binarized = mlb.fit_transform(true_labels_list)
-        predicted_binarized = mlb.transform(predicted_labels_list)
+        # # Binarize the labels
+        # true_binarized = mlb.fit_transform(true_labels_list)
+        # predicted_binarized = mlb.transform(predicted_labels_list)
 
-        # Calculate metrics
-        accuracy = accuracy_score(true_binarized, predicted_binarized)
-        f1 = f1_score(true_binarized, predicted_binarized, average='macro')  # Use 'micro' or 'weighted' for alternative averaging
-        hamming = hamming_loss(true_binarized, predicted_binarized)
+        # # Calculate metrics
+        # accuracy = accuracy_score(true_binarized, predicted_binarized)
+        # f1 = f1_score(true_binarized, predicted_binarized, average='macro')  # Use 'micro' or 'weighted' for alternative averaging
+        # hamming = hamming_loss(true_binarized, predicted_binarized)
 
-        print(f"Accuracy: {accuracy}")
-        print(f"F1 Score: {f1}")
-        print(f"Hamming Loss: {hamming}")
-        print_metrics(cwd, 'metrics_pred.out', true_binarized, predicted_binarized, all_labels)
+        # print(f"Accuracy: {accuracy}")
+        # print(f"F1 Score: {f1}")
+        # print(f"Hamming Loss: {hamming}")
+        # print_metrics(cwd, 'metrics_pred.out', true_binarized, predicted_binarized, all_labels)
 
 
-        # label_matrix = np.hstack(label_matrix_list)
-        # pred_label_matrix = np.hstack(pred_label_matrix_list)
-        # labels = np.hstack(labels_list)
-        # print_metrics(cwd, 'metrics_pred.out', label_matrix, pred_label_matrix, labels, op_durations)
-        # print(one_hot_to_names(f"{clf_path[:-15]}index_label_mapping", pred_label_matrix))
+        # # label_matrix = np.hstack(label_matrix_list)
+        # # pred_label_matrix = np.hstack(pred_label_matrix_list)
+        # # labels = np.hstack(labels_list)
+        # # print_metrics(cwd, 'metrics_pred.out', label_matrix, pred_label_matrix, labels, op_durations)
+        # # print(one_hot_to_names(f"{clf_path[:-15]}index_label_mapping", pred_label_matrix))
 
 
 
