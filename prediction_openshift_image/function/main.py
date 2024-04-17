@@ -102,7 +102,7 @@ def get_free_filename(stub, directory, suffix=''):
         file_candidate = '{}/{}-{}{}'.format(
             str(directory), stub, counter, suffix)
         if Path(file_candidate).exists():
-            print("file exists")
+            # print("file exists")
             counter += 1
         else:  # No match found
             # print("no file")
@@ -163,13 +163,13 @@ def iterative_train(train_dat, args):
     """
     outdir = os.path.abspath(args['outdir'])
 
-    # SET UP LOGGING
-    loglevel = args['loglevel']
-    stub = 'praxi_exp'
-    logfile_name = get_free_filename(stub, outdir, '.log')
+    # # SET UP LOGGING
+    # loglevel = args['loglevel']
+    # stub = 'praxi_exp'
+    # logfile_name = get_free_filename(stub, outdir, '.log')
 
-    numeric_level = getattr(logging, loglevel, None)
-    logging.basicConfig(filename=logfile_name,level=numeric_level)
+    # numeric_level = getattr(logging, loglevel, None)
+    # logging.basicConfig(filename=logfile_name,level=numeric_level)
 
     # Log command line args
     result_type = args['result'] # full or summary
@@ -196,15 +196,16 @@ def iterative_train(train_dat, args):
         suffix = 'iterative'
         iterative = True
         modfile = new_model_name
-        clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=False,
+        clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=True,
                      vw_args= vwargs, suffix=suffix, iterative=iterative,
-                     use_temp_files=True, vw_modelfile=modfile, outdir = outdir)
+                     use_temp_files=False, vw_modelfile=modfile, outdir = outdir)
     else:
         clf = pickle.load(open(initial_model, "rb"))
+        clf.vw_args = '--passes=20 -l 50'
     #clf.probability = True                                                            ###
     train_names = []
     for f in train_dat:
-        if list(f)[2] == 'tags':
+        if list(f)[1] == 'tags':
             train_names.append(f[list(f)[0]])
     if(len(train_names) == 0):
         logging.error("No tagsets found in provided training directory")
@@ -212,9 +213,9 @@ def iterative_train(train_dat, args):
     train_tags, train_labels = parse_ts(train_names, train_dat)
     #train and save model
     clf.fit(train_tags, train_labels)
-    save_name = clf.vw_modelfile[:-2] + 'p'
-    with open(save_name, "wb") as f:
-        pickle.dump(clf, f)
+    # save_name = clf.vw_modelfile[:-2] + 'p'
+    # with open(save_name, "wb") as f:
+    #     pickle.dump(clf, f)
 
     return clf  
 
@@ -294,7 +295,7 @@ def test(clf, test_data, args):
     resfile.close()
     logging.info("Printing results:")
     with open(resfile_name, 'wb') as writer:
-        print_multilabel_results(results, writer, args=clf.get_args())
+        print_multilabel_results(results, writer, setting_args= args, args=clf.get_args())
     return results
 
 def get_accuracy(preds, labels):
@@ -469,13 +470,13 @@ def multilabel_train(train_dat, args):
     nfolds = int(args['nfolds'])
     resfile_name = get_free_filename('multi_test', outdir, '.p')
 
-    # SET UP LOGGING
-    loglevel = args['loglevel']
-    stub = 'praxi_exp'
-    logfile_name = get_free_filename(stub, outdir, '.log')
+    # # SET UP LOGGING
+    # loglevel = args['loglevel']
+    # stub = 'praxi_exp'
+    # logfile_name = get_free_filename(stub, outdir, '.log')
 
-    numeric_level = getattr(logging, loglevel, None) 
-    logging.basicConfig(filename=logfile_name,level=numeric_level)
+    # numeric_level = getattr(logging, loglevel, None) 
+    # logging.basicConfig(filename=logfile_name,level=numeric_level)
     
     # Log command line args
     result_type = args['result'] # full or summary
@@ -491,8 +492,8 @@ def multilabel_train(train_dat, args):
 
     suffix = 'multi'
     # VW ARGS SHOULD BE PASSED IN
-    clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=False,
-                 vw_args=vwargs, suffix=suffix, use_temp_files=False, vw_modelfile="./results/model.vw", outdir = outdir)
+    clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=True,
+                 vw_args=vwargs, suffix=suffix, use_temp_files=False, vw_modelfile=f"{outdir}/model.vw", outdir = outdir)
     #print(clf.vw_modelfile)
     with open(clf.vw_modelfile, 'wb') as mod_file:
         pickle.dump(clf, mod_file)
@@ -613,7 +614,7 @@ def get_metrics(results):
     return f1w, pw, rw
 
 
-def print_multilabel_results(results, retfile, result_type="", args=None, n_strats=1, summary=False):
+def print_multilabel_results(results, retfile, result_type="", setting_args=None, args=None, n_strats=1, summary=False):
     """ Calculate result statistics and print them to result file
     input: name of result pickle file, path to result directory, type of result
            desired
@@ -633,7 +634,7 @@ def print_multilabel_results(results, retfile, result_type="", args=None, n_stra
     bnz.fit(y_true)
     all_tags = copy.deepcopy(y_true)
 
-    with open('./results/pred_true.txt', 'w') as datatile:
+    with open(f"{setting_args['outdir']}/pred_true.txt", 'w') as datatile:
         yaml.dump(y_true, datatile)
         
     for preds in y_pred:
@@ -702,13 +703,13 @@ def get_inputs():
     # run a single label experiment by default, if --multi flag is added, run a multilabel experiment!
     parser.add_argument('-m','--multi', dest='experiment', action='store_const', const='multi',
                         default='single', help="Type of experiment to run (single-label default).")
-    parser.add_argument('-w','--vwargs', dest='vw_args', default='-b 26 --learning_rate 1.5 --passes 10',
+    parser.add_argument('-w','--vwargs', dest='vw_args', default='-b 26 --learning_rate 1.5 --threads --passes 10',
                         help="custom arguments for VW.")
     parser.add_argument('-n', '--nfolds', help='number of folds to use in cross validation', default=1) # make default 1?
     parser.add_argument('-f', '--fullres', help='generate full result file.', dest='result',
                         action='store_const', const='full', default='summary')
     parser.add_argument('-v', '--verbosity', dest='loglevel', action='store_const', const='DEBUG',
-                        default='WARNING',help='specify level of detail for log file')
+                        default='DEBUG',help='specify level of detail for log file')
     # IMPLEMENT THIS!
     parser.add_argument('-l' '--labels', dest='print_labels', action='store_const', const=True, default=False,
                         help='Print missed labels')

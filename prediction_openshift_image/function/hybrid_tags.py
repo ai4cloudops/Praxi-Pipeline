@@ -52,7 +52,7 @@ class Hybrid(BaseEstimator):
         # getting path to vw
         fout=os.popen("which vw")
         fout = fout.read().strip()
-        vw_binary = fout
+        vw_binary = f"{fout}"
         
 
         self.freq_threshold = freq_threshold
@@ -133,27 +133,29 @@ class Hybrid(BaseEstimator):
                 self.label_counter += 1
         ################################################
         ## Create VW arg string ########################
-        if self.probability:                                                 #########
-            print("labels", self.all_labels)
-            self.vw_args_ += ' --csoaa {}'.format(len(self.all_labels))
-            #
-            #self.loss_function = 'logistic'
-            #self.vw_args_ += ' --loss_function={}'.format(self.loss_function)
-            #self.vw_args_ += ' --link=logistic'
-            #self.vw_args_ += ' --multilabel_oaa {} --loss_function=logistic'.format(len(self.all_labels))
-        else:
-            self.vw_args_ += ' --probabilities'
-            self.loss_function = 'logistic'
-            self.vw_args_ += ' --loss_function={}'.format(self.loss_function)
-            self.vw_args_ += ' --link=logistic'
-            #self.vw_args_ += ' --link=glf1'
-            if self.iterative:
-                self.vw_args_ += ' --oaa 80'
+        if not self.trained:
+            if self.probability:                                                 #########
+                # print("labels", self.all_labels)
+                self.vw_args_ += ' --csoaa {}'.format(len(self.all_labels))
+                # self.vw_args_ += ' --csoaa 15'
+                #
+                #self.loss_function = 'logistic'
+                #self.vw_args_ += ' --loss_function={}'.format(self.loss_function)
+                #self.vw_args_ += ' --link=logistic'
+                #self.vw_args_ += ' --multilabel_oaa {} --loss_function=logistic'.format(len(self.all_labels))
             else:
-                self.vw_args_ += ' --oaa {}'.format(len(self.all_labels))
+                self.vw_args_ += ' --probabilities'
+                self.loss_function = 'logistic'
+                self.vw_args_ += ' --loss_function={}'.format(self.loss_function)
+                self.vw_args_ += ' --link=logistic'
+                #self.vw_args_ += ' --link=glf1'
+                if self.iterative:
+                    self.vw_args_ += ' --oaa 80'
+                else:
+                    self.vw_args_ += ' --oaa {}'.format(len(self.all_labels))
         if self.iterative:
             self.vw_args_ += ' --save_resume'
-        self.vw_args_ += ' --kill_cache --cache_file a.cache'
+        self.vw_args_ += f' --kill_cache --cache_file {self.outdir}/a.cache'
         ####################################################
         train_set = list(zip(X, y))
         random.shuffle(train_set)
@@ -202,7 +204,7 @@ class Hybrid(BaseEstimator):
         c = envoy.run(command)
         ##########################################################
         ### Print info about VW run ##############################
-        #logging.info("vw took %f secs." % (time.time() - vw_start))
+        logging.info("vw fit took %f secs." % (time.time() - vw_start))
         print("vw took this many seconds: ", (time.time() - vw_start))
         if c.status_code:
             logging.error(
@@ -282,7 +284,7 @@ class Hybrid(BaseEstimator):
         logging.info('vw command: %s', command)
         vw_start = time.time()
         c = envoy.run(command)
-        logging.info("vw took %f secs." % (time.time() - vw_start))
+        logging.info("vw pred took %f secs." % (time.time() - vw_start))
         if c.status_code:
             print('something happened to vw, code: %d, out: %s, err: %s',
                 c.status_code, c.std_out, c.std_err)
@@ -412,6 +414,7 @@ class Hybrid(BaseEstimator):
         # # ============================
         # result = []
         # thresholds = [1e-19, 1e-16, 1e-13, 1e-12, 0.7, 0.6, 0.5, 0.4, 0.35, 0.3, 0.25, 0.2]
+        # # thresholds = [0.7]
         # for th in thresholds:
         #     temp_res = []
         #     isdone = False
