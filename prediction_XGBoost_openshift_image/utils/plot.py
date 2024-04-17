@@ -1123,7 +1123,8 @@ if __name__ == "__main__":
 
     fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/figs/'
     filename = "nerccostandtrainlatencysummodel_by_N_models_with_rawinput_data_4"
-    xs=[str(xlabel) for xlabel in [3000//50, 3000//25, 3000//10, 3000]]
+    # xs=[str(xlabel) for xlabel in [3000//50, 3000//25, 3000//10, 3000]]
+    xs=["3", "6", "60", "120", "300", "3000\nDeltaSherlock"]
     # ys0_l=[[ys0/60/60*0.013*64 for ys0 in [20.14, 36.68, 51.58, 101.09, 249.6, 942.14, 9847.24]]]
     # ys_d4totaltraintime_l=[[sum([2.236, 4.209, 2.428, 2.51, 3.049, 3.11, 2.607, 2.533, 3.219, 3.938, 2.08, 6.05, 4.248, 12.301, 3.214, 2.71, 2.705, 8.022, 2.603, 1.915, 1.512, 1.806, 4.082, 4.392, 1.77, 2.01, 4.226, 2.933, 2.818, 1.923, 3.963, 3.588, 2.467, 2.011, 2.946, 6.876, 2.447, 2.532, 6.21, 2.114, 2.018, 2.968, 3.954, 3.589, 2.191, 2.925, 2.187, 2.762, 5.256, 2.73]), sum([2.234, 2.86, 4.443, 5.557, 3.663, 3.182, 2.515, 3.167, 3.608, 8.675, 1.584, 3.115, 2.161, 2.929, 2.93, 2.393, 3.052, 2.724, 2.692, 6.881, 2.583, 3.26, 2.743, 8.186, 2.19, 1.769, 5.494, 2.457, 2.925, 3.217, 2.459, 1.98, 1.939, 4.588, 2.421, 2.749, 3.017, 3.808, 3.288, 2.447, 3.125, 2.656, 2.631, 1.308, 2.299, 1.406, 4.316, 12.402, 4.02, 2.326]), sum([4.645, 2.372, 2.247, 2.234, 7.856, 3.166, 2.464, 2.423, 3.644, 2.517, 2.389, 2.851, 5.925, 1.914, 2.443, 2.13, 12.786, 2.294, 8.741, 2.384, 1.947, 5.934, 2.177, 2.603, 2.768, 4.504, 2.873, 2.375, 2.054, 3.018, 3.329, 2.804, 1.984, 1.965, 3.333, 2.178, 2.471, 1.786, 2.153, 1.861, 8.07, 1.919, 2.212, 2.479, 2.814, 2.522, 3.072, 3.619, 4.129, 2.732])],
     #                     [sum([12.156, 6.961, 11.058, 7.813, 9.737, 13.431, 27.468, 8.145, 18.968, 7.589, 5.238, 10.372, 3.881, 10.532, 5.821, 13.131, 3.743, 17.957, 9.06, 15.217, 8.647, 10.563, 5.785, 7.895, 13.402]), sum([5.677, 17.108, 7.737, 7.341, 22.429, 7.752, 4.823, 6.513, 10.254, 16.172, 7.265, 19.48, 6.355, 12.668, 8.653, 6.061, 10.186, 8.095, 12.045, 8.627, 9.406, 6.937, 6.506, 31.496, 11.758]), sum([12.591, 8.109, 20.071, 7.757, 11.948, 9.663, 14.374, 8.164, 28.058, 20.674, 14.071, 7.695, 11.86, 5.301, 7.704, 10.981, 5.641, 9.189, 6.641, 5.436, 17.11, 5.688, 8.005, 8.844, 9.692])],
@@ -1142,11 +1143,11 @@ if __name__ == "__main__":
     ys_d4nerccoststd_l  = [ys0/60/60*0.013*64 for ys0 in ys_d4totaltraintimestd_l]
     ys_d4awscostmean_l = [ys0/60/60*2.448 for ys0 in ys_d4totaltraintimemean_l]
     ys_d4awscoststd_l  = [ys0/60/60*2.448 for ys0 in ys_d4totaltraintimestd_l]
-    fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+    fig, ax = plt.subplots(1, 1, figsize=(10, 3))
     # bottom = np.zeros(len(xs))
     entry_count, width = 2, 0.4
-    p = ax.bar([idx-width/entry_count-width/entry_count/2 for idx, _ in enumerate(ys_d4nerccostmean_l)], ys_d4nerccostmean_l, width/entry_count, yerr=ys_d4nerccoststd_l, color='#0067ff', edgecolor="black", hatch="x", label="NERC VM (\$)")
-    p2 = ax.bar([idx-width/entry_count/2 for idx, _ in enumerate(ys_d4awscostmean_l)], ys_d4awscostmean_l, width/entry_count, yerr=ys_d4awscoststd_l, color='#00ff67', edgecolor="black", hatch="|", label="AWS EC2 (\$)")
+    p = ax.bar([idx-width/entry_count+width/entry_count/2 for idx, _ in enumerate(ys_d4nerccostmean_l)], ys_d4nerccostmean_l, width/entry_count, yerr=ys_d4nerccoststd_l, color='#0067ff', edgecolor="black", hatch="x", label="NERC VM (\$)")
+    p2 = ax.bar([idx-width/entry_count+(2+1)*width/entry_count/2 for idx, _ in enumerate(ys_d4awscostmean_l)], ys_d4awscostmean_l, width/entry_count, yerr=ys_d4awscoststd_l, color='#00ff67', edgecolor="black", hatch="|", label="AWS EC2 (\$)")
     # ax.bar_label(p)
     # ax.set_title("Training Latency by N Models with Data 3", fontsize=20)
     ax.grid()
@@ -1157,6 +1158,46 @@ if __name__ == "__main__":
     ax.tick_params(axis='both', which='minor', labelsize=18)
     ax.set_xlabel("Number of Labels per Submodel", fontsize=20)
     ax.set_ylabel("Resource Cost (\$)", fontsize=20)
+    # plt.show()
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
+    plt.close()
+
+
+    fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/figs/'
+    filename = "F1_score_incremental_praxi"
+    # xs=[str(xlabel) for xlabel in [3000//50, 3000//25, 3000//10, 3000]]
+    xs=["6", "12", "18", "24", "30"]
+    ys_d4noreplay_f1score_l=[
+        [1],
+        [1],
+        [1],
+        [0.541],
+        [0.213]]
+    ys_d4noreplay_f1scoremean_l = np.array(ys_d4noreplay_f1score_l).mean(axis=1).tolist()
+    ys_d4noreplay_f1scorestd_l  = np.array(ys_d4noreplay_f1score_l).std(axis=1).tolist()
+    ys_d4replay_f1score_l=[
+        [1],
+        [1],
+        [1],
+        [1],
+        [1]]
+    ys_d4replay_f1scoremean_l = np.array(ys_d4replay_f1score_l).mean(axis=1).tolist()
+    ys_d4replay_f1scorestd_l  = np.array(ys_d4replay_f1score_l).std(axis=1).tolist()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 3))
+    # bottom = np.zeros(len(xs))
+    entry_count, width = 2, 0.4
+    p = ax.bar([idx-width/entry_count+width/entry_count/2 for idx, _ in enumerate(ys_d4noreplay_f1scoremean_l)], ys_d4noreplay_f1scoremean_l, width/entry_count, yerr=ys_d4noreplay_f1scorestd_l, color='#0067ff', edgecolor="black", hatch="x", label="no data replay")
+    p2 = ax.bar([idx-width/entry_count+(2+1)*width/entry_count/2 for idx, _ in enumerate(ys_d4replay_f1scoremean_l)], ys_d4replay_f1scoremean_l, width/entry_count, yerr=ys_d4replay_f1scorestd_l, color='#00ff67', edgecolor="black", hatch="|", label="with data replay")
+    # ax.bar_label(p)
+    # ax.set_title("Training Latency by N Models with Data 3", fontsize=20)
+    ax.grid()
+    ax.legend(loc="upper left", prop={'size': 16})
+    ax.set_xticks(list(range(len(xs))))
+    ax.set_xticklabels(xs)
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Number of Package for Discovery after Incremental Training", fontsize=20)
+    ax.set_ylabel("F1 Score", fontsize=20)
     # plt.show()
     plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
@@ -1371,7 +1412,7 @@ if __name__ == "__main__":
 
 
     filename = "test_f1score_model_token_share_by_cos_sim_with_rawinput_False100filter_data_4"
-    fig, ax = plt.subplots(1, 1, figsize=(10, 3))
+    fig, ax = plt.subplots(1, 1, figsize=(10, 4))
     xs_label = [0.6, 0.7, 0.8, 0.9, 0.98]
     xs = list(range(len(xs_label)))
     f1_score_label = "F1-Score"
@@ -1456,8 +1497,8 @@ if __name__ == "__main__":
     # ax2.grid(True)
 
     # Adding legends
-    ax.legend(title="Metric", fontsize=12, loc="center left")
-    ax2.legend(fontsize=12, loc="center right")
+    ax.legend(title="Metric", fontsize=18, loc="center left")
+    ax2.legend(fontsize=18, loc="center right")
 
     fig.tight_layout(rect=[0, 0, 0.95, 1])  # Adjust rect parameter as needed
 
@@ -1496,19 +1537,19 @@ if __name__ == "__main__":
     bars_impl2 = ax1.bar(ind + width/2, times_impl2, width, color='orange', label=r'$\tau = 0.7$')
 
     ax1.set_xlabel('Sub-Models', fontsize=20)
-    ax1.set_ylabel('Incremental Training Time (s)', color='black', fontsize=20)
+    ax1.set_ylabel('Training Time (s)', color='black', fontsize=20)
     ax1.set_xticks(ind)
-    ax1.set_xticklabels(sub_models, rotation=45)
-    ax1.tick_params(axis='y', labelcolor='black')
-    ax1.legend(loc='upper left', title='Training Time')
+    ax1.set_xticklabels(sub_models, fontsize=18, rotation=45)
+    ax1.tick_params(axis='y', labelcolor='black', labelsize=20)
+    ax1.legend(loc='upper left', title='Training Time', fontsize=18, title_fontsize=18)
 
     # Secondary y-axis for num_labels
     ax2 = ax1.twinx()
-    ax2.plot(ind - width/2, num_labels_tau_06, color='green', marker='o', linestyle='--', label=r'Num Labels $\tau = 0.6$')
-    ax2.plot(ind + width/2, num_labels_tau_07, color='red', marker='x', linestyle='--', label=r'Num Labels $\tau = 0.7$')
+    ax2.plot(ind - width/2, num_labels_tau_06, color='green', marker='o', linestyle='--', label=r'$\tau = 0.6$')
+    ax2.plot(ind + width/2, num_labels_tau_07, color='red', marker='x', linestyle='--', label=r'$\tau = 0.7$')
     ax2.set_ylabel('Number of Labels', color='green', fontsize=20)
-    ax2.tick_params(axis='y', labelcolor='green')
-    ax2.legend(loc='upper right', title='Num Labels')
+    ax2.tick_params(axis='y', labelcolor='green', labelsize=20)
+    ax2.legend(loc='upper right', title='Num Labels', fontsize=18, title_fontsize=18)
 
     plt.tight_layout()
     plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
@@ -1695,7 +1736,7 @@ if __name__ == "__main__":
 
 
     filename = "test_f1score_model_token_share_by_labels_per_model_with_rawinput_False100filter_data_4"
-    fig, ax = plt.subplots(1, 1, figsize=(10, 3))
+    fig, ax = plt.subplots(1, 1, figsize=(10, 4))
     xs_label = [3, 6, 60, 120, 300, "3000 (DeltaSherlock)"]
     xs = list(range(len(xs_label)))
     f1_score_label = "F1-Score"
@@ -1783,8 +1824,8 @@ if __name__ == "__main__":
     # ax2.grid(True)
 
     # Adding legends
-    ax.legend(title="Metric", fontsize=12, loc="center left")
-    ax2.legend(fontsize=12, loc="center right")
+    ax.legend(title="Metric", fontsize=18, loc="center left")
+    ax2.legend(fontsize=18, loc="center right")
 
     fig.tight_layout(rect=[0, 0, 0.95, 1])  # Adjust rect parameter as needed
 
@@ -1796,7 +1837,7 @@ if __name__ == "__main__":
 
 
     filename = "test_f1score_model_token_share_by_labels_per_model_with_rawinput_True25filter_data_4"
-    fig, ax = plt.subplots(1, 1, figsize=(10, 3))
+    fig, ax = plt.subplots(1, 1, figsize=(10, 4))
     xs_label = [3, 6, 60, 120, 300, "3000 (DeltaSherlock)"]
     xs = list(range(len(xs_label)))
     f1_score_label = "F1-Score"
@@ -1883,8 +1924,8 @@ if __name__ == "__main__":
     # ax2.grid(True)
 
     # Adding legends
-    ax.legend(title="Metric", fontsize=12, loc="center left")
-    ax2.legend(fontsize=12, loc="center right")
+    ax.legend(title="Metric", fontsize=18, loc="center left")
+    ax2.legend(fontsize=18, loc="center right")
 
     fig.tight_layout(rect=[0, 0, 0.95, 1])  # Adjust rect parameter as needed
 
@@ -1999,38 +2040,49 @@ if __name__ == "__main__":
 
 
 
-    filename = "total_encoder_time_by_labels_per_model_with_rawinput_True25filter_data_4"
+
+    filename = "total_inference_time_by_labels_per_model_with_rawinput_True25filter_96sample_data_4"
 
     # Data for Set 1 and Set 2
-    encoder_selector_time_set1 = [[133.2956097126007]]
-    encoder_mat_builder_time_set1 = [[7.621311187744141]]
-    total_time_set1 = [[142.47874236106873]]
+    total_clf_decompressing_time_set1 = [[15.764593124389648, 13.836970090866089, 13.477382898330688, 12.042516231536865, 14.005075216293335]]
+    total_clf_load_time_set1 = [[7.224096298217773, 7.03323769569397, 7.505751132965088, 9.247905731201172, 7.643913507461548]]
+    total_data_load_time_set1 = [[7.02317476272583, 7.79384708404541, 7.417893171310425, 7.333470821380615, 8.649438619613647]]
+    total_encoder_time_set1 = [[1.7366256713867188, 1.7113926410675049, 1.706197738647461, 2.316041946411133, 1.9386999607086182]]
+    total_inference_time_set1 = [[0.02560591697692871, 0.026439428329467773, 0.026050567626953125, 0.03408455848693848, 0.028303146362304688]]
+    total_decoding_time_set1 = [[0.0019006729125976562, 0.0019347667694091797, 0.0019376277923583984, 0.002548694610595703, 0.002088785171508789]]
+    total_time_set1 = [[31.954143047332764, 30.593761682510376, 30.32544779777527, 31.171023845672607, 32.44474768638611]]
 
-    encoder_selector_time_set2 = [[0.020627737045288086]]
-    encoder_mat_builder_time_set2 = [[3.0785326957702637]]
-    total_time_set2 = [[3.7783362865448]]
+    total_clf_decompressing_time_set2 = [[2.5380616188049316, 4.5007617473602295, 3.676270008087158]]
+    total_clf_load_time_set2 = [[7.674092054367065, 6.740265369415283, 6.628811597824097]]
+    total_data_load_time_set2 = [[9.164861679077148, 9.65386962890625, 8.21211862564087]]
+    total_encoder_time_set2 = [[6.972375154495239, 6.928048372268677, 6.895395994186401]]
+    total_inference_time_set2 = [[6.826249122619629, 7.0181725025177, 6.8797993659973145]]
+    total_decoding_time_set2 = [[0.009405851364135742, 0.00936436653137207, 0.00953984260559082]]
+    total_time_set2 = [[33.35287642478943, 35.00924324989319, 32.46582317352295]]
 
-    # Calculate the averages for all components
-    def avg_sum(list_of_lists):
-        return np.mean([sum(inner_list) for inner_list in list_of_lists])
+    # Function to calculate mean and 2 standard deviations
+    def trial_stats(trial_list):
+        mean_val = np.mean(trial_list)
+        std_dev = np.std(trial_list) * 2  # Calculate two standard deviations
+        return mean_val, std_dev
 
-    # Calculating components for Set 1
-    avg_components_set1 = [avg_sum(x) for x in [encoder_selector_time_set1, encoder_mat_builder_time_set1]]
-    avg_total_time_set1 = avg_sum(total_time_set1)
-    avg_other_time_set1 = avg_total_time_set1 - sum(avg_components_set1)
-    avg_components_set1.append(avg_other_time_set1)
+    # Define indices of the components to keep ('Encode', 'Inference', 'Decode')
+    indices = [3, 4, 5]  # Assuming 'Encode' is 3rd, 'Inference' is 4th, 'Decode' is 5th in the original list
 
-    # Calculating components for Set 2
-    avg_components_set2 = [avg_sum(x) for x in [encoder_selector_time_set2, encoder_mat_builder_time_set2]]
-    avg_total_time_set2 = avg_sum(total_time_set2)
-    avg_other_time_set2 = avg_total_time_set2 - sum(avg_components_set2)
-    avg_components_set2.append(avg_other_time_set2)
+    # Data extraction and processing for Set 1
+    data_set1 = [total_encoder_time_set1[0], total_inference_time_set1[0], total_decoding_time_set1[0]]
+    avg_components_set1, errors_set1 = zip(*[trial_stats(data) for data in data_set1])
+    avg_total_time_set1 = sum(avg_components_set1)  # New total is the sum of the included components
+    total_error_set1 = np.sqrt(sum(np.array(errors_set1) ** 2 / 4))  # Combine errors using quadrature
 
-    # Names of components
-    components = ['Encoder Selector', 'Encoder Matrix Builder', 'Other Time']
+    # Data extraction and processing for Set 2
+    data_set2 = [total_encoder_time_set2[0], total_inference_time_set2[0], total_decoding_time_set2[0]]
+    avg_components_set2, errors_set2 = zip(*[trial_stats(data) for data in data_set2])
+    avg_total_time_set2 = sum(avg_components_set2)  # New total is the sum of the included components
+    total_error_set2 = np.sqrt(sum(np.array(errors_set2) ** 2 / 4))  # Combine errors using quadrature
 
-    # Define a list of colors for the components
-    colors = ['skyblue', 'lightgreen', 'lightgoldenrodyellow']
+    components = ['Encode', 'Inference', 'Decode']
+    colors = ['lightcoral', 'magenta', 'orange']
 
     # Plotting
     fig, ax = plt.subplots()
@@ -2041,65 +2093,81 @@ if __name__ == "__main__":
     def plot_stacked_bar(position, component_averages, components, colors):
         bottom = 0
         for i, component_avg in enumerate(component_averages):
-            # Only add labels for the first set to avoid redundancy
             label = components[i] if position == 0 else None
             color = colors[i]
             ax.bar(position, component_avg, width, color=color, bottom=bottom, label=label)
             bottom += component_avg
 
-    # Plot components for each set
+    # Plot for each set
     plot_stacked_bar(ind[0], avg_components_set1, components, colors)
     plot_stacked_bar(ind[1], avg_components_set2, components, colors)
 
-    ax.set_ylabel('Average Time')
-    # ax.set_title('Word2Vec Encoder Time Breakdown')
+    # Adding error bars to the total values
+    ax.errorbar(ind, [avg_total_time_set1, avg_total_time_set2], yerr=[total_error_set1, total_error_set2], fmt='none', ecolor='red', capsize=5, label='Total Time Error')
+
+    ax.set_ylabel('Average Time', fontsize=24)
+    ax.set_xlabel('Number of Package Labels per Model', fontsize=24)
     ax.set_xticks(ind)
-    ax.set_xticklabels(['3', '1000 (DeltaSherlock)'])
-    ax.legend()
+    ax.set_xticklabels(["3", "3000\n(DeltaSherlock)"])
+    ax.tick_params(axis='both', which='major', labelsize=24)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.legend(fontsize=18, loc="lower center")
     ax.grid()
-    # plt.legend(prop={'size': 16})
-    # plt.show()
-    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
+
+    plt.savefig(fig_path + filename + '.pdf', bbox_inches='tight')
     plt.close()
 
 
 
 
 
-    filename = "total_inference_time_by_labels_per_model_with_rawinput_True25filter_data_4"
+    filename = "total_time_by_labels_per_model_with_rawinput_True25filter_96sample_data_4"
 
     # Data for Set 1 and Set 2
-    total_clf_load_time_set1 = [[16.719700813293457]]
-    total_inference_time_set1 = [[0.3348977565765381]]
-    total_encoder_time_set1 = [[142.47874236106873]]
-    total_clf_time_set1 = [[159.92134428024292]]
+    total_clf_decompressing_time_set1 = [[15.764593124389648, 13.836970090866089, 13.477382898330688, 12.042516231536865, 14.005075216293335]]
+    total_clf_load_time_set1 = [[7.224096298217773, 7.03323769569397, 7.505751132965088, 9.247905731201172, 7.643913507461548]]
+    total_data_load_time_set1 = [[7.02317476272583, 7.79384708404541, 7.417893171310425, 7.333470821380615, 8.649438619613647]]
+    total_encoder_time_set1 = [[1.7366256713867188, 1.7113926410675049, 1.706197738647461, 2.316041946411133, 1.9386999607086182]]
+    total_inference_time_set1 = [[0.02560591697692871, 0.026439428329467773, 0.026050567626953125, 0.03408455848693848, 0.028303146362304688]]
+    total_decoding_time_set1 = [[0.0019006729125976562, 0.0019347667694091797, 0.0019376277923583984, 0.002548694610595703, 0.002088785171508789]]
+    total_time_set1 = [[31.954143047332764, 30.593761682510376, 30.32544779777527, 31.171023845672607, 32.44474768638611]]
 
-    total_clf_load_time_set2 = [[7.818715572357178]]
-    total_inference_time_set2 = [[1.5569875240325928]]
-    total_encoder_time_set2 = [[3.7783362865448]]
-    total_clf_time_set2 = [[13.158068418502808]]
+    total_clf_decompressing_time_set2 = [[2.5380616188049316, 4.5007617473602295, 3.676270008087158]]
+    total_clf_load_time_set2 = [[7.674092054367065, 6.740265369415283, 6.628811597824097]]
+    total_data_load_time_set2 = [[9.164861679077148, 9.65386962890625, 8.21211862564087]]
+    total_encoder_time_set2 = [[6.972375154495239, 6.928048372268677, 6.895395994186401]]
+    total_inference_time_set2 = [[6.826249122619629, 7.0181725025177, 6.8797993659973145]]
+    total_decoding_time_set2 = [[0.009405851364135742, 0.00936436653137207, 0.00953984260559082]]
+    total_time_set2 = [[33.35287642478943, 35.00924324989319, 32.46582317352295]]
 
-    # Calculate the averages for all components
-    def avg_sum(list_of_lists):
-        return np.mean([sum(inner_list) for inner_list in list_of_lists])
+    # Calculate the averages and standard deviations for all components
+    def trial_stats(trial_list):
+        mean_val = np.mean(trial_list)
+        std_dev = np.std(trial_list) * 2  # Calculate two standard deviations
+        return mean_val, std_dev
 
-    # Calculating components for Set 1
-    avg_components_set1 = [avg_sum(x) for x in [total_clf_load_time_set1, total_inference_time_set1, total_encoder_time_set1]]
-    avg_total_clf_time_set1 = avg_sum(total_clf_time_set1)
-    avg_other_time_set1 = avg_total_clf_time_set1 - sum(avg_components_set1)
-    avg_components_set1.append(avg_other_time_set1)
+    # Process data and calculate statistics for Set 1
+    avg_components_set1, errors_set1 = zip(*[trial_stats(x[0]) for x in [
+        total_clf_decompressing_time_set1, total_clf_load_time_set1, total_data_load_time_set1,
+        total_encoder_time_set1, total_inference_time_set1, total_decoding_time_set1
+    ]])
+    avg_total_time_set1, total_error_set1 = trial_stats(total_time_set1[0])
+    avg_other_time_set1 = avg_total_time_set1 - sum(avg_components_set1)
+    avg_components_set1 = list(avg_components_set1) + [avg_other_time_set1]
+    errors_set1 = list(errors_set1) + [0]  # Assuming no error for 'Other Time'
 
-    # Calculating components for Set 2
-    avg_components_set2 = [avg_sum(x) for x in [total_clf_load_time_set2, total_inference_time_set2, total_encoder_time_set2]]
-    avg_total_clf_time_set2 = avg_sum(total_clf_time_set2)
-    avg_other_time_set2 = avg_total_clf_time_set2 - sum(avg_components_set2)
-    avg_components_set2.append(avg_other_time_set2)
+    # Process data and calculate statistics for Set 2
+    avg_components_set2, errors_set2 = zip(*[trial_stats(x[0]) for x in [
+        total_clf_decompressing_time_set2, total_clf_load_time_set2, total_data_load_time_set2,
+        total_encoder_time_set2, total_inference_time_set2, total_decoding_time_set2
+    ]])
+    avg_total_time_set2, total_error_set2 = trial_stats(total_time_set2[0])
+    avg_other_time_set2 = avg_total_time_set2 - sum(avg_components_set2)
+    avg_components_set2 = list(avg_components_set2) + [avg_other_time_set2]
+    errors_set2 = list(errors_set2) + [0]  # Assuming no error for 'Other Time'
 
-    # Names of components
-    components = ['CLF Load', 'Inference', 'Encode', 'Other Time']
-
-    # Define a list of colors for the components
-    colors = ['skyblue', 'lightgreen', 'lightcoral', 'lightgoldenrodyellow']
+    components = ['CLF Unzip', 'CLF Load', 'Data Load', 'Encode', 'Inference', 'Decode', 'Other Time']
+    colors = ['skyblue', 'lightgreen', 'lightcoral', 'lightgoldenrodyellow', 'magenta', 'orange', 'grey']
 
     # Plotting
     fig, ax = plt.subplots()
@@ -2110,25 +2178,190 @@ if __name__ == "__main__":
     def plot_stacked_bar(position, component_averages, components, colors):
         bottom = 0
         for i, component_avg in enumerate(component_averages):
-            # Only add labels for the first set to avoid redundancy
             label = components[i] if position == 0 else None
             color = colors[i]
             ax.bar(position, component_avg, width, color=color, bottom=bottom, label=label)
             bottom += component_avg
 
-    # Plot components for each set
     plot_stacked_bar(ind[0], avg_components_set1, components, colors)
     plot_stacked_bar(ind[1], avg_components_set2, components, colors)
 
-    ax.set_ylabel('Average Time')
-    # ax.set_title('Word2Vec Encoder Time Breakdown')
+    # Adding error bars to the total values
+    ax.errorbar(ind, [avg_total_time_set1, avg_total_time_set2], yerr=[total_error_set1, total_error_set2], fmt='none', ecolor='red', capsize=5, label='Total Time Error')
+
+    ax.set_ylabel('Average Time', fontsize=24)
+    ax.set_xlabel('Number of Package Labels per Model', fontsize=24)
     ax.set_xticks(ind)
-    ax.set_xticklabels(['3', '1000 (DeltaSherlock)'])
-    ax.legend()
+    ax.set_xticklabels(["3", "3000\n(DeltaSherlock)"])
+    ax.tick_params(axis='both', which='major', labelsize=24)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.legend(fontsize=18, loc="lower center")
     ax.grid()
-    # plt.legend(prop={'size': 16})
-    # plt.show()
-    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
+
+    plt.savefig(fig_path + filename + '.pdf', bbox_inches='tight')
+    plt.close()
+
+
+
+
+    filename = "total_inference_time_by_labels_per_model_with_rawinput_True25filter_1sample_data_4"
+
+    # Data for Set 1 and Set 2
+    total_clf_decompressing_time_set1 = [[12.576352834701538, 12.261749744415283, 12.337924480438232, 13.471532821655273, 13.102944612503052, 11.770299434661865, 14.755093097686768, 11.704959630966187, 13.930732250213623]]
+    total_clf_load_time_set1 = [[8.03196930885315, 9.084920406341553, 7.496171236038208, 7.797701358795166, 7.310502290725708, 7.641609191894531, 7.684532880783081, 9.466667175292969, 8.499563455581665]]
+    total_data_load_time_set1 = [[0.15577340126037598, 0.05624580383300781, 0.04289555549621582, 0.09280228614807129, 0.048061370849609375, 0.07185721397399902, 0.15152668952941895, 0.2614626884460449, 0.045533180236816406]]
+    total_encoder_time_set1 = [[0.8384318351745605, 0.9804048538208008, 0.8090255260467529, 0.8751320838928223, 0.8211545944213867, 0.8605690002441406, 0.8970224857330322, 1.0060911178588867, 0.9055325984954834]]
+    total_inference_time_set1 = [[0.016701698303222656, 0.019629478454589844, 0.01606440544128418, 0.017569303512573242, 0.017370939254760742, 0.0169677734375, 0.01761794090270996, 0.01955413818359375, 0.017991065979003906]]
+    total_decoding_time_set1 = [[0.0006570816040039062, 0.0007910728454589844, 0.000682830810546875, 0.0007050037384033203, 0.0006947517395019531, 0.0007040500640869141, 0.0007078647613525391, 0.0007729530334472656, 0.0007004737854003906]]
+    total_time_set1 = [[21.806591272354126, 22.603351831436157, 20.885945796966553, 22.434388399124146, 21.48725152015686, 20.545469522476196, 23.679903984069824, 22.663171768188477, 23.57577896118164]]
+
+    total_clf_decompressing_time_set2 = [[3.3748786449432373, 2.652545213699341, 4.280938386917114, 3.292240858078003, 3.5788254737854004, 3.952855110168457, 4.79905366897583, 4.730808973312378, 3.217198371887207]]
+    total_clf_load_time_set2 = [[7.508908748626709, 7.185784816741943, 7.324116230010986, 8.744511604309082, 8.47779393196106, 9.517568588256836, 7.459484100341797, 7.276854753494263, 9.140186548233032]]
+    total_data_load_time_set2 = [[0.11790204048156738, 0.09383845329284668, 0.04489588737487793, 0.20633769035339355, 0.09059643745422363, 0.31734800338745117, 0.23385381698608398, 0.05802655220031738, 0.16172480583190918]]
+    total_encoder_time_set2 = [[0.7292325496673584, 0.729332447052002, 0.7746524810791016, 0.7520701885223389, 0.7643775939941406, 0.7392139434814453, 0.7678463459014893, 0.7339191436767578, 0.728668212890625]]
+    total_inference_time_set2 = [[0.08936023712158203, 0.0869131088256836, 0.08446741104125977, 0.09904336929321289, 0.08483576774597168, 0.10666966438293457, 0.09701800346374512, 0.08715009689331055, 0.09555983543395996]]
+    total_decoding_time_set2 = [[0.00018143653869628906, 0.00013375282287597656, 0.0001308917999267578, 0.00013446807861328125, 0.0001323223114013672, 0.0002167224884033203, 0.00016427040100097656, 0.0001552104949951172, 0.00014352798461914062]]
+    total_time_set2 = [[11.98745846748352, 10.921641111373901, 12.67851209640503, 13.256442546844482, 13.158096313476562, 14.795198678970337, 13.53711748123169, 13.036462545394897, 13.499534130096436]]
+
+    # Function to calculate mean and 2 standard deviations
+    def trial_stats(trial_list):
+        mean_val = np.mean(trial_list)
+        std_dev = np.std(trial_list) * 2  # Calculate two standard deviations
+        return mean_val, std_dev
+
+    # Define indices of the components to keep ('Encode', 'Inference', 'Decode')
+    indices = [3, 4, 5]  # Assuming 'Encode' is 3rd, 'Inference' is 4th, 'Decode' is 5th in the original list
+
+    # Data extraction and processing for Set 1
+    data_set1 = [total_encoder_time_set1[0], total_inference_time_set1[0], total_decoding_time_set1[0]]
+    avg_components_set1, errors_set1 = zip(*[trial_stats(data) for data in data_set1])
+    avg_total_time_set1 = sum(avg_components_set1)  # New total is the sum of the included components
+    total_error_set1 = np.sqrt(sum(np.array(errors_set1) ** 2 / 4))  # Combine errors using quadrature
+
+    # Data extraction and processing for Set 2
+    data_set2 = [total_encoder_time_set2[0], total_inference_time_set2[0], total_decoding_time_set2[0]]
+    avg_components_set2, errors_set2 = zip(*[trial_stats(data) for data in data_set2])
+    avg_total_time_set2 = sum(avg_components_set2)  # New total is the sum of the included components
+    total_error_set2 = np.sqrt(sum(np.array(errors_set2) ** 2 / 4))  # Combine errors using quadrature
+
+    components = ['Encode', 'Inference', 'Decode']
+    colors = ['lightcoral', 'magenta', 'orange']
+
+    # Plotting
+    fig, ax = plt.subplots()
+    ind = np.arange(2)  # Number of sets
+    width = 0.35       # the width of the bars
+
+    # Function to plot stacked bars for a set
+    def plot_stacked_bar(position, component_averages, components, colors):
+        bottom = 0
+        for i, component_avg in enumerate(component_averages):
+            label = components[i] if position == 0 else None
+            color = colors[i]
+            ax.bar(position, component_avg, width, color=color, bottom=bottom, label=label)
+            bottom += component_avg
+
+    # Plot for each set
+    plot_stacked_bar(ind[0], avg_components_set1, components, colors)
+    plot_stacked_bar(ind[1], avg_components_set2, components, colors)
+
+    # Adding error bars to the total values
+    ax.errorbar(ind, [avg_total_time_set1, avg_total_time_set2], yerr=[total_error_set1, total_error_set2], fmt='none', ecolor='red', capsize=5, label='Total Time Error')
+
+    ax.set_ylabel('Average Time', fontsize=24)
+    ax.set_xlabel('Number of Package Labels per Model', fontsize=24)
+    ax.set_xticks(ind)
+    ax.set_xticklabels(["3", "3000\n(DeltaSherlock)"])
+    ax.tick_params(axis='both', which='major', labelsize=24)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.legend(fontsize=18, loc="lower center")
+    ax.grid()
+
+    plt.savefig(fig_path + filename + '.pdf', bbox_inches='tight')
+    plt.close()
+
+
+
+
+
+    filename = "total_time_by_labels_per_model_with_rawinput_True25filter_1sample_data_4"
+
+    # Data for Set 1 and Set 2
+    total_clf_decompressing_time_set1 = [[12.576352834701538, 12.261749744415283, 12.337924480438232, 13.471532821655273, 13.102944612503052, 11.770299434661865, 14.755093097686768, 11.704959630966187, 13.930732250213623]]
+    total_clf_load_time_set1 = [[8.03196930885315, 9.084920406341553, 7.496171236038208, 7.797701358795166, 7.310502290725708, 7.641609191894531, 7.684532880783081, 9.466667175292969, 8.499563455581665]]
+    total_data_load_time_set1 = [[0.15577340126037598, 0.05624580383300781, 0.04289555549621582, 0.09280228614807129, 0.048061370849609375, 0.07185721397399902, 0.15152668952941895, 0.2614626884460449, 0.045533180236816406]]
+    total_encoder_time_set1 = [[0.8384318351745605, 0.9804048538208008, 0.8090255260467529, 0.8751320838928223, 0.8211545944213867, 0.8605690002441406, 0.8970224857330322, 1.0060911178588867, 0.9055325984954834]]
+    total_inference_time_set1 = [[0.016701698303222656, 0.019629478454589844, 0.01606440544128418, 0.017569303512573242, 0.017370939254760742, 0.0169677734375, 0.01761794090270996, 0.01955413818359375, 0.017991065979003906]]
+    total_decoding_time_set1 = [[0.0006570816040039062, 0.0007910728454589844, 0.000682830810546875, 0.0007050037384033203, 0.0006947517395019531, 0.0007040500640869141, 0.0007078647613525391, 0.0007729530334472656, 0.0007004737854003906]]
+    total_time_set1 = [[21.806591272354126, 22.603351831436157, 20.885945796966553, 22.434388399124146, 21.48725152015686, 20.545469522476196, 23.679903984069824, 22.663171768188477, 23.57577896118164]]
+
+    total_clf_decompressing_time_set2 = [[3.3748786449432373, 2.652545213699341, 4.280938386917114, 3.292240858078003, 3.5788254737854004, 3.952855110168457, 4.79905366897583, 4.730808973312378, 3.217198371887207]]
+    total_clf_load_time_set2 = [[7.508908748626709, 7.185784816741943, 7.324116230010986, 8.744511604309082, 8.47779393196106, 9.517568588256836, 7.459484100341797, 7.276854753494263, 9.140186548233032]]
+    total_data_load_time_set2 = [[0.11790204048156738, 0.09383845329284668, 0.04489588737487793, 0.20633769035339355, 0.09059643745422363, 0.31734800338745117, 0.23385381698608398, 0.05802655220031738, 0.16172480583190918]]
+    total_encoder_time_set2 = [[0.7292325496673584, 0.729332447052002, 0.7746524810791016, 0.7520701885223389, 0.7643775939941406, 0.7392139434814453, 0.7678463459014893, 0.7339191436767578, 0.728668212890625]]
+    total_inference_time_set2 = [[0.08936023712158203, 0.0869131088256836, 0.08446741104125977, 0.09904336929321289, 0.08483576774597168, 0.10666966438293457, 0.09701800346374512, 0.08715009689331055, 0.09555983543395996]]
+    total_decoding_time_set2 = [[0.00018143653869628906, 0.00013375282287597656, 0.0001308917999267578, 0.00013446807861328125, 0.0001323223114013672, 0.0002167224884033203, 0.00016427040100097656, 0.0001552104949951172, 0.00014352798461914062]]
+    total_time_set2 = [[11.98745846748352, 10.921641111373901, 12.67851209640503, 13.256442546844482, 13.158096313476562, 14.795198678970337, 13.53711748123169, 13.036462545394897, 13.499534130096436]]
+
+    # Calculate the averages and standard deviations for all components
+    def trial_stats(trial_list):
+        mean_val = np.mean(trial_list)
+        std_dev = np.std(trial_list) * 2  # Calculate two standard deviations
+        return mean_val, std_dev
+
+    # Process data and calculate statistics for Set 1
+    avg_components_set1, errors_set1 = zip(*[trial_stats(x[0]) for x in [
+        total_clf_decompressing_time_set1, total_clf_load_time_set1, total_data_load_time_set1,
+        total_encoder_time_set1, total_inference_time_set1, total_decoding_time_set1
+    ]])
+    avg_total_time_set1, total_error_set1 = trial_stats(total_time_set1[0])
+    avg_other_time_set1 = avg_total_time_set1 - sum(avg_components_set1)
+    avg_components_set1 = list(avg_components_set1) + [avg_other_time_set1]
+    errors_set1 = list(errors_set1) + [0]  # Assuming no error for 'Other Time'
+
+    # Process data and calculate statistics for Set 2
+    avg_components_set2, errors_set2 = zip(*[trial_stats(x[0]) for x in [
+        total_clf_decompressing_time_set2, total_clf_load_time_set2, total_data_load_time_set2,
+        total_encoder_time_set2, total_inference_time_set2, total_decoding_time_set2
+    ]])
+    avg_total_time_set2, total_error_set2 = trial_stats(total_time_set2[0])
+    avg_other_time_set2 = avg_total_time_set2 - sum(avg_components_set2)
+    avg_components_set2 = list(avg_components_set2) + [avg_other_time_set2]
+    errors_set2 = list(errors_set2) + [0]  # Assuming no error for 'Other Time'
+
+    components = ['CLF Unzip', 'CLF Load', 'Data Load', 'Encode', 'Inference', 'Decode', 'Other Time']
+    colors = ['skyblue', 'lightgreen', 'lightcoral', 'lightgoldenrodyellow', 'magenta', 'orange', 'grey']
+
+    # Plotting
+    fig, ax = plt.subplots()
+    ind = np.arange(2)  # Number of sets
+    width = 0.35       # the width of the bars
+
+    # Function to plot stacked bars for a set
+    def plot_stacked_bar(position, component_averages, components, colors):
+        bottom = 0
+        for i, component_avg in enumerate(component_averages):
+            label = components[i] if position == 0 else None
+            color = colors[i]
+            ax.bar(position, component_avg, width, color=color, bottom=bottom, label=label)
+            bottom += component_avg
+
+    plot_stacked_bar(ind[0], avg_components_set1, components, colors)
+    plot_stacked_bar(ind[1], avg_components_set2, components, colors)
+
+    # Adding error bars to the total values
+    ax.errorbar(ind, [avg_total_time_set1, avg_total_time_set2], yerr=[total_error_set1, total_error_set2], fmt='none', ecolor='red', capsize=5, label='Total Time Error')
+
+    ax.set_ylabel('Average Time', fontsize=24)
+    ax.set_xlabel('Number of Package Labels per Model', fontsize=24)
+    ax.set_xticks(ind)
+    ax.set_xticklabels(["3", "3000\n(DeltaSherlock)"])
+    ax.tick_params(axis='both', which='major', labelsize=24)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.legend(fontsize=18, loc="lower center")
+    ax.grid()
+
+    plt.savefig(fig_path + filename + '.pdf', bbox_inches='tight')
     plt.close()
 
 
