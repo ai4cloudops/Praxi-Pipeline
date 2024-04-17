@@ -983,17 +983,18 @@ if __name__ == "__main__":
         # Testing the ML dataset
         for dataset in ["data_4"]:
             n_samples = n_samples_d[dataset]
-            for (with_filter, freq) in [(True, 50)]:
+            for (with_filter, freq) in [(True, 25)]:
                 for n_jobs in [32]:
                     for clf_njobs in [32]:
-                        for n_models, test_batch_count in zip([50, 25, 10, 1],[1,1,1,1]): # zip([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]):
+                        for n_models, test_batch_count in zip([1000],[1,1,1,1]): # zip([50,25,20,15,10,5,1],[1,1,1,1,1,1,8]):
                             for n_estimators in [100]:
                                 for depth in [1]:
                                     for tree_method in["exact"]: # "exact","approx","hist"
                                         for max_bin in [1]:
                                             for input_size, dim_compact_factor in zip([None],[1,1,1,1,1]):
                                                 for shuffle_idx in range(9):
-
+                                                    
+                                                    index_label_mapping_path = []
                                                     index_tag_mapping_path = []
                                                     for i in range(n_models):
                                                         index_tag_mapping_pathname = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/index_tag_mapping"
@@ -1001,6 +1002,13 @@ if __name__ == "__main__":
                                                             index_tag_mapping_path.append(index_tag_mapping_pathname)
                                                         else:
                                                             print(f"index_tag_mapping is missing! {index_tag_mapping_pathname}")
+                                                            sys.exit(-1)
+                                                            # break
+                                                        index_label_mapping_pathname = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/index_label_mapping"
+                                                        if os.path.isfile(index_label_mapping_pathname):
+                                                            index_label_mapping_path.append(index_label_mapping_pathname)
+                                                        else:
+                                                            print(f"index_label_mapping is missing! {index_label_mapping_pathname}")
                                                             sys.exit(-1)
                                                             # break
                                                     cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/"
@@ -1024,16 +1032,28 @@ if __name__ == "__main__":
                                                             shared_token_count[tag_index_mapping_global[tag]] += 1
                                                     non_zero_count = np.count_nonzero(shared_token_count > 1)
 
+
+                                                    all_label_list_per_clf = []
+                                                    for index_label_mapping in index_label_mapping_path:
+                                                        with open(index_label_mapping, 'rb') as fp:
+                                                            all_label_list = pickle.load(fp)
+                                                            all_label_list_per_clf.append(all_label_list)
+
+
                                                     # Prepare data in a JSON-friendly format
                                                     data_to_save = {
                                                         "model_share_token": non_zero_count,
                                                         "model_share_token_percent": non_zero_count/len(all_tags_set_global),
-                                                        "shared_token_count": shared_token_count.tolist()  # Convert numpy array to list
+                                                        "shared_token_count": shared_token_count.tolist(),  # Convert numpy array to list
+                                                        "name_groups": all_label_list_per_clf
                                                     }
 
                                                     # Save the data as JSON
                                                     with open(f"{cwd}inter_model_share_token.out", 'w') as json_file:
                                                         json.dump(data_to_save, json_file, indent=4)
+
+
+                                                    name_groups = []
 
 
 
