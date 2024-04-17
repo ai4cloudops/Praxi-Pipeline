@@ -41,7 +41,7 @@ def download_image(repository, tag, output_dir='/home/cc/tmp'):
 
     # token = get_auth_token()
     manifest = get_image_manifest(repository, tag)
-    with open(f"{output_dir}/manifest.json", 'w') as f:
+    with open(f"{output_dir}/manifest_{repository.replace('/','_')}.json", 'w') as f:
         json.dump(manifest, f)
 
     for layer in manifest['layers']:
