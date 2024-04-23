@@ -10,3 +10,6 @@ envoy
 matplotlib
 boto3
 xgboost
+tqdm
+scikit-learn
+scipy
