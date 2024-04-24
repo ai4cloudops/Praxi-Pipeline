@@ -47,11 +47,11 @@ def plot_modification_times(file_mod_times, filename):
     times, counts = zip(*sorted(zip(times, counts)))
 
     # Plotting
-    plt.figure(figsize=(12, 6))
-    p = plt.bar(times, counts, width=0.7, align='center')  # Using a very small width for precise display
-    plt.bar_label(p, label_type='edge', fontsize=18)
+    plt.figure(figsize=(12, 3))
+    p = plt.bar(times, counts, width=0.01, align='center')  # Using a very small width for precise display
+    # plt.bar_label(p, label_type='edge', fontsize=18)
     plt.xlabel('Modification Time (Normalized Second)', fontsize=20)
-    plt.ylabel('Number of Files Modified', fontsize=20)
+    plt.ylabel('Files Modified', fontsize=20)
     # plt.title('File Modifications Over Time')
     plt.xticks(fontsize=18)
     plt.yticks(fontsize=18)
