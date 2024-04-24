@@ -201,7 +201,7 @@ def iterative_train(train_dat, args):
                      use_temp_files=False, vw_modelfile=modfile, outdir = outdir)
     else:
         clf = pickle.load(open(initial_model, "rb"))
-        clf.vw_args = '--passes=20 -l 50'
+        clf.vw_args = '--passes=1 -l 0.000001'
     #clf.probability = True                                                            ###
     train_names = []
     for f in train_dat:
@@ -703,8 +703,10 @@ def get_inputs():
     # run a single label experiment by default, if --multi flag is added, run a multilabel experiment!
     parser.add_argument('-m','--multi', dest='experiment', action='store_const', const='multi',
                         default='single', help="Type of experiment to run (single-label default).")
-    parser.add_argument('-w','--vwargs', dest='vw_args', default='-b 26 --learning_rate 1.5 --threads --passes 10',
+    parser.add_argument('-w','--vwargs', dest='vw_args', default='-b 26 --learning_rate 0.000001 --threads --passes 1',
                         help="custom arguments for VW.")
+    # parser.add_argument('-w','--vwargs', dest='vw_args', default='-b 26 --learning_rate 1.5 --threads --passes 10',
+    #                     help="custom arguments for VW.")
     parser.add_argument('-n', '--nfolds', help='number of folds to use in cross validation', default=1) # make default 1?
     parser.add_argument('-f', '--fullres', help='generate full result file.', dest='result',
                         action='store_const', const='full', default='summary')

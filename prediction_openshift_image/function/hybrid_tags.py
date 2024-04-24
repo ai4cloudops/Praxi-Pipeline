@@ -216,8 +216,8 @@ class Hybrid(BaseEstimator):
             logging.info(
                 'vw ran sucessfully. out: %s, err: %s',
                 c.std_out, c.std_err)
-        if self.use_temp_files: # WILL USUALLY BE FALSE
-            safe_unlink(f.name)
+        # if self.use_temp_files: # WILL USUALLY BE FALSE
+        safe_unlink(f.name)
         self.trained = True # once the fit function has been run, model has been trained!
         logging.info("Training took %f secs." % (time.time() - start))
 
@@ -390,7 +390,7 @@ class Hybrid(BaseEstimator):
         output: list of lists containing the predicted labels for each tagset
         """
         probas = self.predict_proba(X, y)
-        #print("probas", probas)
+        # print("probas", probas)
         # ============================
         result = []
         thresholds = [-1]
@@ -400,7 +400,8 @@ class Hybrid(BaseEstimator):
             for i in range(ntag):
                 if self.probability:
                     tag = min(proba.keys(), key=lambda key: proba[key])
-                    print(proba)
+                    # print(proba)
+                    logging.debug(proba)
                     #tag = max(proba.keys(), key=lambda key: proba[key])
                 else:
                     tag = max(proba.keys(), key=lambda key: proba[key])

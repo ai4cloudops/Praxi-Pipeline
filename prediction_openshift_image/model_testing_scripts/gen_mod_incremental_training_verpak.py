@@ -11,11 +11,10 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_compl
 from tqdm import tqdm
 import main
 from hybrid_tags import Hybrid
-args = main.get_inputs()
-
+# args = main.get_inputs()
 
 train_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_SL/"
-test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML_2/"
+test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_SL/"
 
 
 def get_intersection(from_set, to_set):
@@ -55,45 +54,40 @@ def load_tag_files_concurrently(tags_path):
     
     return tags
 
-# train_tags_batch = load_tag_files_concurrently(train_tags_path)
-# train_tags = []
-# train_tags.extend(train_tags_batch)
-# train_tags.extend(train_tags_batch)
-# train_tags.extend(train_tags_batch)
-# train_tags.extend(train_tags_batch)
-# train_tags.extend(train_tags_batch)
-# train_tags.extend(train_tags_batch)
-# train_tags.extend(train_tags_batch)
-# train_tags.extend(train_tags_batch)
-# train_tags.extend(train_tags_batch)
-# train_tags.extend(train_tags_batch)
-# train_tags.extend(train_tags_batch)
-# train_tags.extend(train_tags_batch)
-
+# train_tags = load_tag_files_concurrently(train_tags_path)
 # test_tags = load_tag_files_concurrently(test_tags_path)
-
-# vw_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/data/"
-# with open(vw_tags_path+"train_tags.obj","wb") as filehandler:
-#     pickle.dump(train_tags, filehandler)
-
 
 vw_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/data/"
-with open(vw_tags_path+"test_tags.obj","rb") as filehandler:
+# with open(vw_tags_path+"train_tags.obj","wb") as filehandler:
+#     pickle.dump(train_tags, filehandler)
+with open(vw_tags_path+"train_tags.obj","rb") as filehandler:
     train_tags = pickle.load(filehandler)
-train_tags.extend(train_tags)
+# with open(vw_tags_path+"test_tags.obj","rb") as filehandler:
+#     train_tags = pickle.load(filehandler)
+
+# vw_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/data/"
+# with open(vw_tags_path+"test_tags.obj","rb") as filehandler:
+#     train_tags = pickle.load(filehandler)
+# train_tags.extend(train_tags)
+# train_tags.extend(train_tags)
+# train_tags.extend(train_tags)
+# train_tags.extend(train_tags)
+# train_tags.extend(train_tags)
+# train_tags.extend(train_tags)
+# train_tags.extend(train_tags)
 # train_tags.extend(train_tags)
 # train_tags.extend(train_tags)
 # train_tags.extend(train_tags)
 # train_tags.extend(train_tags)
 # train_tags.extend(train_tags)
 
-# with open(vw_tags_path+"train_tags.obj","rb") as filehandler:
-#     test_tags = pickle.load(filehandler)
-# test_tags = load_tag_files_concurrently(test_tags_path)
-# with open(vw_tags_path+"test_tags_ML_2.obj","wb") as filehandler:
-#     pickle.dump(test_tags, filehandler)
-with open(vw_tags_path+"test_tags.obj","rb") as filehandler:
+
+with open(vw_tags_path+"train_tags.obj","rb") as filehandler:
     test_tags = pickle.load(filehandler)
+# # with open(vw_tags_path+"test_tags_ML_2.obj","wb") as filehandler:
+# #     pickle.dump(test_tags, filehandler)
+# with open(vw_tags_path+"test_tags.obj","rb") as filehandler:
+#     test_tags = pickle.load(filehandler)
 
 packages_ll = {}
 package_ver_dd = {}
@@ -109,85 +103,66 @@ package_ver_dd["data_4"] = package_ver_d
 
 dataset = "data_4"
 packages_l = packages_ll[dataset]
-for n_models in [1000]:
-    for sim_thr in ["verpak"]:
-        for datareplay_flag in [True]:
-            for termination_batch_idx in range(2, 10, 2):
-                random_instance = random.Random(4)
-                for shuffle_idx in range(1):
-                    cwd  = f"/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/model_testing_scripts/incremental_batchbybatch/cwd_{n_models}_{sim_thr}_{shuffle_idx}_csoaa3000_2timesdata_datareplay{datareplay_flag}_batchbybatch{termination_batch_idx}_MLtest/"
-                    Path(cwd).mkdir(parents=True, exist_ok=True)
-                    outdir  = f"{cwd}/results/"
-                    Path(outdir).mkdir(parents=True, exist_ok=True)
-                    args['outdir'] = outdir
-                    model_path = cwd+"pred_model.p"
-                    modfile_path = cwd+"model.vw"
-                    prediction_path = cwd+"test_result.txt"
+for timesdata in [5]:
+    for _ in range(timesdata):
+        train_tags.extend(train_tags)
+    for n_models in [1000]:
+        for sim_thr in ["verpak"]:
+            for datareplay_count in [0,3]:
+                for termination_batch_idx in range(2, 9, 2):
+                # for termination_batch_idx in range(1, 5):
+                # for termination_batch_idx in [1,2,3,4,5,10,15,20]:
+                    random_instance = random.Random(4)
+                    for shuffle_idx in range(1):
+                        cwd  = f"/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/model_testing_scripts/incremental_batchbybatch/cwd_{n_models}_{sim_thr}_{shuffle_idx}_csoaa3000_{timesdata}timesdata_datareplay{datareplay_count}_batchbybatch{termination_batch_idx}_SL_conf_passes0.000001/"
+                        # if Path(cwd).exists():
+                        #     random_instance.sample(packages_l, len(packages_l))
+                        #     print(f"skipped {cwd}")
+                        #     continue
+                        Path(cwd).mkdir(parents=True, exist_ok=True)
+                        outdir  = f"{cwd}/results/"
+                        Path(outdir).mkdir(parents=True, exist_ok=True)
+                        args = main.get_inputs()
+                        args['outdir'] = outdir
+                        model_path = cwd+"pred_model.p"
+                        modfile_path = cwd+"model.vw"
+                        prediction_path = cwd+"test_result.txt"
 
 
-                    # SET UP LOGGING
-                    loglevel = args['loglevel']
-                    stub = 'praxi_exp'
-                    logfile_name = main.get_free_filename(stub, os.path.abspath(outdir), '.log')
-                    numeric_level = getattr(logging, loglevel, None) 
-                    logging.basicConfig(filename=logfile_name,level=numeric_level)
+                        # SET UP LOGGING
+                        loglevel = args['loglevel']
+                        stub = 'praxi_exp'
+                        logfile_name = main.get_free_filename(stub, os.path.abspath(outdir), '.log')
+                        numeric_level = getattr(logging, loglevel, None) 
+                        logging.basicConfig(filename=logfile_name,level=numeric_level)
 
-                    fileh = logging.FileHandler(logfile_name, 'a')
-                    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-                    fileh.setFormatter(formatter)
-                    log = logging.getLogger()  # root logger
-                    for hdlr in log.handlers[:]:  # remove all old handlers
-                        log.removeHandler(hdlr)
-                    log.addHandler(fileh)      # set the new handler
+                        fileh = logging.FileHandler(logfile_name, 'a')
+                        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                        fileh.setFormatter(formatter)
+                        log = logging.getLogger()  # root logger
+                        for hdlr in log.handlers[:]:  # remove all old handlers
+                            log.removeHandler(hdlr)
+                        log.addHandler(fileh)      # set the new handler
 
-                    logging.debug(shuffle_idx)
+                        logging.debug(shuffle_idx)
 
-                    # for _ in range(shuffle_idx+1):
-                    #     randomized_packages_l = random_instance.sample(packages_l, len(packages_l))
-                    randomized_packages_l = random_instance.sample(packages_l, len(packages_l))
-                    package_subset, step = [], len(randomized_packages_l)//n_models
-                    for i in range(0, len(randomized_packages_l), step):
-                        if dataset in package_ver_dd:
-                            a_subset = set()
-                            for package in randomized_packages_l[i:i+step]:
-                                a_subset.update(package_ver_dd[dataset][package])
-                                
-                        else:
-                            a_subset = set(randomized_packages_l[i:i+step])
-                        package_subset.append(a_subset)
-                    
-                    # trained_train_tags = []
-                    trained_train_labels_set = set()
-                    for i, train_subset in enumerate(package_subset):
-                        if i == termination_batch_idx: # 250
-                            break
-                        local_train_tags = []
-                        for tags in train_tags:
-                            # if tags["labels"] in train_subset:
-                            if get_intersection(tags["labels"], train_subset):
-                                local_train_tags.append(tags)
-                                trained_train_labels_set.update(tags["labels"])
-                        if i == 0:
-                            args['iterative'] = modfile_path
-                            model = main.iterative_train(local_train_tags, args)
-                            # model = main.multilabel_train(train_tags, args)
-                            modfile = model.vw_modelfile
-                            # os.popen('cp {0} {1}'.format(modfile, modfile_path))
-                            with open(model_path, 'wb') as modfile:
-                                pickle.dump(model, modfile)
-                            # previous_local_train_tags = local_train_tags
-
-                        else:
-                            args['previous'] = model_path
-                            model = main.iterative_train(local_train_tags, args)
-                            modfile = model.vw_modelfile
-                            # os.popen('cp {0} {1}'.format(modfile, modfile_path))
-                            with open(model_path, 'wb') as modfile:
-                                pickle.dump(model, modfile)
-
-                        print(f"initial iteration {i} done ===============================")
-
-                    if datareplay_flag:
+                        # for _ in range(shuffle_idx+1):
+                        #     randomized_packages_l = random_instance.sample(packages_l, len(packages_l))
+                        randomized_packages_l = random_instance.sample(packages_l, len(packages_l))
+                        logging.debug(randomized_packages_l)
+                        package_subset, step = [], len(randomized_packages_l)//n_models
+                        for i in range(0, len(randomized_packages_l), step):
+                            if dataset in package_ver_dd:
+                                a_subset = set()
+                                for package in randomized_packages_l[i:i+step]:
+                                    a_subset.update(package_ver_dd[dataset][package])
+                                    
+                            else:
+                                a_subset = set(randomized_packages_l[i:i+step])
+                            package_subset.append(a_subset)
+                        
+                        # trained_train_tags = []
+                        trained_train_labels_set = set()
                         for i, train_subset in enumerate(package_subset):
                             if i == termination_batch_idx: # 250
                                 break
@@ -197,43 +172,79 @@ for n_models in [1000]:
                                 if get_intersection(tags["labels"], train_subset):
                                     local_train_tags.append(tags)
                                     trained_train_labels_set.update(tags["labels"])
-                            args['previous'] = model_path
-                            model = main.iterative_train(local_train_tags, args)
-                            modfile = model.vw_modelfile
-                            # os.popen('cp {0} {1}'.format(modfile, modfile_path))
-                            with open(model_path, 'wb') as modfile:
-                                pickle.dump(model, modfile)
+                            # print(i, termination_batch_idx, len(trained_train_labels_set))
+                            if i == 0:
+                                args['iterative'] = modfile_path
+                                model = main.iterative_train(local_train_tags, args)
+                                # model = main.multilabel_train(train_tags, args)
+                                modfile = model.vw_modelfile
+                                # os.popen('cp {0} {1}'.format(modfile, modfile_path))
+                                with open(model_path, 'wb') as modfile:
+                                    pickle.dump(model, modfile)
+                                # previous_local_train_tags = local_train_tags
 
-                            # with open(model_path, 'rb') as reader:  
-                            #     model = pickle.load(reader)
-                            # # model.vw_binary = 'docker run -v /home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/prediction_base_image:/workspace --rm vowpalwabbit/vw-rel-alpine:9.8.0'
-                            # model.vw_modelfile = modfile_path
-                            # # print("labs",model.all_labels)
-                            # pred = main.test(model, previous_local_train_tags, args)
-                            # # print("output", pred)
-                            # # with open(prediction_path, 'wb') as writer:
-                            # #     pickle.dump(pred, writer) 
-                            # # time.sleep(5000)
-                            # trained_train_tags.extend(local_train_tags)
+                            else:
+                                args['previous'] = model_path
+                                model = main.iterative_train(local_train_tags, args)
+                                modfile = model.vw_modelfile
+                                # os.popen('cp {0} {1}'.format(modfile, modfile_path))
+                                with open(model_path, 'wb') as modfile:
+                                    pickle.dump(model, modfile)
+
+                            print(f"initial iteration {i} done ===============================")
+
+                        for j in range(datareplay_count):
+                            for i, train_subset in enumerate(package_subset):
+                                if i == termination_batch_idx: # 250
+                                    break
+                                local_train_tags = []
+                                for tags in train_tags:
+                                    # if tags["labels"] in train_subset:
+                                    if get_intersection(tags["labels"], train_subset):
+                                        local_train_tags.append(tags)
+                                        trained_train_labels_set.update(tags["labels"])
+                                args['previous'] = model_path
+                                model = main.iterative_train(local_train_tags, args)
+                                modfile = model.vw_modelfile
+                                # os.popen('cp {0} {1}'.format(modfile, modfile_path))
+                                with open(model_path, 'wb') as modfile:
+                                    pickle.dump(model, modfile)
+
+                                # with open(model_path, 'rb') as reader:  
+                                #     model = pickle.load(reader)
+                                # # model.vw_binary = 'docker run -v /home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/prediction_base_image:/workspace --rm vowpalwabbit/vw-rel-alpine:9.8.0'
+                                # model.vw_modelfile = modfile_path
+                                # # print("labs",model.all_labels)
+                                # pred = main.test(model, previous_local_train_tags, args)
+                                # # print("output", pred)
+                                # # with open(prediction_path, 'wb') as writer:
+                                # #     pickle.dump(pred, writer) 
+                                # # time.sleep(5000)
+                                # trained_train_tags.extend(local_train_tags)
+                                
+                                print(f"revisit iteration {j}-{i} done ===============================")
                             
-                            print(f"revisit iteration {i} done ===============================")
-                        
-                        
-                    local_test_tags = []
-                    for tags in test_tags:
-                        # if get_intersection(tags["labels"], trained_train_labels_set):
-                        if len(get_intersection(tags["labels"], trained_train_labels_set)) == len(tags["labels"]):
-                            local_test_tags.append(tags)
-                    with open(model_path, 'rb') as reader:
-                        model = pickle.load(reader)
-                    # model.vw_binary = 'docker run -v /home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/prediction_base_image:/workspace --rm vowpalwabbit/vw-rel-alpine:9.8.0'
-                    model.vw_modelfile = modfile_path
-                    print("labs",model.all_labels)
-                    pred = main.test(model, local_test_tags, args)
-                    print("output", pred)
-                    with open(prediction_path, 'wb') as writer:
-                        pickle.dump(pred, writer) 
-                    # time.sleep(5000)
+                            
+                        local_test_tags = []
+                        for tags in test_tags:
+                            # if get_intersection(tags["labels"], trained_train_labels_set):
+                            if len(get_intersection(tags["labels"], trained_train_labels_set)) == len(tags["labels"]):
+                                local_test_tags.append(tags)
+                        with open(model_path, 'rb') as reader:
+                            model = pickle.load(reader)
+                        # model.vw_binary = 'docker run -v /home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/prediction_base_image:/workspace --rm vowpalwabbit/vw-rel-alpine:9.8.0'
+                        model.vw_modelfile = modfile_path
+                        print("labs",model.all_labels)
+                        pred = main.test(model, local_test_tags, args)
+                        print("output", pred)
+                        with open(prediction_path, 'wb') as writer:
+                            pickle.dump(pred, writer) 
+                        # time.sleep(5000)
 
-                    args['previous'] = None
+                        args['previous'] = None
 
+
+# count = 0
+# for tagsets in train_tags:
+#     if 'universal-pathlib==0.2.0' in tagsets["labels"]:
+#         count += 1
