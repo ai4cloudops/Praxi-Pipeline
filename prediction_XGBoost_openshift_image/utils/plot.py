@@ -1196,11 +1196,102 @@ if __name__ == "__main__":
     ax.set_xticklabels(xs)
     ax.tick_params(axis='both', which='major', labelsize=20)
     ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Number of Labels Trained after Incremental Training", fontsize=20)
+    ax.set_ylabel("F1 Score", fontsize=20)
+    # plt.show()
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
+    plt.close()
+
+
+    fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/figs/'
+    filename = "F1_score_incremental_praxi_ML"
+    # xs=[str(xlabel) for xlabel in [3000//50, 3000//25, 3000//10, 3000]]
+    xs=["8", "16", "18", "25", "37", "167", "188"]
+    ys_d4noreplay_f1score_l=[
+        [1, 1, 1],
+        [0.384, 0.560, 0.762],
+        [0.444, 0.520, 0.444],
+        [0.711, 0.491, 0.711],
+        [0.502, 0.538, 0.252],
+        [0.595, 0.436, 0.514],
+        [0.569, 0.389, 0.468]]
+    # ys_d4noreplay_f1score_l=[
+    #     [0.390, 0.572, 0.254],
+    #     [0.618, 0.511, 0.629],
+    #     [0.550, 0.375]]
+    ys_d4noreplay_f1scoremean_l = np.array(ys_d4noreplay_f1score_l).mean(axis=1).tolist()
+    ys_d4noreplay_f1scorestd_l  = np.array(ys_d4noreplay_f1score_l).std(axis=1).tolist()
+    ys_d4replay_f1score_l=[
+        [1, 1, 1],
+        [0.890, 0.932, 0.963],
+        [0.745, 0.887, 0.965],
+        [0.747, 0.895, 0.929],
+        [0.743, 0.890, 0.819],
+        [0.694, 0.864, 0.760],
+        [0.728, 0.861, 0.762]]
+    # ys_d4replay_f1score_l=[
+    #     [0.852, 0.907, 0.806],
+    #     [0.758, 0.869],
+    #     [1]]
+    ys_d4replay_f1scoremean_l = np.array(ys_d4replay_f1score_l).mean(axis=1).tolist()
+    ys_d4replay_f1scorestd_l  = np.array(ys_d4replay_f1score_l).std(axis=1).tolist()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 3))
+    # bottom = np.zeros(len(xs))
+    entry_count, width = 2, 0.4
+    p = ax.bar([idx-width/entry_count+width/entry_count/2 for idx, _ in enumerate(ys_d4noreplay_f1scoremean_l)], ys_d4noreplay_f1scoremean_l, width/entry_count, yerr=ys_d4noreplay_f1scorestd_l, color='#0067ff', edgecolor="black", hatch="x", label="no data replay")
+    p2 = ax.bar([idx-width/entry_count+(2+1)*width/entry_count/2 for idx, _ in enumerate(ys_d4replay_f1scoremean_l)], ys_d4replay_f1scoremean_l, width/entry_count, yerr=ys_d4replay_f1scorestd_l, color='#00ff67', edgecolor="black", hatch="|", label="with data replay")
+    # ax.bar_label(p)
+    # ax.set_title("Training Latency by N Models with Data 3", fontsize=20)
+    ax.grid()
+    ax.legend(loc="upper left", prop={'size': 16})
+    ax.set_xticks(list(range(len(xs))))
+    ax.set_xticklabels(xs)
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
     ax.set_xlabel("Number of Package for Discovery after Incremental Training", fontsize=20)
     ax.set_ylabel("F1 Score", fontsize=20)
     # plt.show()
     plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
     plt.close()
+
+
+
+    fig_path = '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/figs/'
+    filename = "F1_score_incremental_praxi_ML_conf"
+    # xs=[str(xlabel) for xlabel in [3000//50, 3000//25, 3000//10, 3000]]
+    xs=["5", "10", "15"]
+    ys_d4noreplay_f1score_l=[
+        [0.502, 0.538, 0.252],
+        [0.595, 0.436, 0.514],
+        [0.569, 0.389, 0.468]]
+    ys_d4noreplay_f1scoremean_l = np.array(ys_d4noreplay_f1score_l).mean(axis=1).tolist()
+    ys_d4noreplay_f1scorestd_l  = np.array(ys_d4noreplay_f1score_l).std(axis=1).tolist()
+    ys_d4replay_f1score_l=[
+        [0.743, 0.890, 0.819],
+        [0.694, 0.864, 0.760],
+        [0.728, 0.861, 0.762]]
+    ys_d4replay_f1scoremean_l = np.array(ys_d4replay_f1score_l).mean(axis=1).tolist()
+    ys_d4replay_f1scorestd_l  = np.array(ys_d4replay_f1score_l).std(axis=1).tolist()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 3))
+    # bottom = np.zeros(len(xs))
+    entry_count, width = 2, 0.4
+    p = ax.bar([idx-width/entry_count+width/entry_count/2 for idx, _ in enumerate(ys_d4noreplay_f1scoremean_l)], ys_d4noreplay_f1scoremean_l, width/entry_count, yerr=ys_d4noreplay_f1scorestd_l, color='#0067ff', edgecolor="black", hatch="x", label="no data replay")
+    p2 = ax.bar([idx-width/entry_count+(2+1)*width/entry_count/2 for idx, _ in enumerate(ys_d4replay_f1scoremean_l)], ys_d4replay_f1scoremean_l, width/entry_count, yerr=ys_d4replay_f1scorestd_l, color='#00ff67', edgecolor="black", hatch="|", label="with data replay")
+    # ax.bar_label(p)
+    # ax.set_title("Training Latency by N Models with Data 3", fontsize=20)
+    ax.grid()
+    ax.legend(loc="upper left", prop={'size': 16})
+    ax.set_xticks(list(range(len(xs))))
+    ax.set_xticklabels(xs)
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.tick_params(axis='both', which='minor', labelsize=18)
+    ax.set_xlabel("Number of Package for Discovery after Incremental Training", fontsize=20)
+    ax.set_ylabel("F1 Score", fontsize=20)
+    # plt.show()
+    plt.savefig(fig_path+filename+'.pdf', bbox_inches='tight')
+    plt.close()
+
+
 
 
     # filename = "trainlatency_by_labels_per_model_with_rawinput_data_4"
