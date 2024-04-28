@@ -147,7 +147,7 @@ class Hybrid(BaseEstimator):
                 self.vw_args_ += ' --probabilities'
                 self.loss_function = 'logistic'
                 self.vw_args_ += ' --loss_function={}'.format(self.loss_function)
-                self.vw_args_ += ' --link=logistic'
+                # self.vw_args_ += ' --link=logistic'
                 #self.vw_args_ += ' --link=glf1'
                 if self.iterative:
                     self.vw_args_ += ' --oaa 80'
@@ -216,8 +216,8 @@ class Hybrid(BaseEstimator):
             logging.info(
                 'vw ran sucessfully. out: %s, err: %s',
                 c.std_out, c.std_err)
-        # if self.use_temp_files: # WILL USUALLY BE FALSE
-        safe_unlink(f.name)
+        if self.use_temp_files: # WILL USUALLY BE FALSE
+            safe_unlink(f.name)
         self.trained = True # once the fit function has been run, model has been trained!
         logging.info("Training took %f secs." % (time.time() - start))
 
@@ -405,6 +405,7 @@ class Hybrid(BaseEstimator):
                     #tag = max(proba.keys(), key=lambda key: proba[key])
                 else:
                     tag = max(proba.keys(), key=lambda key: proba[key])
+                    logging.debug(proba)
                     #print(tag, self.reverse_labels[int(tag)])
                     #print(self.reverse_labels)
                 proba.pop(tag)
