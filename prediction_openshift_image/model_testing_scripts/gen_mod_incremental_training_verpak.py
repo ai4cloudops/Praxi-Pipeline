@@ -6,7 +6,7 @@ import pickle
 import time
 import yaml
 import random
-from collections import defaultdict
+from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 import main
@@ -54,40 +54,125 @@ def load_tag_files_concurrently(tags_path):
     
     return tags
 
+def load_tag_files_concurrently_rm_common_tags(tags_path, max_occurrence):
+    """Function to load tag files in parallel, remove common tags, and return a list of tags."""
+    tags = []
+    tag_files = [f for f in os.listdir(tags_path) if f.endswith('.tag')]
+    
+    with ProcessPoolExecutor(max_workers=128) as executor:
+        future_to_tag_file = {executor.submit(load_tag_file, tag_file, tags_path): tag_file for tag_file in tag_files}
+        
+        # Collect all tags
+        for future in tqdm(as_completed(future_to_tag_file), total=len(tag_files), desc='Loading tag files'):
+            try:
+                tag = future.result()
+                tags.append(tag)
+            except Exception as e:
+                print(f'Error loading file {future_to_tag_file[future]}: {e}')
+
+    # Aggregate and count tag occurrences
+    tag_counts = Counter()
+    for tag_dict in tags:
+        tag_counts.update(tag_dict['tags'])
+
+    # Find common tags
+    common_tags = {tag for tag, count in tag_counts.items() if count > max_occurrence}
+
+    # Remove common tags from each set
+    for tag_dict in tags:
+        for tag in common_tags:
+            if tag in tag_dict['tags']:
+                del tag_dict['tags'][tag]
+
+    return tags
+
+def rm_common_tags(tags, max_occurrence):
+    # Aggregate and count tag occurrences
+    tag_counts = Counter()
+    for tag_dict in tags:
+        tag_counts.update(tag_dict['tags'])
+
+    # Find common tags
+    common_tags = {tag for tag, count in tag_counts.items() if count > max_occurrence}
+
+    # Remove common tags from each set
+    for tag_dict in tqdm(tags):
+        for tag in list(tag_dict['tags']):
+            if tag in common_tags:
+                del tag_dict['tags'][tag]
+    
+    return tags
+
+
+# def rm_common_tags(tags, max_occurrence):
+#     # Aggregate and count tag occurrences
+#     tag_counts = Counter()
+#     for tag_dict in tags:
+#         tag_counts.update(tag_dict['tags'])
+
+#     # Find tags that are too common
+#     common_tags = {tag for tag, count in tag_counts.items() if count > max_occurrence}
+    
+#     # Function to remove common tags from a single tag dictionary
+#     def remove_tags(tag_dict):
+#         tag_keys = list(tag_dict['tags'].keys())
+#         for tag in tag_keys:
+#             if tag in common_tags:
+#                 del tag_dict['tags'][tag]
+#         return tag_dict
+
+#     # Parallelize the removal of common tags
+#     with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
+#         # Submit tasks to executor
+#         futures = [executor.submit(remove_tags, tag_dict) for tag_dict in tags]
+        
+#         # Wait for all futures to complete
+#         processed_tags = [future.result() for future in tqdm(as_completed(futures))]
+    
+#     return processed_tags
+
+
+
+
 # train_tags = load_tag_files_concurrently(train_tags_path)
+# train_tags = load_tag_files_concurrently_rm_common_tags(train_tags_path, 3)
 # test_tags = load_tag_files_concurrently(test_tags_path)
 
 vw_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/data/"
-# with open(vw_tags_path+"train_tags.obj","wb") as filehandler:
+# with open(vw_tags_path+"train_tags_count_3.obj","wb") as filehandler:
 #     pickle.dump(train_tags, filehandler)
 with open(vw_tags_path+"train_tags.obj","rb") as filehandler:
     train_tags = pickle.load(filehandler)
-# with open(vw_tags_path+"test_tags.obj","rb") as filehandler:
-#     train_tags = pickle.load(filehandler)
+# # with open(vw_tags_path+"test_tags.obj","rb") as filehandler:
+# #     train_tags = pickle.load(filehandler)
 
-# vw_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/data/"
-# with open(vw_tags_path+"test_tags.obj","rb") as filehandler:
-#     train_tags = pickle.load(filehandler)
-# train_tags.extend(train_tags)
-# train_tags.extend(train_tags)
-# train_tags.extend(train_tags)
-# train_tags.extend(train_tags)
-# train_tags.extend(train_tags)
-# train_tags.extend(train_tags)
-# train_tags.extend(train_tags)
-# train_tags.extend(train_tags)
-# train_tags.extend(train_tags)
-# train_tags.extend(train_tags)
-# train_tags.extend(train_tags)
-# train_tags.extend(train_tags)
+# # vw_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/data/"
+# # with open(vw_tags_path+"test_tags.obj","rb") as filehandler:
+# #     train_tags = pickle.load(filehandler)
+# # train_tags.extend(train_tags)
+# # train_tags.extend(train_tags)
+# # train_tags.extend(train_tags)
+# # train_tags.extend(train_tags)
+# # train_tags.extend(train_tags)
+# # train_tags.extend(train_tags)
+# # train_tags.extend(train_tags)
+# # train_tags.extend(train_tags)
+# # train_tags.extend(train_tags)
+# # train_tags.extend(train_tags)
+# # train_tags.extend(train_tags)
+# # train_tags.extend(train_tags)
 
+# train_tags = rm_common_tags(train_tags, 1440)
+# with open(f"{vw_tags_path}/train_tags.yaml", 'w') as datatile:
+#     yaml.dump(train_tags, datatile)
 
 with open(vw_tags_path+"train_tags.obj","rb") as filehandler:
     test_tags = pickle.load(filehandler)
-# # with open(vw_tags_path+"test_tags_ML_2.obj","wb") as filehandler:
-# #     pickle.dump(test_tags, filehandler)
-# with open(vw_tags_path+"test_tags.obj","rb") as filehandler:
-#     test_tags = pickle.load(filehandler)
+# # # with open(vw_tags_path+"test_tags_ML_2.obj","wb") as filehandler:
+# # #     pickle.dump(test_tags, filehandler)
+# # with open(vw_tags_path+"test_tags.obj","rb") as filehandler:
+# #     test_tags = pickle.load(filehandler)
+# test_tags = rm_common_tags(test_tags, 1440)
 
 packages_ll = {}
 package_ver_dd = {}
@@ -108,17 +193,17 @@ for timesdata in [5]:
         train_tags.extend(train_tags)
     for n_models in [1000]:
         for sim_thr in ["verpak"]:
-            for datareplay_count in [0,3]:
-                for termination_batch_idx in range(2, 9, 2):
-                # for termination_batch_idx in range(1, 5):
-                # for termination_batch_idx in [1,2,3,4,5,10,15,20]:
+            for datareplay_count in [0, 1]:
+                for termination_batch_idx in range(10, 51, 10):
+                # for termination_batch_idx in range(1, 2):
+                # for termination_batch_idx in [1,2,3,4,5,10,15,20,40,60,100]:
                     random_instance = random.Random(4)
-                    for shuffle_idx in range(1):
-                        cwd  = f"/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/model_testing_scripts/incremental_batchbybatch/cwd_{n_models}_{sim_thr}_{shuffle_idx}_csoaa3000_{timesdata}timesdata_datareplay{datareplay_count}_batchbybatch{termination_batch_idx}_SL_conf_passes0.000001/"
-                        # if Path(cwd).exists():
-                        #     random_instance.sample(packages_l, len(packages_l))
-                        #     print(f"skipped {cwd}")
-                        #     continue
+                    for shuffle_idx in range(3):
+                        cwd  = f"/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/model_testing_scripts/incremental_batchbybatch/cwd_{n_models}_{sim_thr}_{shuffle_idx}_csoaa3000_{timesdata}timesdata_batchdatareplay{datareplay_count}_batchbybatch{termination_batch_idx}_SL_conf_oaa/"
+                        if Path(cwd).exists():
+                            random_instance.sample(packages_l, len(packages_l))
+                            print(f"skipped {cwd}")
+                            continue
                         Path(cwd).mkdir(parents=True, exist_ok=True)
                         outdir  = f"{cwd}/results/"
                         Path(outdir).mkdir(parents=True, exist_ok=True)
@@ -223,6 +308,33 @@ for timesdata in [5]:
                                 # trained_train_tags.extend(local_train_tags)
                                 
                                 print(f"revisit iteration {j}-{i} done ===============================")
+
+
+                            # local_train_tags = []
+                            # for tags in train_tags:
+                            #     # if tags["labels"] in train_subset:
+                            #     if get_intersection(tags["labels"], trained_train_labels_set):
+                            #         local_train_tags.append(tags)
+                            # args['previous'] = model_path
+                            # model = main.iterative_train(local_train_tags, args)
+                            # modfile = model.vw_modelfile
+                            # # os.popen('cp {0} {1}'.format(modfile, modfile_path))
+                            # with open(model_path, 'wb') as modfile:
+                            #     pickle.dump(model, modfile)
+
+                            # # with open(model_path, 'rb') as reader:  
+                            # #     model = pickle.load(reader)
+                            # # # model.vw_binary = 'docker run -v /home/cc/Praxi-study/vw-kubeflow-pipeline/Praxi-Pipeline/prediction_base_image:/workspace --rm vowpalwabbit/vw-rel-alpine:9.8.0'
+                            # # model.vw_modelfile = modfile_path
+                            # # # print("labs",model.all_labels)
+                            # # pred = main.test(model, previous_local_train_tags, args)
+                            # # # print("output", pred)
+                            # # # with open(prediction_path, 'wb') as writer:
+                            # # #     pickle.dump(pred, writer) 
+                            # # # time.sleep(5000)
+                            # # trained_train_tags.extend(local_train_tags)
+                            
+                            # print(f"revisit iteration {j} done ===============================")
                             
                             
                         local_test_tags = []
