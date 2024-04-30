@@ -41,7 +41,9 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
     import tarfile, json, os
     # import requests
     from pathlib import Path
+    import shutil
     from pprint import pprint
+    from collections import defaultdict
     # sys.path.insert(0, "/home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/src")
     import image_downloader
     s3 = boto3.resource(service_name='s3', 
@@ -99,46 +101,48 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
     # image_name = "/".join(kube_pod_container_info.json()['data']['result'][0]['metric']['image'].split("/")[1:])
 
     # image_name = "zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0"
-    image_name = "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4"
+    # image_name = "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4"
     # image_name = "zongshun96/introspected_container:0.01"
+    image_name_l = ["zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4"]
+    changesets_d = defaultdict(list)
 
+    for image_name in image_name_l:
+        image_d = {}
+        image_meta_d = {}
+        image_layer_dir = cwd+image_name.replace('/','_')+"/"
+        image_downloader.download_image(repository=image_name, tag="latest", output_dir=image_layer_dir)
 
-    image_layer_dir = cwd+"introspected_container"
-    image_downloader.download_image(repository=image_name, tag="latest", output_dir=image_layer_dir)
-
-
-    image_d = {}
-    image_meta_d = {}
-    with open(cwd+"logfile_reading_tar_introspected.log", "w") as log_file:
-        for root, subdirs, files in os.walk(image_layer_dir):
-            for file_name in files:
-                print(os.path.join(root, file_name))
-                # print(file_name)
-                if file_name == "manifest.json":
-                    # json_file = tar.extractfile(member)
-                    with open(os.path.join(root, file_name), "r") as json_file:
-                        content = json.load(json_file)
-                        image_meta_d[file_name] = content
-                        pprint(file_name, log_file)
-                        pprint(content, log_file)
+        with open(cwd+f"logfile_reading_tar_{image_name.replace('/','_')}.log", "w") as log_file:
+            for root, subdirs, files in os.walk(image_layer_dir):
+                for file_name in files:
+                    print(os.path.join(root, file_name))
+                    # print(file_name)
+                    if file_name == f"manifest_{image_name.replace('/','_')}.json":
+                        # json_file = tar.extractfile(member)
+                        with open(os.path.join(root, file_name), "r") as json_file:
+                            content = json.load(json_file)
+                            image_meta_d[file_name] = content
+                            pprint(file_name, log_file)
+                            pprint(content, log_file)
+                            pprint("\n", log_file)
+                    elif file_name[-6:] == "tar.gz":
+                        # tar_bytes = io.BytesIO(tar.extractfile(member).read())
+                        tar_file = os.path.join(root, file_name)
+                        inner_tar = tarfile.open(tar_file)
+                        image_d[file_name] = inner_tar.getnames()
+                        pprint(tar_file, log_file)
+                        pprint(inner_tar.getnames(), log_file)
                         pprint("\n", log_file)
-                elif file_name[-6:] == "tar.gz":
-                    # tar_bytes = io.BytesIO(tar.extractfile(member).read())
-                    tar_file = os.path.join(root, file_name)
-                    inner_tar = tarfile.open(tar_file)
-                    image_d[file_name] = inner_tar.getnames()
-                    pprint(tar_file, log_file)
-                    pprint(inner_tar.getnames(), log_file)
-                    pprint("\n", log_file)
-                    inner_tar.close()
+                        inner_tar.close()
+        shutil.rmtree(image_layer_dir)
+                    
 
-    changesets_l = []             
-    changesets_dir = cwd+"changesets/"
-    if not Path(changesets_dir).exists():
-        Path(changesets_dir).mkdir()
-        # os.chmod(changesets_dir, 777)
-    with open(cwd+"logfile_changeset_gen_introspected.log", "w") as log_file:
-        for layer in image_meta_d["manifest.json"]["layers"]:
+        changesets_dir = image_layer_dir+"changesets/"
+        if not Path(changesets_dir).exists():
+            Path(changesets_dir).mkdir(parents=True)
+            # os.chmod(changesets_dir, 777)
+        # with open(cwd+f"logfile_changeset_gen_{image_name.replace('/','_')}.log", "w") as log_file:
+        for layer in image_meta_d[f"manifest_{image_name.replace('/','_')}.json"]["layers"]:
             # yaml_in = {'open_time': open_time, 'close_time': close_time, 'label': label, 'changes': changes}
             yaml_in = {'labels': ['unknown'], 'changes': image_d[f"{layer['digest'].replace(':', '_')}.tar.gz"]}
             changeset_filename = get_free_filename("unknown", changesets_dir, ".yaml")
@@ -146,7 +150,7 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
                 print("gen_changeset", os.path.dirname(outfile.name))
                 print("gen_changeset", changeset_filename)
                 yaml.dump(yaml_in, outfile, default_flow_style=False)
-            changesets_l.append(yaml_in)
+            changesets_d[image_name].append(yaml_in)
 
     # cs_dump_path = "/home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/cwd/changesets_l_dump"
     # # cs_path = "/home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/cwd/unknown"
@@ -158,14 +162,14 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
 
     # time.sleep(5000)
     # debug
-    for ind, changeset in enumerate(changesets_l):
-        with open("/pipelines/component/cwd/changesets/changesets_l"+str(ind)+".yaml", 'w') as writer:
-            # yaml.dump(changesets_l, writer)
-            yaml.dump(changeset, writer, default_flow_style=False)
-        # s3.Bucket('praxi-interm-1').upload_file("/pipelines/component/cwd/changesets/changesets_l"+str(ind)+".yaml", "changesets_l"+str(ind)+".yaml")
+    print(changesets_d)
+    with open("/pipelines/component/cwd/changesets/changesets_d.yaml", 'w') as writer:
+        # yaml.dump(changesets_l, writer)
+        yaml.dump(changesets_d, writer, default_flow_style=False)
+    # s3.Bucket('praxi-interm-1').upload_file("/pipelines/component/cwd/changesets/changesets_l"+str(ind)+".yaml", "changesets_l"+str(ind)+".yaml")
     # pass data to next component
     with open(cs_path, 'wb') as writer:
-        pickle.dump(changesets_l, writer)
+        pickle.dump(changesets_d, writer)
     with open(args_path, 'wb') as argfile:
         pickle.dump(user_in, argfile)
 generate_changeset_op = kfp.components.create_component_from_func(generate_changesets, output_component_file='generate_changeset_component.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/prom-get-layers:1.0")
@@ -179,6 +183,7 @@ def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(s
     import os
     import time
     import boto3
+    from collections import defaultdict
     # from function import changeset_gen
     s3 = boto3.resource(service_name='s3', 
                         region_name='us-east-1', 
@@ -188,28 +193,30 @@ def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(s
     # Load data from previous component
     with open(input_args_path, 'rb') as in_argfile:
         user_in = pickle.load(in_argfile)
-    with open(changeset_path, 'rb') as in_changesets_l:
-        changesets_l = pickle.load(in_changesets_l)
+    with open(changeset_path, 'rb') as in_changesets_d:
+        changesets_d = pickle.load(in_changesets_d)
                               
     # Tagset Generator
-    tagsets_l = []
-    for changeset in changesets_l:
-        # # tags = tagset_gen.get_columbus_tags(changeset['changes'])
-        # tag_dict = columbus(changeset['changes'], freq_threshold=2)
-        # tags = ['{}:{}'.format(tag, freq) for tag, freq in tag_dict.items()]
-        # cur_dict = {'labels': changeset['labels'], 'tags': tags}
-        tag_dict = columbus(changeset['changes'], freq_threshold=1)
-        # tags = ['{}:{}'.format(tag, freq) for tag, freq in tag_dict.items()]
-        cur_dict = {'labels': changeset['labels'], 'tags': tag_dict}
-        tagsets_l.append(cur_dict)
+    tagsets_d = defaultdict(list)
+    for image_name, changeset_l_per_img in changesets_d.items():
+        for changeset in changeset_l_per_img:
+            # # tags = tagset_gen.get_columbus_tags(changeset['changes'])
+            # tag_dict = columbus(changeset['changes'], freq_threshold=2)
+            # tags = ['{}:{}'.format(tag, freq) for tag, freq in tag_dict.items()]
+            # cur_dict = {'labels': changeset['labels'], 'tags': tags}
+            tag_dict = columbus(changeset['changes'], freq_threshold=1)
+            # tags = ['{}:{}'.format(tag, freq) for tag, freq in tag_dict.items()]
+            cur_dict = {'labels': changeset['labels'], 'tags': tag_dict}
+            tagsets_d[image_name].append(cur_dict)
 
     # Debug
-    with open("/pipelines/component/cwd/changesets_l_dump", 'w') as writer:
-        for change_dict in changesets_l:
-            writer.write(json.dumps(change_dict) + '\n')
-    for ind, tag_dict in enumerate(tagsets_l):
-        with open("/pipelines/component/cwd/tagsets_"+str(ind)+".tag", 'w') as writer:
-            writer.write(json.dumps(tag_dict) + '\n')
+    print(changesets_d)
+    print("============================================")
+    print(tagsets_d)
+    with open("/pipelines/component/cwd/changesets_d_dump", 'w') as writer:
+        json.dump(changesets_d, writer)
+    with open("/pipelines/component/cwd/tagsets_d_dump", 'w') as writer:
+        json.dump(tagsets_d, writer)
         # s3.Bucket('praxi-interm-1').upload_file("/pipelines/component/cwd/tagsets_"+str(ind)+".tag", "tagsets_"+str(ind)+".tag")
 
     # time.sleep(5000)
@@ -220,13 +227,13 @@ def generate_tagset(input_args_path: InputPath(str), changeset_path: InputPath(s
     with open(output_text_path, 'wb') as writer:
         # for tag_dict in tag_dict_gen:
         #     writer.write(json.dumps(tag_dict) + '\n')
-        pickle.dump(tagsets_l, writer)
+        pickle.dump(tagsets_d, writer)
     with open(output_args_path, 'wb') as argfile:
         pickle.dump(user_in, argfile)
 generate_tagset_op = kfp.components.create_component_from_func(generate_tagset, output_component_file='generate_tagset_component.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/taggen_openshift:0.01")
 
 
-def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str), prediction_path: OutputPath(str)):
+def gen_prediction(user_in: str, clf_zip_path: InputPath(str), test_tags_path: InputPath(str), prediction_path: OutputPath(str)):
 # def gen_prediction(model_path: InputPath(str), modfile_path: InputPath(str), test_tags_path: InputPath(str), created_tags_path: InputPath(str), prediction_path: OutputPath(str)):
     '''generate prediction given model'''
     # import main
@@ -258,7 +265,7 @@ def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str),
     # cwd = "/home/ubuntu/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
 
 
-
+    t_clf_decompressing_0 = time.time()
     # Path to the zip file (include the full path if the file is not in the current directory)
     zip_file_path = clf_zip_path
     # Directory where you want to extract the files
@@ -270,6 +277,8 @@ def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str),
     with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
         zip_ref.extractall(cwd_clf)
     print(f'Files extracted to {cwd_clf}')
+    t_clf_decompressing_t = time.time()
+    op_durations[f"total_clf_decompressing_time"] = t_clf_decompressing_t-t_clf_decompressing_0
 
 
     dataset = "data_4"
@@ -318,33 +327,34 @@ def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str),
     tags_by_instance_l, labels_by_instance_l = [], []
     tagset_files = []
     with open(test_tags_path, 'rb') as reader:
-        tagsets_l = pickle.load(reader)
-        for tagset in tagsets_l:
-            tagset_files.append("filename")
-            instance_feature_tags_d = defaultdict(int)
-            # # feature 
-            # for tag_vs_count in tagset['tags']:
-            #     k,v = tag_vs_count.split(":")
-            #     all_tags_set.add(k)
-            #     instance_feature_tags_d[k] += int(v)
-            for k, v in tagset['tags'].items():
-                all_tags_set.add(k)
-                instance_feature_tags_d[k] += int(v)
-            tags_by_instance_l.append(instance_feature_tags_d)
-            # label
-            if 'labels' in tagset:
-                all_label_set.update(tagset['labels'])
-                labels_by_instance_l.append(tagset['labels'])
-            else:
-                all_label_set.add(tagset['label'])
-                labels_by_instance_l.append([tagset['label']])
+        tagsets_d = pickle.load(reader)
+        for image_name, tagsets_l in tagsets_d.items():
+            for layer_idx, tagset in enumerate(tagsets_l):
+                tagset_files.append(f"{image_name}_layer_idx_{layer_idx}")
+                instance_feature_tags_d = defaultdict(int)
+                # # feature 
+                # for tag_vs_count in tagset['tags']:
+                #     k,v = tag_vs_count.split(":")
+                #     all_tags_set.add(k)
+                #     instance_feature_tags_d[k] += int(v)
+                for k, v in tagset['tags'].items():
+                    all_tags_set.add(k)
+                    instance_feature_tags_d[k] += int(v)
+                tags_by_instance_l.append(instance_feature_tags_d)
+                # label
+                if 'labels' in tagset:
+                    all_label_set.update(tagset['labels'])
+                    labels_by_instance_l.append(tagset['labels'])
+                else:
+                    all_label_set.add(tagset['label'])
+                    labels_by_instance_l.append([tagset['label']])
     t_data_t = time.time()
-    op_durations["total_data_load__time"] = t_data_t-t_data_0
-    # debugging
-    with open(f"{output_cwd}/labels_by_instance_l.yaml", 'w') as writer:
-        yaml.dump(labels_by_instance_l, writer)
-    with open(f"{output_cwd}/tags_by_instance_l.yaml", 'w') as writer:
-        yaml.dump(tags_by_instance_l, writer)
+    op_durations["total_data_load_time"] = t_data_t-t_data_0
+    # # debugging
+    # with open(f"{output_cwd}/labels_by_instance_l.yaml", 'w') as writer:
+    #     yaml.dump(labels_by_instance_l, writer)
+    # with open(f"{output_cwd}/tags_by_instance_l.yaml", 'w') as writer:
+    #     yaml.dump(tags_by_instance_l, writer)
 
     # time.sleep(5000)
 
@@ -359,9 +369,9 @@ def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str),
             print(f"clf is missing: {clf_pathname}")
             sys.exit(-1)
     t_clf_path_t = time.time()
-    op_durations["total_clf_path_load__time"] = t_clf_path_t-t_clf_path_0
-    with open(f"{output_cwd}/clf_path_l.yaml", 'w') as writer:
-        yaml.dump(clf_path_l, writer)
+    op_durations["total_clf_path_load_time"] = t_clf_path_t-t_clf_path_0
+    # with open(f"{output_cwd}/clf_path_l.yaml", 'w') as writer:
+    #     yaml.dump(clf_path_l, writer)
     # print(clf_path_l)
     
     # time.sleep(5000)
@@ -371,12 +381,12 @@ def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str),
     # values_l_, pos_x_l_, pos_y_l_ = [],[],[]
     predicted_labels_dict, true_labels_dict = defaultdict(list), defaultdict(list)
     for clf_idx, clf_path in enumerate(clf_path_l):
+        t_per_clf_0 = time.time()
+
         with open(clf_path[:-15]+'index_label_mapping', 'rb') as fp:
             clf_labels_l = pickle.load(fp)
             # labels_list.append(np.array(clf_labels_l))
 
-
-        t_per_clf_0 = time.time()
 
         BOW_XGB = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
                         booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
@@ -387,7 +397,7 @@ def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str),
 
         t_per_clf_loading_t = time.time()
         op_durations[f"clf{clf_idx}_load_time"] = t_per_clf_loading_t-t_per_clf_0
-        op_durations["total_clf_load__time"] += t_per_clf_loading_t-t_per_clf_0
+        op_durations["total_clf_load_time"] += t_per_clf_loading_t-t_per_clf_0
 
         # # label_matrix_list_per_clf, pred_label_matrix_list_per_clf = [],[]
         # pred_label_matrix_list_per_clf = []
@@ -473,12 +483,16 @@ def gen_prediction(clf_zip_path: InputPath(str), test_tags_path: InputPath(str),
         for k,v in predicted_labels_dict.items():
             results_d[int(k)] = v
         yaml.dump(results_d, writer)
-    s3.Bucket('praxi-interm-1').upload_file(output_cwd+"pred_l_dump", "pred_l_dump")
-    s3.Bucket('praxi-interm-1').upload_file(output_cwd+"pred_d_dump", "pred_d_dump")
+    with open(output_cwd+"tagset_files_dump", 'w') as writer:
+        yaml.dump(tagset_files, writer)
+    s3.Bucket('praxi-interm-1').upload_file(output_cwd+"pred_l_dump", f"pred_l_dump{user_in}")
+    s3.Bucket('praxi-interm-1').upload_file(output_cwd+"pred_d_dump", f"pred_d_dump{user_in}")
+    s3.Bucket('praxi-interm-1').upload_file(output_cwd+"metrics.yaml", f"metrics{user_in}.yaml")
+    s3.Bucket('praxi-interm-1').upload_file(output_cwd+"tagset_files_dump", f"tagset_files_dump{user_in}.yaml")
 
     # debug
     # time.sleep(5000)
-gen_prediction_op = kfp.components.create_component_from_func(gen_prediction, output_component_file='generate_pred_component.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/prediction_xgb_openshift:1.0") 
+gen_prediction_op = kfp.components.create_component_from_func(gen_prediction, output_component_file='generate_pred_component.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/prediction_xgb_openshift:1.1") 
 
 
 # # Reading bigger data
@@ -511,7 +525,7 @@ def use_image_pull_policy(image_pull_policy='Always'):
 @kfp.dsl.pipeline(
     name="Submitted Pipeline",
 )
-def praxi_pipeline():
+def praxi_pipeline(trial_idx):
     # vop = dsl.VolumeOp(
     #     name="interm-pvc",
     #     resource_name="interm-pvc",
@@ -555,7 +569,7 @@ def praxi_pipeline():
 
     # Pipeline design
     model = generate_loadmod_op().apply(use_image_pull_policy()).add_affinity(affinity)
-    change_test = generate_changeset_op("test").apply(use_image_pull_policy()).add_affinity(affinity)
+    change_test = generate_changeset_op(str(trial_idx)).apply(use_image_pull_policy()).add_affinity(affinity)
     change_test.set_cpu_limit('4')
     change_test.set_cpu_request('4')
     change_test.set_memory_limit('5120Mi')
@@ -565,7 +579,7 @@ def praxi_pipeline():
     tag_test.set_cpu_request('4')
     tag_test.set_memory_limit('5120Mi')
     tag_test.set_memory_request('5120Mi')
-    prediction = gen_prediction_op(model.outputs["clf"], tag_test.outputs["output_text"]).apply(use_image_pull_policy()).add_affinity(affinity)
+    prediction = gen_prediction_op(str(trial_idx), model.outputs["clf"], tag_test.outputs["output_text"]).apply(use_image_pull_policy()).add_affinity(affinity)
     prediction.set_cpu_limit('4')
     prediction.set_cpu_request('4')
     prediction.set_memory_limit('5120Mi')
@@ -573,11 +587,18 @@ def praxi_pipeline():
 
 if __name__ == "__main__":
 
+    import time
+
     client = kfp_tekton.TektonClient(
             host=kubeflow_endpoint,
             existing_token=bearer_token,
             # ssl_ca_cert = '/home/ubuntu/cert/ca.crt'
         )
     # client = kfp.Client(host=kfp_endpoint)
-    client.create_run_from_pipeline_func(praxi_pipeline, arguments={})
-    # print(client.list_experiments())
+
+    for trial_idx in range(0, 3):
+        arguments = {"trial_idx": trial_idx}
+        client.create_run_from_pipeline_func(praxi_pipeline, arguments=arguments)
+        # print(client.list_experiments())
+
+        time.sleep(1000)
