@@ -150,12 +150,12 @@ class Hybrid(BaseEstimator):
                 # self.vw_args_ += ' --link=logistic'
                 #self.vw_args_ += ' --link=glf1'
                 if self.iterative:
-                    self.vw_args_ += ' --oaa 80'
+                    self.vw_args_ += ' --oaa 3000'
                 else:
                     self.vw_args_ += ' --oaa {}'.format(len(self.all_labels))
         if self.iterative:
             self.vw_args_ += ' --save_resume'
-        self.vw_args_ += f' --kill_cache --cache_file {self.outdir}/a.cache'
+        self.vw_args_ += f' -c --kill_cache --cache_file {self.outdir}/a.cache'
         ####################################################
         train_set = list(zip(X, y))
         random.shuffle(train_set)
@@ -165,6 +165,7 @@ class Hybrid(BaseEstimator):
             with open(self.outdir+'/label_table-%s.yaml' % self.suffix, 'w') as f:
                 yaml.dump(self.reverse_labels, f)
             f = open(self.outdir+'/fit_input-%s.txt' % self.suffix, 'w')
+        fit_input_start = time.time()
         for tag, labels in train_set:
             if isinstance(labels, str):
                 labels = [labels]
@@ -175,6 +176,9 @@ class Hybrid(BaseEstimator):
                         input_string += '{}:0.0 '.format(number)
                     else:
                         input_string += '{}:1.0 '.format(number)
+                if number < 3000:
+                    for preallocate_clf_idx in range(number+1, 3001):
+                        input_string += '{}:1.0 '.format(preallocate_clf_idx)
             else:
                 input_string += '{} '.format(self.indexed_labels[labels[0]])
             if isinstance(tag, list):
@@ -185,6 +189,7 @@ class Hybrid(BaseEstimator):
                 print("wrong tag format!!!!!")
             
         f.close()
+        logging.info("fit_input took %f secs." % (time.time() - fit_input_start))
         # write all tag/label combos into a file f ^^^
         ######## Call VW ML alg ##################################
         # print("Calling " + '{vw_binary} {vw_input} {vw_args} -f {vw_modelfile}'.format(
@@ -216,8 +221,8 @@ class Hybrid(BaseEstimator):
             logging.info(
                 'vw ran sucessfully. out: %s, err: %s',
                 c.std_out, c.std_err)
-        if self.use_temp_files: # WILL USUALLY BE FALSE
-            safe_unlink(f.name)
+        # if self.use_temp_files: # WILL USUALLY BE FALSE
+        safe_unlink(f.name)
         self.trained = True # once the fit function has been run, model has been trained!
         logging.info("Training took %f secs." % (time.time() - start))
 
@@ -251,13 +256,21 @@ class Hybrid(BaseEstimator):
             #     input_string = input_string[:-1] + " "
             #     f.write('{} | {}\n'.format(input_string, ' '.join(tag)))
             for tag in X:
+                # if isinstance(tag, list):
+                #     f.write('{} | {}\n'.format(
+                #         ' '.join([str(x) for x in self.reverse_labels.keys()]),
+                #         ' '.join(tag)))
+                # elif isinstance(tag, dict):
+                #     f.write('{} | {}\n'.format(
+                #         ' '.join([str(x) for x in self.reverse_labels.keys()]),
+                #         ' '.join([f"{k}:{v}" for k, v in tag.items()])))
                 if isinstance(tag, list):
                     f.write('{} | {}\n'.format(
-                        ' '.join([str(x) for x in self.reverse_labels.keys()]),
+                        ' '.join([str(x) for x in self.reverse_labels.keys()]+[str(x) for x in range(max(self.reverse_labels.keys())+1, 3001)]),
                         ' '.join(tag)))
                 elif isinstance(tag, dict):
                     f.write('{} | {}\n'.format(
-                        ' '.join([str(x) for x in self.reverse_labels.keys()]),
+                        ' '.join([str(x) for x in self.reverse_labels.keys()]+[str(x) for x in range(max(self.reverse_labels.keys())+1, 3001)]),
                         ' '.join([f"{k}:{v}" for k, v in tag.items()])))
                 else:
                     print("wrong tag format!")

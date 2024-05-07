@@ -196,12 +196,14 @@ def iterative_train(train_dat, args):
         suffix = 'iterative'
         iterative = True
         modfile = new_model_name
-        clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=False,
+        clf = Hybrid(freq_threshold=2, pass_freq_to_vw=True, probability=True,
                      vw_args= vwargs, suffix=suffix, iterative=iterative,
                      use_temp_files=False, vw_modelfile=modfile, outdir = outdir)
     else:
         clf = pickle.load(open(initial_model, "rb"))
         clf.vw_args = ' --learning_rate 1.5 --passes 10'
+        # clf.vw_args = ' --learning_rate 1.5 --passes 10  --threads'
+        # clf.vw_args = ' --learning_rate 1.5'
     #clf.probability = True                                                            ###
     train_names = []
     for f in train_dat:
@@ -704,6 +706,8 @@ def get_inputs():
     parser.add_argument('-m','--multi', dest='experiment', action='store_const', const='multi',
                         default='single', help="Type of experiment to run (single-label default).")
     # parser.add_argument('-w','--vwargs', dest='vw_args', default='-b 26 --learning_rate 1.5 --threads --random_seed 4',
+    #                     help="custom arguments for VW.")
+    # parser.add_argument('-w','--vwargs', dest='vw_args', default='-b 26 --learning_rate 1.5 --threads',
     #                     help="custom arguments for VW.")
     parser.add_argument('-w','--vwargs', dest='vw_args', default='-b 26 --learning_rate 1.5 --threads --passes 10',
                         help="custom arguments for VW.")

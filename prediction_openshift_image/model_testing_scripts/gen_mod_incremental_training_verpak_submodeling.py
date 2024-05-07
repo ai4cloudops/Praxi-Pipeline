@@ -1,3 +1,4 @@
+import copy
 import os, sys, logging
 from pathlib import Path
 sys.path.insert(1, '/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/function')
@@ -88,12 +89,16 @@ def load_tag_files_concurrently_rm_common_tags(tags_path, max_occurrence):
 
 def rm_common_tags(tags, max_occurrence):
     # Aggregate and count tag occurrences
-    tag_counts = Counter()
-    for tag_dict in tags:
-        tag_counts.update(tag_dict['tags'])
+    label_tagnames_d = defaultdict(set)
+    for labels_tags in tags:
+        for label in labels_tags['labels']:
+            label_tagnames_d[label].update(labels_tags["tags"].keys())
+    tagnames_counts = Counter()
+    for tagnames in label_tagnames_d.values():
+        tagnames_counts.update(tagnames)
 
     # Find common tags
-    common_tags = {tag for tag, count in tag_counts.items() if count > max_occurrence}
+    common_tags = {tag for tag, count in tagnames_counts.items() if count > max_occurrence}
 
     # Remove common tags from each set
     for tag_dict in tqdm(tags):
@@ -135,11 +140,11 @@ def rm_common_tags(tags, max_occurrence):
 
 
 # train_tags = load_tag_files_concurrently(train_tags_path)
-# train_tags = load_tag_files_concurrently_rm_common_tags(train_tags_path, 3)
+# # train_tags = load_tag_files_concurrently_rm_common_tags(train_tags_path, 3)
 # test_tags = load_tag_files_concurrently(test_tags_path)
 
 vw_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/data/"
-# with open(vw_tags_path+"train_tags_count_3.obj","wb") as filehandler:
+# with open(vw_tags_path+"train_tags.obj","wb") as filehandler:
 #     pickle.dump(train_tags, filehandler)
 with open(vw_tags_path+"train_tags.obj","rb") as filehandler:
     train_tags = pickle.load(filehandler)
@@ -162,17 +167,23 @@ with open(vw_tags_path+"train_tags.obj","rb") as filehandler:
 # # train_tags.extend(train_tags)
 # # train_tags.extend(train_tags)
 
-# train_tags = rm_common_tags(train_tags, 1440)
+rm_common_tags_start = time.time()
+train_tags_bak = copy.deepcopy(train_tags)
+train_tags = rm_common_tags(train_tags, 10)
+rm_common_tags_end = time.time()
 # with open(f"{vw_tags_path}/train_tags.yaml", 'w') as datatile:
 #     yaml.dump(train_tags, datatile)
 
+
 with open(vw_tags_path+"train_tags.obj","rb") as filehandler:
     test_tags = pickle.load(filehandler)
+# with open(vw_tags_path+"test_tags.obj","rb") as filehandler:
+#     test_tags = pickle.load(filehandler)
 # # # with open(vw_tags_path+"test_tags_ML_2.obj","wb") as filehandler:
 # # #     pickle.dump(test_tags, filehandler)
 # # with open(vw_tags_path+"test_tags.obj","rb") as filehandler:
 # #     test_tags = pickle.load(filehandler)
-# test_tags = rm_common_tags(test_tags, 1440)
+# test_tags = rm_common_tags(test_tags, 25)
 
 packages_ll = {}
 package_ver_dd = {}
@@ -190,16 +201,19 @@ dataset = "data_4"
 packages_l = packages_ll[dataset]
 random_instance = random.Random(4)
 for shuffle_idx in range(10):
+    original_train_tags = copy.deepcopy(train_tags)
     for timesdata in [5]:
         for _ in range(timesdata):
-            train_tags.extend(train_tags)
+            train_tags.extend(original_train_tags)
+        del original_train_tags
         for n_models in [1000]:
             for sim_thr in ["verpak"]:
                 for datareplay_count in [0]:
                     # for termination_batch_idx in range(10, 51, 10):
                     # for termination_batch_idx in range(2, 10, 2):
-                    for termination_batch_idx in [10,20,30,31,40,50,2,4,6,8]:
-                        cwd  = f"/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/model_testing_scripts/incremental_batchbybatch/cwd_{n_models}_{sim_thr}_{shuffle_idx}_csoaa3000_{timesdata}timesdata_batchdatareplay{datareplay_count}_batchbybatch{termination_batch_idx}_SL_conf/"
+                    # for termination_batch_idx in [10,20,30,31,40,50,2,4,6,8]:
+                    for termination_batch_idx in [10000]:
+                        cwd  = f"/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/model_testing_scripts/submodeling/cwd_{n_models}_{sim_thr}_{shuffle_idx}_csoaa3000_{timesdata}timesdata_batchdatareplay{datareplay_count}_batchbybatch{termination_batch_idx}_SL_conf_testing_filterTrue10/"
                         if Path(cwd).exists():
                             random_instance.sample(packages_l, len(packages_l))
                             print(f"skipped {cwd}")
@@ -212,6 +226,8 @@ for shuffle_idx in range(10):
                         model_path = cwd+"pred_model.p"
                         modfile_path = cwd+"model.vw"
                         prediction_path = cwd+"test_result.txt"
+                        # models_pwd = f"{cwd}/models/"
+                        # Path(models_pwd).mkdir(parents=True, exist_ok=True)
 
 
                         # SET UP LOGGING
@@ -230,6 +246,7 @@ for shuffle_idx in range(10):
                         log.addHandler(fileh)      # set the new handler
 
                         logging.debug(shuffle_idx)
+                        logging.info("rm_common_tags took %f secs." % (rm_common_tags_end - rm_common_tags_start))
 
                         # for _ in range(shuffle_idx+1):
                         #     randomized_packages_l = random_instance.sample(packages_l, len(packages_l))
@@ -263,7 +280,7 @@ for shuffle_idx in range(10):
                                 model = main.iterative_train(local_train_tags, args)
                                 # model = main.multilabel_train(train_tags, args)
                                 modfile = model.vw_modelfile
-                                # os.popen('cp {0} {1}'.format(modfile, modfile_path))
+                                # os.popen('cp {0} {1}-i'.format(modfile, models_pwd))
                                 with open(model_path, 'wb') as modfile:
                                     pickle.dump(model, modfile)
                                 # previous_local_train_tags = local_train_tags
@@ -272,7 +289,7 @@ for shuffle_idx in range(10):
                                 args['previous'] = model_path
                                 model = main.iterative_train(local_train_tags, args)
                                 modfile = model.vw_modelfile
-                                # os.popen('cp {0} {1}'.format(modfile, modfile_path))
+                                # os.popen('cp {0} {1}-i'.format(modfile, models_pwd))
                                 with open(model_path, 'wb') as modfile:
                                     pickle.dump(model, modfile)
 
@@ -291,7 +308,7 @@ for shuffle_idx in range(10):
                                 args['previous'] = model_path
                                 model = main.iterative_train(local_train_tags, args)
                                 modfile = model.vw_modelfile
-                                # os.popen('cp {0} {1}'.format(modfile, modfile_path))
+                                # os.popen('cp {0} {1}-j-i'.format(modfile, models_pwd))
                                 with open(model_path, 'wb') as modfile:
                                     pickle.dump(model, modfile)
 
