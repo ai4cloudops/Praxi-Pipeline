@@ -114,6 +114,7 @@ def read_tokens(tags_path, tag_file, cwd, inference_flag, freq=100, tokens_filte
     return ret
 
 def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None, tag_index_mapping_path=None, index_label_mapping_path=None, label_index_mapping_path=None, cwd="/home/cc/Praxi-study/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/", train_flag=False, inference_flag=True, iter_flag=False, packages_select_set=set(), tokens_filter_set=set(), input_size=None, compact_factor=1, freq=100, all_tags_set=None,all_label_set=None,tags_by_instance_l=None,labels_by_instance_l=None,tagset_files=None):
+    op_durations = {}
     if index_tag_mapping_path == None:
         index_tag_mapping_path=cwd+'index_tag_mapping'
         tag_index_mapping_path=cwd+'tag_index_mapping'
@@ -142,17 +143,24 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
 
 
         if tag_files_l == None:
+            t_read_tag_files_l_0 = time.time()
             tag_files_l = [tag_file for tag_file in os.listdir(tags_path) if (tag_file[-3:] == 'tag') and (tag_file[:-4].rsplit('-', 1)[0] in packages_select_set or packages_select_set == set())]
+            op_durations["t_read_tag_files_l"] = time.time()-t_read_tag_files_l_0
         # return 
+        t_prepare_tag_files_l_of_l_0 = time.time()
         tag_files_l_of_l, step = [], len(tag_files_l)//mp.cpu_count()+1
         for i in range(0, len(tag_files_l), step):
             tag_files_l_of_l.append(tag_files_l[i:i+step])
+        op_durations["t_prepare_tag_files_l_of_l"] = time.time()-t_prepare_tag_files_l_of_l_0
+        t_load_tag_files_l_0 = time.time()
         pool = mp.Pool(processes=mp.cpu_count())
         # pool = mp.Pool(processes=1)
         data_instance_d_l = [pool.apply_async(map_tagfilesl, args=(tags_path, tag_files_l, cwd, inference_flag, freq), kwds={"tokens_filter_set": tokens_filter_set}) for tag_files_l in tqdm(tag_files_l_of_l)]
         data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
         pool.close()
         pool.join()
+        op_durations["t_load_tag_files_l"] = time.time()-t_load_tag_files_l_0
+        t_dup_data_instance_d_l_0 = time.time()
         for data_instance_d in data_instance_d_l:
             if len(data_instance_d) == 5:
                     tagset_files.extend(data_instance_d['tagset_files'])
@@ -195,7 +203,7 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
                     tags_by_instance_l.extend(data_instance_d['tags_by_instance_l'])
                     all_label_set.update(data_instance_d['all_label_set'])
                     labels_by_instance_l.extend(data_instance_d['labels_by_instance_l'])
-
+        op_durations["t_dup_data_instance_d_l"] = time.time()-t_dup_data_instance_d_l_0
         # pool = mp.Pool(processes=mp.cpu_count())
         # # pool = mp.Pool(processes=1)
         # data_instance_d_l = [pool.apply_async(read_tokens, args=(tags_path, tag_file, cwd, packages_select_set, inference_flag)) for tag_file in tqdm(os.listdir(tags_path))]
@@ -234,6 +242,7 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
         #     #     f.write(f"{line}\n")
 
         # Sorting instances
+        t_sorting_data_instance_d_l_0 = time.time()
         if not inference_flag:
             zipped = list(zip(tagset_files, tags_by_instance_l, labels_by_instance_l))
             zipped.sort(key=lambda x: x[0])
@@ -242,6 +251,7 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
             zipped = list(zip(tagset_files, tags_by_instance_l))
             zipped.sort(key=lambda x: x[0])
             tagset_files, tags_by_instance_l = zip(*zipped)
+        op_durations["t_sorting_data_instance_d_l"] = time.time()-t_sorting_data_instance_d_l_0
 
 
 
@@ -272,6 +282,7 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
     # #############
 
     # Feature Matrix Generation
+    t_generate_feat_mapping_0 = time.time()
     removed_tags_l = []
     ## Generate Mapping
     if train_flag and not iter_flag:  # generate initial mapping.
@@ -307,7 +318,9 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
             all_tags_l = pickle.load(fp)
         with open(tag_index_mapping_path, 'rb') as fp:
             tag_index_mapping = pickle.load(fp)
+    op_durations["t_generate_feat_mapping"] = time.time()-t_generate_feat_mapping_0
     ## Generate Feature Matrix
+    t_generate_feat_mat_0 = time.time()
     instance_row_list = []
     for instance_tags_d in tags_by_instance_l:
         if input_size == None:
@@ -339,14 +352,17 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
         instance_row_list.append(scipy.sparse.csr_matrix(instance_row))
         # instance_row_list.append(instance_row)
     # instance_row_list.extend(instance_row_list)
+    t_generate_feat_mat_vtack_0 = time.time()
     feature_matrix = scipy.sparse.vstack(instance_row_list)
     # feature_matrix = np.vstack(instance_row_list)
+    op_durations["t_generate_feat_mat:vstack"] = time.time()-t_generate_feat_mat_vtack_0
     del instance_row_list
     # with open(cwd+'removed_tags_l', 'wb') as fp:
     #     pickle.dump(removed_tags_l, fp)
     # with open(cwd+'removed_tags_l.txt', 'w') as f:
     #     for line in removed_tags_l:
     #         f.write(f"{line}\n")
+    op_durations["t_generate_feat_mat"] = time.time()-t_generate_feat_mat_0
     
 
 
@@ -355,7 +371,7 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
     if not inference_flag:
         removed_label_l = []
         ## Handling Mapping
-
+        t_generate_label_mapping_0 = time.time()
         if train_flag and not iter_flag:  # generate initial mapping.
             all_label_l = list(all_label_set)
             label_index_mapping = {}
@@ -398,7 +414,9 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
             with open(cwd+'loaded_index_label_mapping.txt', 'w') as f:
                 for line in all_label_l:
                     f.write(f"{line}\n")
+        op_durations["t_generate_label_mapping"] = time.time()-t_generate_label_mapping_0
         ## Handling Label Matrix
+        t_generate_label_mat_0 = time.time()
         instance_row_list = []
         # label_matrix = np.zeros(len(all_label_l))
         for labels in labels_by_instance_l:
@@ -420,8 +438,9 @@ def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None
         with open(cwd+'removed_label_l.txt', 'w') as f:
             for line in removed_label_l:
                 f.write(f"{line}\n")
+        op_durations["t_generate_label_mat"] = time.time()-t_generate_label_mat_0
     
-    return tagset_files, feature_matrix, label_matrix
+    return tagset_files, feature_matrix, label_matrix, op_durations
     # return tagset_files, None, label_matrix
 
 def one_hot_to_names(mapping_path, one_hot_matrix):
@@ -489,7 +508,9 @@ def print_metrics(cwd, outfile, y_true, y_pred, labels, op_durations=None):
     file_header += (" {:-^55}\n".format("CLASSIFICATION REPORT") + report.replace('\n', "\n"))
 
     if op_durations != None:
-        file_header += ("\n {:-^55}\n".format("DURATION REPORT") + "\n".join(["{}:{:.3f}".format(k, v) for k, v in op_durations.items()]))
+        # file_header += ("\n {:-^55}\n".format("DURATION REPORT") + "\n".join(["{}:{:.3f}".format(k, v) for k, v in op_durations.items()]))
+        with open(f"{cwd}measurement_metrics.yaml", 'w') as writer:
+            yaml.dump(op_durations, writer)
     
     
     np.savetxt("{}".format(cwd+outfile),
@@ -517,11 +538,12 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, train_tags_init_l=
     # Train Data
     print(cwd)
     t0 = time.time()
-    train_tagset_files_init, train_feature_matrix_init, train_label_matrix_init, op_durations = {} = tagsets_to_matrix(train_tags_init_path, tag_files_l=train_tags_init_l, cwd=cwd, train_flag=True, inference_flag=False, packages_select_set=train_packages_select_set, tokens_filter_set=tokens_filter_set, input_size=input_size, compact_factor=compact_factor, freq=freq)
+    train_tagset_files_init, train_feature_matrix_init, train_label_matrix_init, op_durations_encoder = tagsets_to_matrix(train_tags_init_path, tag_files_l=train_tags_init_l, cwd=cwd, train_flag=True, inference_flag=False, packages_select_set=train_packages_select_set, tokens_filter_set=tokens_filter_set, input_size=input_size, compact_factor=compact_factor, freq=freq)
     # print(process.memory_info())
     t1 = time.time()
     print(t1-t0)
     op_durations["tagsets_to_matrix-trainset"] = t1-t0
+    op_durations["tagsets_to_matrix-trainset_details"] = op_durations_encoder
     op_durations["tagsets_to_matrix-trainset_xsize"] = train_feature_matrix_init.shape[0]
     op_durations["tagsets_to_matrix-trainset_ysize"] = train_feature_matrix_init.shape[1]
 
@@ -679,10 +701,11 @@ def run_init_train(train_tags_init_path, test_tags_path, cwd, train_tags_init_l=
     for batch_first_idx in range(0, len(test_tags_l), step):
         # Test Data
         t0 = time.time()
-        test_tagset_files_init, test_feature_matrix_init, test_label_matrix_init = tagsets_to_matrix(test_tags_path, tag_files_l=test_tags_l[batch_first_idx:batch_first_idx+step], cwd=cwd, train_flag=False, inference_flag=False, packages_select_set=test_packages_select_set, input_size=input_size, compact_factor=compact_factor)
+        test_tagset_files_init, test_feature_matrix_init, test_label_matrix_init, op_durations_encoder = tagsets_to_matrix(test_tags_path, tag_files_l=test_tags_l[batch_first_idx:batch_first_idx+step], cwd=cwd, train_flag=False, inference_flag=False, packages_select_set=test_packages_select_set, input_size=input_size, compact_factor=compact_factor)
         # print(process.memory_info())
         t1 = time.time()
         op_durations["tagsets_to_matrix-testset_"+str(batch_first_idx)] = t1-t0
+        op_durations["tagsets_to_matrix-testset_"+str(batch_first_idx)+"_details"] = op_durations_encoder
         op_durations["tagsets_to_matrix-testset_xsize_"+str(batch_first_idx)] = test_feature_matrix_init.shape[0]
         op_durations["tagsets_to_matrix-testset_ysize_"+str(batch_first_idx)] = test_feature_matrix_init.shape[1]
         label_matrix_list.append(test_label_matrix_init)
@@ -787,6 +810,7 @@ def run_iter_train():
     print_metrics(cwd, 'metrics_iter.out', test_label_matrix_iter, pred_label_matrix_iter, labels)
 
 def run_pred(cwd, clf_path_l, test_tags_path, tag_files_l=None, flag_load_obj=True, n_jobs=64, n_estimators=100, packages_select_set=set(), test_batch_count=1, input_size=None, compact_factor=1, depth=1, tree_method="auto"):
+    op_durations = {}
     # # cwd = "/pipelines/component/cwd/"
     # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
     # clf_path = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/model_init.json"
@@ -811,16 +835,23 @@ def run_pred(cwd, clf_path_l, test_tags_path, tag_files_l=None, flag_load_obj=Tr
         tags_by_instance_l, labels_by_instance_l = [], []
         tagset_files = []
         if tag_files_l == None:
+            t_read_test_tag_files_l_0 = time.time()
             tag_files_l = [tag_file for tag_file in os.listdir(test_tags_path) if tag_file[-3:] == 'tag']
+            op_durations["t_read_tag_files_l"] = time.time()-t_read_test_tag_files_l_0
+        t_prepare_test_tag_files_l_of_l_0 = time.time()
         tag_files_l_of_l, step = [], len(tag_files_l)//mp.cpu_count()+1
         for i in range(0, len(tag_files_l), step):
             tag_files_l_of_l.append(tag_files_l[i:i+step])
+        op_durations["t_prepare_test_tag_files_l_of_l"] = time.time()-t_prepare_test_tag_files_l_of_l_0
+        t_load_test_tag_files_l_0 = time.time()
         # pool = mp.Pool(processes=mp.cpu_count())
         pool = mp.Pool(processes=10)
         data_instance_d_l = [pool.apply_async(map_tagfilesl, args=(test_tags_path, tag_files_l, cwd, inference_flag, freq), kwds={"tokens_filter_set": tokens_filter_set}) for tag_files_l in tqdm(tag_files_l_of_l)]
         data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
         pool.close()
         pool.join()
+        op_durations["t_load_test_tag_files_l"] = time.time()-t_load_test_tag_files_l_0
+        t_dup_test_data_instance_d_l_0 = time.time()
         for data_instance_d in data_instance_d_l:
             if len(data_instance_d) == 5:
                     tagset_files.extend(data_instance_d['tagset_files'])
@@ -863,8 +894,9 @@ def run_pred(cwd, clf_path_l, test_tags_path, tag_files_l=None, flag_load_obj=Tr
                     tags_by_instance_l.extend(data_instance_d['tags_by_instance_l'])
                     all_label_set.update(data_instance_d['all_label_set'])
                     labels_by_instance_l.extend(data_instance_d['labels_by_instance_l'])
-
+        op_durations["t_dup_test_data_instance_d_l"] = time.time()-t_dup_test_data_instance_d_l_0
         # Sorting instances
+        t_sorting_test_data_instance_d_l_0 = time.time()
         if not inference_flag:
             zipped = list(zip(tagset_files, tags_by_instance_l, labels_by_instance_l))
             zipped.sort(key=lambda x: x[0])
@@ -873,8 +905,9 @@ def run_pred(cwd, clf_path_l, test_tags_path, tag_files_l=None, flag_load_obj=Tr
             zipped = list(zip(tagset_files, tags_by_instance_l))
             zipped.sort(key=lambda x: x[0])
             tagset_files, tags_by_instance_l = zip(*zipped)
+        op_durations["t_sorting_test_data_instance_d_l"] = time.time()-t_sorting_test_data_instance_d_l_0
 
-    op_durations = {}
+    
     label_matrix_list, pred_label_matrix_list, labels_list = [], [], []
     results = defaultdict(list)
     for clf_idx, clf_path in enumerate(clf_path_l):
@@ -900,7 +933,7 @@ def run_pred(cwd, clf_path_l, test_tags_path, tag_files_l=None, flag_load_obj=Tr
             #     tagsets_l = pickle.load(reader)
             t0 = time.time()
             # ########### convert from tag:count strings to encoding format
-            tagset_files_used, feature_matrix, label_matrix = tagsets_to_matrix(test_tags_path, tag_files_l = tag_files_l[batch_first_idx:batch_first_idx+step], inference_flag=inference_flag, cwd=clf_path[:-15], packages_select_set=packages_select_set, input_size=input_size, compact_factor=compact_factor, all_tags_set=all_tags_set,all_label_set=all_label_set,tags_by_instance_l=tags_by_instance_l,labels_by_instance_l=labels_by_instance_l,tagset_files=tagset_files) # get rid of "model_init.json" in the clf_path.
+            tagset_files_used, feature_matrix, label_matrix, op_durations_encoder = tagsets_to_matrix(test_tags_path, tag_files_l = tag_files_l[batch_first_idx:batch_first_idx+step], inference_flag=inference_flag, cwd=clf_path[:-15], packages_select_set=packages_select_set, input_size=input_size, compact_factor=compact_factor, all_tags_set=all_tags_set,all_label_set=all_label_set,tags_by_instance_l=tags_by_instance_l,labels_by_instance_l=labels_by_instance_l,tagset_files=tagset_files) # get rid of "model_init.json" in the clf_path.
             # # ########### load a previously converted encoding format data obj
             # with open(test_tags_path+"feature_matrix.obj","rb") as filehandler:
             #     feature_matrix = pickle.load(filehandler)
@@ -911,6 +944,7 @@ def run_pred(cwd, clf_path_l, test_tags_path, tag_files_l=None, flag_load_obj=Tr
             # # ############################################
             t1 = time.time()
             op_durations[clf_path+"\n tagsets_to_matrix-testset"+str(batch_first_idx)+"/"+str(test_batch_count)] = t1-t0
+            op_durations[clf_path+"\n tagsets_to_matrix-testset"+str(batch_first_idx)+"/"+str(test_batch_count)+"_details"] = op_durations_encoder
             op_durations[clf_path+"\n feature_matrix_size_0_"+str(batch_first_idx)+"/"+str(test_batch_count)] = feature_matrix.shape[0]
             op_durations[clf_path+"\n feature_matrix_size_1_"+str(batch_first_idx)+"/"+str(test_batch_count)] = feature_matrix.shape[1]
             op_durations[clf_path+"\n label_matrix_size_0_"+str(batch_first_idx)+"/"+str(test_batch_count)] = label_matrix.shape[0]
@@ -1120,7 +1154,7 @@ if __name__ == "__main__":
                                                     train_tag_files_l = list(train_tagfiles_set)
                                                     test_tag_files_l = list(test_tagfiles_set)
                                                     all_test_tag_files_l.extend(test_tag_files_l)
-                                                    cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/"
+                                                    cwd  ="/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak_detailed_encoder_times/"
                                                     run_init_train(train_tags_path, test_tags_path, cwd, train_tags_init_l=train_tag_files_l, test_tags_l=test_tag_files_l, n_jobs=n_jobs, n_estimators=n_estimators, tokens_filter_set=tokens_filter_set, test_batch_count=test_batch_count, input_size=input_size, compact_factor=dim_compact_factor, depth=depth, tree_method=tree_method, freq=freq)
                                                     # break
 
@@ -1147,14 +1181,14 @@ if __name__ == "__main__":
                                                 for clf_njobs in [32]:
                                                     clf_path = []
                                                     for i in range(n_models):
-                                                        clf_pathname = "/home/cc/test/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/model_init.json"
+                                                        clf_pathname = "/home/cc/test/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak_detailed_encoder_times/model_init.json"
                                                         if os.path.isfile(clf_pathname):
                                                             clf_path.append(clf_pathname)
                                                         else:
                                                             print(f"clf is missing! {clf_pathname}")
                                                             sys.exit(-1)
                                                             # break
-                                                    cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/"
+                                                    cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak_detailed_encoder_times/"
                                                     # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
                                                     # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/tagsets_ML/"
                                                     test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/tagsets_SL/"
