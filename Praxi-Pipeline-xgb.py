@@ -27,7 +27,7 @@ def load_model(clf_path: OutputPath(str)):
                         aws_access_key_id="", 
                         aws_secret_access_key="",)
 
-    s3.Bucket('praxi-model-xgb-02').download_file(Key='True25_1000submodel_verpak.zip', Filename=clf_path)
+    s3.Bucket('praxi-model-xgb-02').download_file(Key='True25_1submodel_verpak.zip', Filename=clf_path)
 
 generate_loadmod_op = kfp.components.create_component_from_func(load_model, output_component_file='generate_loadmod_op.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/load_model_s3:0.01")
 
@@ -103,7 +103,11 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
     # image_name = "zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0"
     # image_name = "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4"
     # image_name = "zongshun96/introspected_container:0.01"
-    image_name_l = ["zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4","zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4"]
+    image_name_two = ["zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4"]
+    image_name_l = []
+    for _ in range(48):
+        image_name_l.extend(image_name_two)
+    # image_name_l = [image_name_two[0]]
     changesets_d = defaultdict(list)
 
     for image_name in image_name_l:
@@ -282,7 +286,7 @@ def gen_prediction(user_in: str, clf_zip_path: InputPath(str), test_tags_path: I
 
 
     dataset = "data_4"
-    n_models = 1000
+    n_models = 1
     shuffle_idx = 0
     test_sample_batch_idx = 0
     n_samples = 4
@@ -492,7 +496,7 @@ def gen_prediction(user_in: str, clf_zip_path: InputPath(str), test_tags_path: I
 
     # debug
     # time.sleep(5000)
-gen_prediction_op = kfp.components.create_component_from_func(gen_prediction, output_component_file='generate_pred_component.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/prediction_xgb_openshift:1.1") 
+gen_prediction_op = kfp.components.create_component_from_func(gen_prediction, output_component_file='generate_pred_component.yaml', base_image="registry-route-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org/zongshun96/prediction_xgb_openshift:1.2") 
 
 
 # # Reading bigger data
@@ -596,9 +600,10 @@ if __name__ == "__main__":
         )
     # client = kfp.Client(host=kfp_endpoint)
 
+    # time.sleep(3000)
     for trial_idx in range(0, 3):
         arguments = {"trial_idx": trial_idx}
         client.create_run_from_pipeline_func(praxi_pipeline, arguments=arguments)
         # print(client.list_experiments())
 
-        time.sleep(1000)
+        time.sleep(600)
