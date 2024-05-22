@@ -1,2 +1,5 @@
 requests
 docker
+pyyaml
+simplejson
+boto3

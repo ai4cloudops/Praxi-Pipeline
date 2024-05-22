@@ -1,0 +1,10 @@
+pyyaml
+flask
+gunicorn
+watchdog 
+numpy 
+scipy 
+scikit-learn 
+tqdm 
+envoy
+boto3

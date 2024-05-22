@@ -1,0 +1,15 @@
+pyyaml
+flask
+gunicorn
+watchdog 
+numpy 
+scipy 
+scikit-learn 
+tqdm 
+envoy
+matplotlib
+boto3
+xgboost
+tqdm
+scikit-learn
+scipy

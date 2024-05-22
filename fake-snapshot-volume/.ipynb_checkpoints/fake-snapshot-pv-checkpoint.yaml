@@ -1,0 +1,16 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: snapshot-volume
+  namespace: kubeflow 
+  labels:
+    app: snapshot
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  capacity:
+    storage: 1Gi
+  hostPath:
+    path: /home/cc/Praxi-study/vw-kubeflow-pipeline/data_mount
+

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: introspected-deployment
-  namespace: default 
+  namespace: ai4cloudops-11855c
 spec:
   replicas: 1
   selector:

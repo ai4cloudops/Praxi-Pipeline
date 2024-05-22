@@ -1,0 +1,46 @@
+name: Generate changesets
+inputs:
+- {name: user_in, type: String}
+outputs:
+- {name: cs, type: String}
+- {name: args, type: String}
+implementation:
+  container:
+    image: zongshun96/prom-get-layers:0.02
+    command:
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n   \
+      \ os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return file_path\n\
+      \ndef generate_changesets(user_in, cs_path, args_path):\n    import read_layered_image\n\
+      \    import pickle\n    import time\n    import yaml\n    import boto3\n   \
+      \ # import os\n    # import json\n    s3 = boto3.resource(service_name='s3',\
+      \ \n                        region_name='us-east-1', \n                    \
+      \    aws_access_key_id=\"AKIAXECNQISLIBBXAMLV\", \n                        aws_secret_access_key=\"\
+      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\",)\n\n    changesets_l = read_layered_image.run()\n\
+      \    # time.sleep(5000)\n    # debug\n    for ind, changeset in enumerate(changesets_l):\n\
+      \        with open(\"/pipelines/component/cwd/changesets/changesets_l\"+str(ind)+\"\
+      .yaml\", 'w') as writer:\n            # yaml.dump(changesets_l, writer)\n  \
+      \          yaml.dump(changeset, writer, default_flow_style=False)\n        s3.Bucket('praxi-interm-1').upload_file(\"\
+      /pipelines/component/cwd/changesets/changesets_l\"+str(ind)+\".yaml\", \"changesets_l\"\
+      +str(ind)+\".yaml\")\n    # pass data to next component\n    with open(cs_path,\
+      \ 'wb') as writer:\n        pickle.dump(changesets_l, writer)\n    with open(args_path,\
+      \ 'wb') as argfile:\n        pickle.dump(user_in, argfile)\n    # time.sleep(5000)\n\
+      \nimport argparse\n_parser = argparse.ArgumentParser(prog='Generate changesets',\
+      \ description='')\n_parser.add_argument(\"--user-in\", dest=\"user_in\", type=str,\
+      \ required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--cs\",\
+      \ dest=\"cs_path\", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)\n\
+      _parser.add_argument(\"--args\", dest=\"args_path\", type=_make_parent_dirs_and_return_path,\
+      \ required=True, default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\
+      \n_outputs = generate_changesets(**_parsed_args)\n"
+    args:
+    - --user-in
+    - {inputValue: user_in}
+    - --cs
+    - {outputPath: cs}
+    - --args
+    - {outputPath: args}

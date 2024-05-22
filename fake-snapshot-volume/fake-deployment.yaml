@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: snapshot-fake-deployment
-  namespace: kubeflow 
+  namespace: praxi 
 spec:
   replicas: 1
   selector:
@@ -13,21 +13,31 @@ spec:
       labels:
         app: snapshot
     spec:
-      securityContext:
-        runAsUser: 0
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values:
+                - wrk-10
+                - wrk-11
       containers:
         - name: snapshot-fake
-          image: andrejschioppa/vw_serving_flask:ubuntu_v1
+          image: busybox:latest
           imagePullPolicy: "IfNotPresent"
-          command: [ "/bin/bash", "-c", "--" ]
-          args: [ "while true; do sleep 30; done;" ]
+          command: 
+            - /bin/sh
+            - -c
+            - sleep 36000
           volumeMounts:
             - mountPath: /fake-snapshot
               name: snapshot-vol1
       volumes:
         - name: snapshot-vol1
           persistentVolumeClaim:
-            claimName: snapshot-claim-0
+            claimName: interm-pvc
 
 
 

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod
+spec:
+  containers:
+  - name: mycontainer
+    image: registry:5000/myimage:mytag
+  imagePullSecrets:
+  - name: my-registry-secret

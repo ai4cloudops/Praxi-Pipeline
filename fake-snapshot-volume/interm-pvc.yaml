@@ -1,0 +1,14 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: interm-pvc
+  namespace: praxi 
+  # labels:
+  #   app: snapshot
+spec:
+  storageClassName: ocs-external-storagecluster-ceph-rbd
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

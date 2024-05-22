@@ -1,0 +1,12 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: registry-route
+spec:
+  to:
+    kind: Service
+    name: registry # Replace with your registry service name
+  port:
+    targetPort: 5000 # The port your service is exposed on within the cluster
+  tls:
+    termination: edge # Optional: Use if you want to secure the route with TLS
