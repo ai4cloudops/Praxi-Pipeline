@@ -50,8 +50,8 @@ def plot_size():
     # target_dir = "big_ML_biased_test"
     # target_dir = "big_SL_biased_test"
     # target_dir = "big_train"
-    # target_dir = "tagsets_SL"
-    target_dir = "tagsets_ML"
+    target_dir = "tagsets_SL"
+    # target_dir = "tagsets_ML"
     dirname = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/"
     out_dirname = dirname+target_dir+"/"
     # print(out_dirname)
@@ -232,7 +232,7 @@ def plot_size():
     reoccurentcounts_valuecount_l = [count for _, count in reoccurentcounts_valuecount_l]
     reoccurentcounts_valuecount_sum = sum(reoccurentcounts_valuecount_l)
     reoccurentcounts_valuecount_l_nomalized = [round(reoccurentcounts_valuecount/reoccurentcounts_valuecount_sum*100,2) for reoccurentcounts_valuecount in reoccurentcounts_valuecount_l]
-    fig, ax = plt.subplots(1, 1, figsize=(10, 3))
+    fig, ax = plt.subplots(1, 1, figsize=(10, 2))
     # proba_array = proba_array.reshape(-1)
     # c_l = [color_l[cluster_idx] for cluster_idx in yhats]
     bar_plots = ax.bar(list(range(len(reoccurentcounts_valuecount_l_nomalized))), reoccurentcounts_valuecount_l_nomalized, hatch="*")

@@ -200,7 +200,7 @@ package_ver_dd["data_4"] = package_ver_d
 dataset = "data_4"
 packages_l = packages_ll[dataset]
 random_instance = random.Random(4)
-for shuffle_idx in range(10):
+for shuffle_idx in range(2, 10):
     original_train_tags = copy.deepcopy(train_tags)
     for timesdata in [5]:
         for _ in range(timesdata):
@@ -213,7 +213,7 @@ for shuffle_idx in range(10):
                     # for termination_batch_idx in range(2, 10, 2):
                     # for termination_batch_idx in [10,20,30,31,40,50,2,4,6,8]:
                     for termination_batch_idx in [10000]:
-                        cwd  = f"/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/model_testing_scripts/submodeling/cwd_{n_models}_{sim_thr}_{shuffle_idx}_csoaa3000_{timesdata}timesdata_batchdatareplay{datareplay_count}_batchbybatch{termination_batch_idx}_SL_conf_testing_filterTrue10/"
+                        cwd  = f"/home/cc/Praxi-study/Praxi-Pipeline/prediction_openshift_image/model_testing_scripts/submodeling/cwd_{n_models}_{sim_thr}_{shuffle_idx}_csoaa3000_{timesdata}timesdata_batchdatareplay{datareplay_count}_batchbybatch{termination_batch_idx}_SL_conf_testing_filterTrue25/"
                         if Path(cwd).exists():
                             random_instance.sample(packages_l, len(packages_l))
                             print(f"skipped {cwd}")
@@ -246,7 +246,7 @@ for shuffle_idx in range(10):
                         log.addHandler(fileh)      # set the new handler
 
                         logging.debug(shuffle_idx)
-                        logging.info("rm_common_tags took %f secs." % (rm_common_tags_end - rm_common_tags_start))
+                        # logging.info("rm_common_tags took %f secs." % (rm_common_tags_end - rm_common_tags_start))
 
                         # for _ in range(shuffle_idx+1):
                         #     randomized_packages_l = random_instance.sample(packages_l, len(packages_l))
