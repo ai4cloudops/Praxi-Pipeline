@@ -39,7 +39,7 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
     import yaml
     import boto3
     import tarfile, json, os
-    # import requests
+    import requests
     from pathlib import Path
     import shutil
     from pprint import pprint
@@ -85,29 +85,32 @@ def generate_changesets(user_in: str, cs_path: OutputPath(str), args_path: Outpu
     # # LOKI_TOKEN=$(oc whoami -t)
     # # curl -H "Authorization: Bearer $LOKI_TOKEN" "https://grafana-open-cluster-management-observability.apps.nerc-ocp-infra.rc.fas.harvard.edu/api/datasources/proxy/1/api/v1/query" --data-urlencode 'query=kube_pod_container_info{namespace="ai4cloudops-f7f10d9"}' | jq
 
-    # grafana_addr = 'https://grafana-open-cluster-management-observability.apps.nerc-ocp-infra.rc.fas.harvard.edu/api/datasources/proxy/1/api/v1/query'
+    grafana_addr = 'https://grafana-open-cluster-management-observability.apps.nerc-ocp-infra.rc.fas.harvard.edu/api/datasources/proxy/1/api/v1/query'
 
-    # headers={
-    #     'Authorization': 'Bearer sha256~1GInrC-5iKWU-HpwVLRmAzefAm64vsgEp3wNewZPNBw',
-    #     'Content-Type': 'application/x-www-form-urlencoded'
-    #     }
+    headers={
+        'Authorization': 'Bearer sha256~1GInrC-5iKWU-HpwVLRmAzefAm64vsgEp3wNewZPNBw',
+        'Content-Type': 'application/x-www-form-urlencoded'
+        }
 
-    # name_space = "ai4cloudops-f7f10d9"
-    # params = {
-    #     "query": "kube_pod_container_info{namespace='"+name_space+"'}"
-    #     }
+    name_space = "ai4cloudops-f7f10d9"
+    params = {
+        "query": "kube_pod_container_info{namespace='"+name_space+"'}"
+        }
 
-    # kube_pod_container_info = requests.get(grafana_addr, params=params, headers=headers)
+    kube_pod_container_info = requests.get(grafana_addr, params=params, headers=headers)
     # image_name = "/".join(kube_pod_container_info.json()['data']['result'][0]['metric']['image'].split("/")[1:])
+    image_name_l = []
+    for container_idx in range(len(kube_pod_container_info.json()['data']['result'])):
+        image_name_l.append("/".join(kube_pod_container_info.json()['data']['result'][container_idx]['metric']['image'].split("/")[1:]))
 
     # image_name = "zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0"
     # image_name = "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4"
     # image_name = "zongshun96/introspected_container:0.01"
-    image_name_two = ["zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4"]
-    image_name_l = []
-    for _ in range(48):
-        image_name_l.extend(image_name_two)
-    # image_name_l = [image_name_two[0]]
+    # image_name_two = ["zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0", "zongshun96/python3_9-slim-bullseye.aws-lambda-powertools_v2_35_1_p_fiona_v1_9_4"]
+    # image_name_l = []
+    # for _ in range(48):
+    #     image_name_l.extend(image_name_two)
+    # # image_name_l = [image_name_two[0]]
     changesets_d = defaultdict(list)
 
     for image_name in image_name_l:
