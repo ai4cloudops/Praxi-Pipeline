@@ -55,7 +55,7 @@ def run():
     # image_name = "zongshun96/introspected_container:0.01"
 
 
-    cmd1 = "bash "+src+"download-frozen-image-v2.sh "+cwd+"introspected_container "+image_name
+    cmd1 = "bash "+src+"image_download-adapted.sh "+cwd+"introspected_container "+image_name
     p_cmd1 = subprocess.Popen(cmd1.split(" "), stdin=subprocess.PIPE)
     p_cmd1.communicate()
 
