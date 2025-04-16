@@ -3,12 +3,12 @@ import subprocess, os, tarfile, shutil, sys, json, yaml
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 # import requests
-sys.path.insert(1, '/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen')
+sys.path.insert(1, '/home/cc/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen')
 import read_layered_image
 
 # The directory containing the Dockerfiles
-directory_path = '/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles'
-cwd = "/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/"
+directory_path = '/home/cc/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles'
+cwd = "/home/cc/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/"
 if not Path(cwd).exists():
     Path(cwd).mkdir()
 changesets_dir = cwd+"changesets/"
@@ -86,7 +86,7 @@ def build_push_remove_docker_image(dockerfile_path, idx):
         return f"Skipped {tag}"
 
     # Define the save directory and tar file name
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/"
+    # cwd = "/home/cc/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/"
     # from pathlib import Path
     # if not Path(cwd).exists():
     #     Path(cwd).mkdir()
@@ -205,15 +205,19 @@ def find_dockerfiles(directory):
 def build_push_remove_images_in_parallel(dockerfiles):
     """Builds, pushes, and removes multiple Docker images in parallel from a list of Dockerfiles."""
     # token = rm_image_dockerhub.get_auth_token(USERNAME, PASSWORD)
-    with ThreadPoolExecutor(max_workers=64) as executor:
-        future_to_dockerfile = {executor.submit(build_push_remove_docker_image, df, idx): df for idx, df in enumerate(dockerfiles)}
-        for idx, future in enumerate(as_completed(future_to_dockerfile)):
-            dockerfile = future_to_dockerfile[future]
-            try:
-                result = future.result()
-                print(f"{idx} {result}")
-            except Exception as exc:
-                print(f'{idx} {dockerfile} generated an exception: {exc}')
+    parallelism = 32
+    
+    with ThreadPoolExecutor(max_workers=parallelism) as executor:
+        for L_idx in range(len(dockerfiles)//parallelism):
+            future_to_dockerfile = {executor.submit(build_push_remove_docker_image, df, idx): df for idx, df in enumerate(dockerfiles[L_idx*parallelism:(L_idx+1)*parallelism])}
+            for idx, future in enumerate(as_completed(future_to_dockerfile)):
+                dockerfile = future_to_dockerfile[future]
+                try:
+                    result = future.result()
+                    print(f"{idx+L_idx*parallelism} {result}")
+                except Exception as exc:
+                    print(f'{idx+L_idx*parallelism} {dockerfile} generated an exception: {exc}')
+            cleanup_build_cache()
 
 
 def cleanup_build_cache():
