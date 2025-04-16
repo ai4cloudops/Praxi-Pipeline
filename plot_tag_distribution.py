@@ -11,6 +11,9 @@ from pathlib import Path
 import multiprocessing as mp
 import itertools
 import matplotlib
+import xgboost as xgb
+import pickle
+import numpy as np
 # matplotlib.rcParams['pdf.fonttype'] = 42
 # matplotlib.rcParams['ps.fonttype'] = 42	
 # matplotlib.rcParams['text.usetex'] = True
@@ -38,7 +41,15 @@ def read_tagset(tagset_pathname):
         except yaml.YAMLError as exc:
             print(exc)
 
+def get_intersection(from_set, to_set):
+    ret = []
+    for ele in from_set:
+        if ele in to_set:
+            ret.append(ele)
+    return ret
+
 def plot_size():
+    # tagset
     # sizes_l, p_l = [], []
     combination_length_d = defaultdict(int)
     pair_count_d = defaultdict(int)
@@ -47,18 +58,20 @@ def plot_size():
     # label_pairs_l = list()
     # tagnames_set = set()
     label_tagsnameset_d = defaultdict(set)
-    # target_dir = "big_ML_biased_test"
-    # target_dir = "big_SL_biased_test"
-    # target_dir = "big_train"
-    target_dir = "tagsets_SL"
-    # target_dir = "tagsets_ML"
-    dirname = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/"
+    target_dir = "tagset_ML_3_test"
+    dirname = "/home/cc/Praxi-Pipeline/data/data_4/"
     out_dirname = dirname+target_dir+"/"
+    filter_dir = "filters/"
+    plot_dir = "plots-1/"
+    Path(dirname+filter_dir).mkdir(parents=True, exist_ok=True)
+    Path(dirname+plot_dir).mkdir(parents=True, exist_ok=True)
+
     # print(out_dirname)
     tagsetfilenames_l = [name for name in os.listdir(out_dirname) if os.path.isfile(out_dirname+name) and name[-4:]!=".obj"]
     # print(tagsetfilenames_l)
     # if len(tagsetfilenames_l) == 2:
-    pool = mp.Pool(processes=mp.cpu_count())
+    # pool = mp.Pool(processes=mp.cpu_count())
+    pool = mp.Pool(processes=16)
     data_instance_d_l = [pool.apply_async(read_tagset, args=(out_dirname+tagsets_name,)) for tagsets_name in tqdm(tagsetfilenames_l)]
     data_instance_d_l = [data_instance_d.get() for data_instance_d in tqdm(data_instance_d_l) if data_instance_d.get()!=None]
     pool.close()
@@ -92,10 +105,58 @@ def plot_size():
     #         except yaml.YAMLError as exc:
     #             print(exc)
 
-    filter_dir = "filters/"
-    plot_dir = "plots-1/"
-    Path(dirname+filter_dir).mkdir(parents=True, exist_ok=True)
-    Path(dirname+plot_dir).mkdir(parents=True, exist_ok=True)
+
+
+    # models
+    dataset = "data_4"
+    n_models = 1000
+    shuffle_idx = 0
+    test_sample_batch_idx = 0
+    n_samples = 4
+    clf_njobs = 32
+    n_estimators = 100
+    depth = 1
+    input_size = None
+    dim_compact_factor = 1
+    tree_method = "exact"
+    max_bin = 1
+    with_filter = True
+    freq = 25
+    cwd_clf = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts_bak"
+
+    clf_path_l = []
+    for i in range(n_models):
+        clf_pathname = f"{cwd_clf}/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/model_init.json"
+        if os.path.isfile(clf_pathname):
+            clf_path_l.append(clf_pathname)
+        else:
+            print(f"clf is missing: {clf_pathname}")
+            sys.exit(-1)
+
+    clf_tagsnameset_d = {}
+    for clf_idx, clf_path in enumerate(clf_path_l):
+        BOW_XGB = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
+                        booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
+                        subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
+        BOW_XGB.load_model(clf_path)
+        feature_importance = BOW_XGB.feature_importances_
+        index_tag_mapping_path=clf_path[:-15]+'index_tag_mapping'
+        with open(index_tag_mapping_path, 'rb') as fp:
+            all_tags_l = pickle.load(fp)
+        used_tags_set = set([all_tags_l[used_fidx] for used_fidx in np.where(feature_importance > 0)[0].tolist()])
+        clf_tagsnameset_d[clf_path] = used_tags_set
+
+
+    clf_usage_d = defaultdict(int)
+    for clf, tagsnamset in clf_tagsnameset_d.items():
+        for data_instance_d in data_instance_d_l:
+            used_instance_tags_list = get_intersection(tagsnamset, set(data_instance_d["tags_d"].keys()))
+            if used_instance_tags_list:
+                clf_usage_d[clf] += 1
+    clf_usage_d = {k: v for k, v in sorted(clf_usage_d.items(), key=lambda item: item[1])}
+    with open(dirname+plot_dir+target_dir+"_clf_usage_d", 'w') as outfile:
+        yaml.dump(clf_usage_d, outfile, default_flow_style=False)
+
 
     pair_count_d = {k: v for k, v in sorted(pair_count_d.items(), key=lambda item: item[1])}
     with open(dirname+plot_dir+target_dir+"_pair_count_d", 'w') as outfile:
@@ -137,6 +198,47 @@ def plot_size():
     plt.savefig(dirname+plot_dir+target_dir+'_distribution_combination_length.pdf', bbox_inches='tight')
     plt.close()
 
+
+    # Plot clf usage for each clf
+    # clf_usage_d = {0: 10, 1: 15, 2: 7, ...}
+    # Get classifier indices and corresponding usage counts
+    # clf_idxs = sorted(clf_usage_d.keys())  # ensures the x-axis values are ordered
+    # usage_counts = [clf_usage_d[idx] for idx in clf_idxs]
+    # clf_usage_d = {k: v for k, v in sorted(clf_usage_d.items(), key=lambda item: item[1])}
+
+    # Create a bar plot
+    plt.figure(figsize=(10, 6))  # optionally adjust the figure size
+    # plt.bar(clf_idxs, usage_counts, color='skyblue')
+    plt.bar(list(range(len(clf_usage_d))), list(clf_usage_d.values()), color='skyblue')
+    plt.xlabel('Classifier Index (clf_idx)')
+    plt.ylabel('Usage Count')
+    plt.title('Classifier Usage by clf_idx')
+    # plt.xticks(list(range(len(clf_usage_d))))  # ensure each classifier is marked on the x-axis
+    plt.savefig(dirname+plot_dir+target_dir+'_distribution_clf_usage.pdf', bbox_inches='tight')
+
+    # # Sort the dictionary by usage count in ascending order.
+    # sorted_clf_usage = dict(sorted(clf_usage_d.items(), key=lambda item: item[1]))
+    # Extract classifier indices and the corresponding sorted usage counts.
+    clf_idxs = list(range(len(clf_usage_d)))
+    usage_counts = list(clf_usage_d.values())
+    # Compute the cumulative sum of the usage counts.
+    cdf_values = np.cumsum(usage_counts)
+    # Normalize the cumulative values to obtain a probability CDF (ranging from 0 to 1).
+    cdf_normalized = cdf_values / cdf_values[-1]
+    plt.figure(figsize=(10, 6))
+    # Plot the normalized (probability) CDF using a step plot.
+    plt.step(clf_idxs, cdf_normalized, where='mid', color='skyblue', label='Normalized CDF')
+    # If you prefer to plot the absolute cumulative counts, uncomment the next lines and comment out the normalized plot.
+    # plt.step(clf_idxs, cdf_values, where='mid', color='skyblue', label='Cumulative Usage Count')
+    # plt.ylabel('Cumulative Usage Count')
+    plt.xlabel('Classifier Index (clf_idx)')
+    plt.ylabel('Cumulative Probability')
+    plt.title('CDF of Classifier Usage')
+    plt.legend()
+    plt.grid(True)
+    # Save the plot as a PDF file.
+    plt.savefig(dirname + plot_dir + target_dir + '_cdf_clf_usage.pdf', bbox_inches='tight')
+    # plt.show()
 
     # ######################## Plots below are for SL datasets only
     # Plot tag counts for each label pair
