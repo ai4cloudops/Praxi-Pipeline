@@ -97,6 +97,8 @@ prediction_openshift_image/model_testing_scripts/multiline.cache.writing
 prediction_XGBoost_openshift_image/model_testing_scripts_bak/
 prediction_openshift_image/model_testing_scripts/submodeling/
 prediction_XGBoost_openshift_image/figs/
-prediction_XGBoost_openshift_image/
 gen_data_docker_image/python/changeset_gen/changesets_SL.zip
 prediction_openshift_image/model_testing_scripts.zip
+lambda-deployment/independent-submodel-praxipaas-container/models/
+lambda-deployment/independent-submodel-praxipaas-lambda-layer/layer-models/models/
+lambda-deployment/independent-submodel-praxipaas-lambda-layer/layer/python/
