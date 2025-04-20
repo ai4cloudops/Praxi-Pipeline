@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import base64
 import os
 import sys
 import time
@@ -8,13 +9,21 @@ import multiprocessing as mp
 from collections import defaultdict
 from pathlib import Path
 import requests
+import gzip
 from tqdm import tqdm
 import yaml
+import numpy as np
+import xgboost as xgb
 
 # ------------------------
 # Global Variables
 # ------------------------
 # Define cwd once as a global variable.
+# Your Flask endpoint:
+# FLASK_URL = "http://18.119.115.230:5000/predict"
+FLASK_URL = "http://localhost:5000/predict"
+# New: your API Gateway / Lambda POST endpoint
+LAMBDA_URL = "https://ae2od52j3i.execute-api.us-east-2.amazonaws.com/Prod/predict"
 # Configuration parameters (adjust as needed)
 dataset = "data_4"
 n_models = 1000
@@ -31,6 +40,8 @@ tree_method = "exact"
 max_bin = 1
 with_filter = True
 freq = 25
+cwd_clf = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts_bak"
+
 
 # Build a working directory; this is passed as an argument to map_tagfilesl
 cwd = (
@@ -120,14 +131,66 @@ def read_tokens(tags_path, tag_file, cwd, inference_flag, freq=100, tokens_filte
 # -----------------------------------------------------------
 # Data Loading Function
 # -----------------------------------------------------------
-def load_tagset_data():
+def load_all_used_tags(
+    models_base_dir: str,
+    dataset: str,
+    n_models: int,
+    shuffle_idx: int,
+    test_sample_batch_idx: int,
+    n_samples: int,
+    clf_njobs: int,
+    n_estimators: int,
+    depth: int,
+    input_size,
+    dim_compact_factor: int,
+    tree_method: str,
+    max_bin: int,
+    with_filter: bool,
+    freq: int,
+) -> set:
+    used_tags = set()
+    for i in range(n_models):
+        # build the same path template you use in Lambda
+        mdir = (
+            f"{models_base_dir}/cwd_ML_with_{dataset}_{n_models}_{i}_train_"
+            f"{shuffle_idx}shuffleidx_{test_sample_batch_idx}testsamplebatchidx_"
+            f"{n_samples}nsamples_{clf_njobs}njobs_{n_estimators}trees_"
+            f"{depth}depth_{input_size}-{dim_compact_factor}rawinput_sampling1_"
+            f"{tree_method}treemethod_{max_bin}maxbin_modize_par_{with_filter}"
+            f"{freq}removesharedornoisestags_verpak"
+        )
+        model_json = os.path.join(mdir, "model_init.json")
+        idx2tag = os.path.join(mdir, "index_tag_mapping")
+
+        if not os.path.isfile(model_json) or not os.path.isfile(idx2tag):
+            continue
+
+        # load model & feature importances
+        clf = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
+                booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
+                subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
+        clf.load_model(model_json)
+        feats = clf.feature_importances_
+        # load the index→tag list
+        with open(idx2tag, "rb") as fp:
+            all_tags_list = pickle.load(fp)
+
+        # any feature with importance > 0
+        for idx in np.where(feats > 0)[0]:
+            if idx < len(all_tags_list):
+                used_tags.add(all_tags_list[idx])
+    return used_tags
+
+def load_tagset_data(filtered_tags: set = None):
     """
     Loads tagset data from a directory using the early version logic.
     Returns a list of sample dictionaries and operation durations.
     """
     op_durations = defaultdict(int)
     t0 = time.time()
-    test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test_mini/"
+    # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test_mini-1/"
+    # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test_mini/"
+    test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test_mid/"
     # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test/"
     # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3/"
     step = None  # will be defined after getting the list of files
@@ -175,6 +238,12 @@ def load_tagset_data():
 
     samples = []
     for idx, instance_tags in enumerate(tags_by_instance_l):
+        if filtered_tags is not None:
+            instance_tags = {
+                tag: cnt
+                for tag, cnt in instance_tags.items()
+                if tag in filtered_tags
+            }
         sample = {"instance_id": idx, "tags": instance_tags}
         if idx < len(labels_by_instance_l) and labels_by_instance_l[idx]:
             sample["true_labels"] = labels_by_instance_l[idx]
@@ -184,36 +253,102 @@ def load_tagset_data():
 
 def send_request(samples):
     """
-    Sends the collected samples to the Flask server endpoint for prediction.
-    Returns the JSON response.
+    Sends samples to the Flask server.
     """
     payload = {"samples": samples}
-    # print("Payload to send:", json.dumps(payload, indent=2))
-    # url = "http://localhost:5000/predict"  # Adjust if needed
-    url = "http://3.134.116.205:5000/predict"
     headers = {"Content-Type": "application/json"}
 
     try:
-        response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()
+        resp = requests.post(FLASK_URL, json=payload, headers=headers)
+        resp.raise_for_status()
     except requests.exceptions.RequestException as e:
-        print("Error sending request:", e)
+        print("Error sending request to Flask:", e)
         sys.exit(1)
 
-    return response.json()
+    return resp.json()
+
+def send_to_lambda(samples):
+    """
+    Sends samples to the AWS Lambda endpoint via API Gateway,
+    with gzip compression on request and response.
+    """
+    # 1) Build and compress payload
+    payload = {"samples": samples}
+    json_bytes = json.dumps(payload).encode("utf-8")
+    compressed_request = gzip.compress(json_bytes)
+
+    headers = {
+        "Content-Type": "application/json",
+        "Content-Encoding": "gzip",   # tell Lambda we're sending gzipped body
+        # "x-api-key": "YOUR_API_KEY", # if required
+    }
+
+    # 2) Send compressed bytes
+    try:
+        resp = requests.post(
+            LAMBDA_URL,
+            data=compressed_request,
+            headers=headers,
+            timeout=60
+        )
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        print("Error sending request to Lambda:", e)
+        sys.exit(1)
+
+    # 3) Parse top‐level JSON
+    try:
+        response_envelope = resp.json()
+    except ValueError as e:
+        print("Invalid JSON from Lambda:", e)
+        sys.exit(1)
+
+    # 4) Unwrap proxy integration envelope
+    if isinstance(response_envelope, dict) and "body" in response_envelope:
+        body = response_envelope["body"]
+
+        # 5) If Lambda marked it base64‑encoded, decode & decompress
+        if response_envelope.get("isBase64Encoded", False):
+            try:
+                compressed_response = base64.b64decode(body)
+                decompressed = gzip.decompress(compressed_response)
+                return json.loads(decompressed.decode("utf-8"))
+            except Exception as e:
+                print("Error decoding/decompressing Lambda response:", e)
+                sys.exit(1)
+        else:
+            # plain JSON string inside `body`
+            return json.loads(body)
+
+    # 6) Fallback: return whatever we got
+    return response_envelope
+
 
 if __name__ == "__main__":
-    samples, durations = load_tagset_data()
+    used = load_all_used_tags(
+        cwd_clf, dataset, n_models, shuffle_idx,
+        test_sample_batch_idx, n_samples, clf_njobs,
+        n_estimators, depth, input_size,
+        dim_compact_factor, tree_method,
+        max_bin, with_filter, freq
+    )
+
+    # pass it into your loaderf
+    samples, durations = load_tagset_data(filtered_tags=used)
     print("Number of samples loaded:", len(samples))
-    
-    result = send_request(samples)
-    
-    # Print the server response
-    print("Server response:")
-    print(json.dumps(result, indent=2))
-    
-    # Dump the server response to a JSON file using the global cwd.
-    output_file = os.path.join(cwd, "server_response.json")
-    with open(output_file, "w") as f:
-        json.dump(result, f, indent=2)
-    print("Server response dumped to:", output_file)
+
+    # 1) Send to your Flask app
+    flask_result = send_request(samples)
+    print("Flask response:")
+    print(json.dumps(flask_result, indent=2))
+    with open(os.path.join(cwd, "flask_response.json"), "w") as f:
+        json.dump(flask_result, f, indent=2)
+    print("Flask response dumped to:", os.path.join(cwd, "flask_response.json"))
+
+    # 2) Send to your Lambda via API Gateway
+    lambda_result = send_to_lambda(samples)
+    print("Lambda response:")
+    print(json.dumps(lambda_result, indent=2))
+    with open(os.path.join(cwd, "lambda_response.json"), "w") as f:
+        json.dump(lambda_result, f, indent=2)
+    print("Lambda response dumped to:", os.path.join(cwd, "lambda_response.json"))
