@@ -8,7 +8,7 @@ import kfp_tekton
 # load_dotenv(override=True)
 
 kubeflow_endpoint="https://ds-pipeline-pipelines-definition-ai4cloudops-11855c.apps.shift.nerc.mghpcc.org"
-bearer_token = "sha256~0BJfe202nyTu6hCk35UEGv4Z_-uSrC56KY_6mAo7xDI" # oc whoami --show-token
+bearer_token = "sha256~kKfhGSRBTS_8qVoVRj3wGDkxu6DhuRN45yDg9YWCiXc" # oc whoami --show-token
 
 if __name__ == "__main__":
     client = kfp_tekton.TektonClient(
