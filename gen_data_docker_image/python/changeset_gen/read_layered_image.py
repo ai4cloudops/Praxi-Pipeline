@@ -6,7 +6,7 @@ from pathlib import Path
 from pprint import pprint
 import sys
 # caution: path[0] is reserved for script path (or '' in REPL)
-sys.path.insert(1, '/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/templating_image/')
+sys.path.insert(1, '/home/cc/Praxi-Pipeline/gen_data_docker_image/python/templating_image/')
 import image_templating
 
 def get_free_filename(stub, directory, suffix=''):
@@ -56,8 +56,8 @@ def pull_save_image(image_name, labels, base_image, src, cwd):
     labels_str = (base_image.replace(":","")).replace(".","_")+'.'+("-".join([dep.replace("==", "_v") for dep in labels])).replace(".","_")
 
 
-    # 'bash /home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/src/download-frozen-image-v2.sh                       /home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/cwd/introspected_container                            zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0:latest'
-    # 'bash /home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/download-frozen-image-v2.sh  /home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/introspected_container   python3_9_18-bullseye.ruff_v0_2_2'
+    # 'bash /home/cc/Praxi-Pipeline/get_layer_changes/src/download-frozen-image-v2.sh                       /home/cc/Praxi-Pipeline/get_layer_changes/cwd/introspected_container                            zongshun96/python3_9-slim-bullseye.plotly_v5_18_0-contourpy_v1_2_0:latest'
+    # 'bash /home/cc/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/download-frozen-image-v2.sh  /home/cc/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/cwd/introspected_container   python3_9_18-bullseye.ruff_v0_2_2'
     cmd1 = "bash "+src+"download-frozen-image-v2.sh "+cwd+labels_str+" "+"zongshun96/"+image_name+":latest"
     # p_cmd1 = subprocess.Popen(cmd1.split(" "), stdin=subprocess.PIPE)
     # p_cmd1.communicate()
@@ -155,7 +155,7 @@ def download_images_in_parallel(images_l, labels_l, base_image_l, src, cwd):
                 print(f'{idx} {dockerfile} generated an exception: {exc}')
 
 if __name__ == "__main__":
-    dockerfiles_failed_dir = "/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles_failed"
+    dockerfiles_failed_dir = "/home/cc/Praxi-Pipeline/gen_data_docker_image/python/dockerfiles_failed"
     if not Path(dockerfiles_failed_dir).exists():
         Path(dockerfiles_failed_dir).mkdir()
     dockerfiles = image_templating.find_dockerfiles(dockerfiles_failed_dir)
@@ -182,7 +182,7 @@ if __name__ == "__main__":
 
 
 
-    homed = "/home/cc/Praxi-study/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/"
+    homed = "/home/cc/Praxi-Pipeline/gen_data_docker_image/python/changeset_gen/"
     # homed = "/pipelines/component/"
     src = homed
     if not Path(src).exists():
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     # for image_name, labels, base_image in zip(images_l, labels_l, base_image_l):
     #     changesets_l = run(image_name, labels, base_image, src, cwd)
         # cs_dump_path = cwd+"changesets_l_dump"
-        # # cs_path = "/home/cc/Praxi-study/Praxi-Pipeline/get_layer_changes/cwd/unknown"
+        # # cs_path = "/home/cc/Praxi-Pipeline/get_layer_changes/cwd/unknown"
         # with open(cs_dump_path, 'wb') as writer:
         #     pickle.dump(changesets_l, writer)
         # # for idx, changeset in enumerate(changesets_l):

@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: "Ensemble\u2011Model Prediction via Lambda Container Image"
+Globals:
+  Function:
+    Timeout: 900
+    MemorySize: 10240
+    Architectures:
+    - x86_64
+Resources:
+  PredictFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      DockerContext: /home/cc/Praxi-Pipeline/lambda-deployment/independent-submodel-praxipaas-container
+      Dockerfile: Dockerfile
+      SamResourceId: PredictFunction
+    Properties:
+      PackageType: Image
+      ImageConfig:
+        EntryPoint:
+        - /lambda-entrypoint.sh
+        Command:
+        - src/lambda_function.lambda_handler
+      Events:
+        ApiPredict:
+          Type: Api
+          Properties:
+            Path: /predict
+            Method: post
+      ImageUri: predictfunction:latest

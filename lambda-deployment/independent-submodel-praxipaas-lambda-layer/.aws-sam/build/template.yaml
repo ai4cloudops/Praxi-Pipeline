@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Ensemble-Model Prediction via Lambda + API Gateway
+Globals:
+  Function:
+    Runtime: python3.10
+    Timeout: 30
+    MemorySize: 2048
+    Architectures:
+    - x86_64
+Resources:
+  MLDepsLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: ml-deps
+      ContentUri: ../../layer
+      CompatibleRuntimes:
+      - python3.10
+  ModelsLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: model-artifacts
+      ContentUri: ../../layer-models
+      CompatibleRuntimes:
+      - python3.10
+  PredictFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ensemble-predict
+      Handler: lambda_function.lambda_handler
+      CodeUri: PredictFunction
+      Runtime: python3.10
+      MemorySize: 2048
+      Timeout: 30
+      Layers:
+      - Ref: MLDepsLayer
+      - Ref: ModelsLayer
+      Environment:
+        Variables:
+          MODELS_PATH: /opt/models
+      Events:
+        ApiPredict:
+          Type: Api
+          Properties:
+            Path: /predict
+            Method: post
+    Metadata:
+      SamResourceId: PredictFunction

@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Ensemble‑Model Prediction via Lambda Container Image
+
+Globals:
+  Function:
+    Timeout: 900
+    MemorySize: 10240
+    Architectures:
+      - x86_64
+
+Resources:
+
+  PredictFunction:
+    Type: AWS::Serverless::Function
+
+    # ⬇️ Tell SAM where to find and build your Docker image
+    Metadata:
+      Dockerfile: Dockerfile        # path to your Dockerfile
+      DockerContext: .              # build context root
+
+    Properties:
+      PackageType: Image
+
+      # inside the container, how to invoke your handler
+      ImageConfig:
+        EntryPoint: ["/lambda-entrypoint.sh"]
+        Command: ["src/lambda_function.lambda_handler"]
+
+      # HTTP POST /predict → this function
+      Events:
+        ApiPredict:
+          Type: Api
+          Properties:
+            Path: /predict
+            Method: post
