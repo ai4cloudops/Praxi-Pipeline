@@ -753,7 +753,6 @@ if __name__ == "__main__":
         op_durations = defaultdict(int)
         t_0 = time.time()
         test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML_test_2/"
-        # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML/"
 
         # cwd = "/home/cc/test"
 

@@ -120,7 +120,7 @@ def get_intersection(from_set, to_set):
             ret.append(ele)
     return ret
 
-def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None, tag_index_mapping_path=None, index_label_mapping_path=None, label_index_mapping_path=None, cwd="/home/cc/Praxi-study/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/", train_flag=False, inference_flag=True, iter_flag=False, packages_select_set=set(), tokens_filter_set=set(), input_size=None, compact_factor=1, freq=100, all_tags_set=None,all_label_set=None,tags_by_instance_l=None,labels_by_instance_l=None,tagset_files=None, feature_importance=np.array([])):
+def tagsets_to_matrix(tags_path, tag_files_l = None, index_tag_mapping_path=None, tag_index_mapping_path=None, index_label_mapping_path=None, label_index_mapping_path=None, cwd="/home/cc/Praxi-Pipeline/prediction_base_image/model_testing_scripts/cwd/", train_flag=False, inference_flag=True, iter_flag=False, packages_select_set=set(), tokens_filter_set=set(), input_size=None, compact_factor=1, freq=100, all_tags_set=None,all_label_set=None,tags_by_instance_l=None,labels_by_instance_l=None,tagset_files=None, feature_importance=np.array([])):
     op_durations = defaultdict(int)
     if index_tag_mapping_path == None:
         index_tag_mapping_path=cwd+'index_tag_mapping'
@@ -538,9 +538,9 @@ def print_metrics(cwd, outfile, y_true, y_pred, labels, op_durations=None):
 
 def run_pred(cwd, clf_path_l, test_tags_path, n_jobs=64, n_estimators=100, packages_select_set=set(), test_batch_count=1, input_size=None, compact_factor=1, depth=1, tree_method="auto"):
     # # cwd = "/pipelines/component/cwd/"
-    # cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
-    # clf_path = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/model_init.json"
-    # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/inference_test/"
+    # cwd = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/"
+    # clf_path = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd/model_init.json"
+    # test_tags_path = "/home/cc/Praxi-Pipeline/data/inference_test/"
     Path(cwd).mkdir(parents=True, exist_ok=True)
 
 
@@ -729,15 +729,15 @@ def load_model(clf_path):
 
 #                                                     clf_path = []
 #                                                     for i in range(n_models):
-#                                                         clf_pathname = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/model_init.json"
+#                                                         clf_pathname = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/model_init.json"
 #                                                         if os.path.isfile(clf_pathname):
 #                                                             clf_path.append(clf_pathname)
 #                                                         else:
 #                                                             print("clf is missing!")
 #                                                             sys.exit(-1)
-#                                                     cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak_on_demand_expert/"
-#                                                     # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
-#                                                     test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/"+dataset+"/tagsets_ML/"
+#                                                     cwd = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak_on_demand_expert/"
+#                                                     # test_tags_path = "/home/cc/Praxi-Pipeline/data/"+dataset+"/big_ML_biased_test/"
+#                                                     test_tags_path = "/home/cc/Praxi-Pipeline/data/"+dataset+"/tagsets_ML/"
 #                                     #    run_init_train(train_tags_path, test_tags_path, cwd, n_jobs=n_jobs, n_estimators=n_estimators, train_packages_select_set=train_subset, test_packages_select_set=test_subset, input_size=input_size, depth=depth, tree_method=tree_method)
 #                                                     run_pred(cwd, clf_path, test_tags_path, n_jobs=n_jobs, n_estimators=n_estimators, test_batch_count=test_batch_count, input_size=input_size, compact_factor=dim_compact_factor, depth=depth, tree_method=tree_method)
 
@@ -752,15 +752,13 @@ if __name__ == "__main__":
     for iter_idx in range(1):
         op_durations = defaultdict(int)
         t_0 = time.time()
-        # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML_test_2/"
-        # test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML/"
-        test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_SL/"
+        test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test/"
 
         # cwd = "/home/cc/test"
 
         dataset = "data_4"
         n_models = 1000
-        shuffle_idx = 1
+        shuffle_idx = 0
         test_sample_batch_idx = 0
         n_samples = 4
         n_jobs = 1
@@ -773,8 +771,8 @@ if __name__ == "__main__":
         max_bin = 1
         with_filter = True
         freq = 25
-        cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts_online/verification/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak_on_demand_expert/"
-        cwd_clf = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts_bak"
+        cwd = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts_online/verification/cwd_ML_with_"+dataset+"_"+str(n_models)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(n_jobs)+"njobs_"+str(clf_njobs)+"clfnjobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak_on_demand_expert/"
+        cwd_clf = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts_bak"
         Path(cwd).mkdir(parents=True, exist_ok=True)
 
 
@@ -973,9 +971,9 @@ if __name__ == "__main__":
 #     t0 = time.time()
 #     from sklearn.feature_extraction.text import CountVectorizer
 
-#     test_tags_path = "/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/tagsets_ML_test/"
+#     test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagsets_ML_test/"
 
-#     cwd = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts"
+#     cwd = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts"
 
 #     dataset = "data_4"
 #     n_models = 1
@@ -1016,8 +1014,8 @@ if __name__ == "__main__":
 #     # Clf
 #     clf_path_l = []
 #     for i in range(n_models):
-#         # clf_pathname = "/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/model_init.json"
-#         #                '/home/cc/Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_  data4    _      1000       _      0   _train_      0             shuffleidx_      0                       testsamplebatchidx_      4           nsamples_      32          njobs_      100            trees_      1       depth_      None         -      1                    rawinput_sampling1_      exact         treemethod_      1         maxbin_modize_par_      True            25   removesharedornoisestags_verpak/model_init.json'
+#         # clf_pathname = "/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/model_init.json"
+#         #                '/home/cc/Praxi-Pipeline/prediction_XGBoost_openshift_image/model_testing_scripts/cwd_ML_with_  data4    _      1000       _      0   _train_      0             shuffleidx_      0                       testsamplebatchidx_      4           nsamples_      32          njobs_      100            trees_      1       depth_      None         -      1                    rawinput_sampling1_      exact         treemethod_      1         maxbin_modize_par_      True            25   removesharedornoisestags_verpak/model_init.json'
 #         clf_pathname = f"{cwd}/cwd_ML_with_"+dataset+"_"+str(n_models)+"_"+str(i)+"_train_"+str(shuffle_idx)+"shuffleidx_"+str(test_sample_batch_idx)+"testsamplebatchidx_"+str(n_samples)+"nsamples_"+str(clf_njobs)+"njobs_"+str(n_estimators)+"trees_"+str(depth)+"depth_"+str(input_size)+"-"+str(dim_compact_factor)+"rawinput_sampling1_"+str(tree_method)+"treemethod_"+str(max_bin)+"maxbin_modize_par_"+str(with_filter)+f"{freq}removesharedornoisestags_verpak/model_init.json"
 #         if os.path.isfile(clf_pathname):
 #             clf_path_l.append(clf_pathname)
@@ -1083,7 +1081,7 @@ if __name__ == "__main__":
     # import json
     
     # # Opening JSON file
-    # with open('/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/dockerfiles_SL/inventory.json', 'r') as openfile:
+    # with open('/home/cc/Praxi-Pipeline/data/data_4/dockerfiles_SL/inventory.json', 'r') as openfile:
     #     # Reading from json file
     #     json_object = json.load(openfile)
     #     print(list(set([x[0] for x in json_object])))
@@ -1093,11 +1091,11 @@ if __name__ == "__main__":
 
 
     # import yaml
-    # with open(f"/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/filters/tagsets_SL_tagnames_reoccurentcount_d", 'rb') as tf:
+    # with open(f"/home/cc/Praxi-Pipeline/data/data_4/filters/tagsets_SL_tagnames_reoccurentcount_d", 'rb') as tf:
     #     tokens_filter_set = yaml.load(tf, Loader=yaml.Loader)
     # tokens_filter_set_100lite = {}
     # for k, v in tokens_filter_set.items():
     #     if v >= 100:
     #         tokens_filter_set_100lite[k] = v
-    # with open(f"/home/cc/Praxi-study/Praxi-Pipeline/data/data_4/filters/tagsets_SL_tagnames_reoccurentcount_100lite_d", 'w') as tf:
+    # with open(f"/home/cc/Praxi-Pipeline/data/data_4/filters/tagsets_SL_tagnames_reoccurentcount_100lite_d", 'w') as tf:
     #     yaml.dump(tokens_filter_set_100lite, tf)
