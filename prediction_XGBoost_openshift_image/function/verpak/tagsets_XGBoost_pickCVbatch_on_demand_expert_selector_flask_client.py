@@ -188,9 +188,9 @@ def load_tagset_data(filtered_tags: set = None):
     """
     op_durations = defaultdict(int)
     t0 = time.time()
-    # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test_mini-1/"
+    test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test_mini-1/"
     # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test_mini/"
-    test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test_mid/"
+    # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test_mid/"
     # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test/"
     # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3/"
     step = None  # will be defined after getting the list of files
@@ -251,21 +251,74 @@ def load_tagset_data(filtered_tags: set = None):
 
     return samples, op_durations
 
+# def send_request(samples):
+#     """
+#     Sends samples to the Flask server.
+#     """
+#     payload = {"samples": samples}
+#     headers = {"Content-Type": "application/json"}
+
+#     try:
+#         resp = requests.post(FLASK_URL, json=payload, headers=headers)
+#         resp.raise_for_status()
+#     except requests.exceptions.RequestException as e:
+#         print("Error sending request to Flask:", e)
+#         sys.exit(1)
+
+#     return resp.json()
+
 def send_request(samples):
     """
-    Sends samples to the Flask server.
+    Sends samples to the Flask server with gzip compression on request and response.
     """
+    # 1) Build and compress payload
     payload = {"samples": samples}
-    headers = {"Content-Type": "application/json"}
+    json_bytes = json.dumps(payload).encode("utf-8")
+    compressed_request = gzip.compress(json_bytes)
 
+    headers = {
+        "Content-Type": "application/json",
+        "Content-Encoding": "gzip",   # tell Flask we're sending gzipped body
+        "Accept-Encoding": "gzip",    # ask Flask to gzip its response if possible
+    }
+
+    # 2) Send compressed bytes
     try:
-        resp = requests.post(FLASK_URL, json=payload, headers=headers)
+        resp = requests.post(
+            FLASK_URL,
+            data=compressed_request,
+            headers=headers,
+            timeout=60
+        )
         resp.raise_for_status()
     except requests.exceptions.RequestException as e:
         print("Error sending request to Flask:", e)
         sys.exit(1)
 
-    return resp.json()
+    # 3) Let requests handle gzip decoding, just parse JSON
+    try:
+        return resp.json()
+    except ValueError as e:
+        print("Invalid JSON from Flask:", e)
+        sys.exit(1)
+
+    # # 3) Handle gzip‐compressed response
+    # # If Flask responded with gzip, requests will expose raw bytes in resp.content
+    # if resp.headers.get("Content-Encoding", "").lower() == "gzip":
+    #     try:
+    #         decompressed = gzip.decompress(resp.content)
+    #         return json.loads(decompressed.decode("utf-8"))
+    #     except Exception as e:
+    #         print("Error decompressing Flask response:", e)
+    #         sys.exit(1)
+    # else:
+    #     # Fallback to normal JSON parsing
+    #     try:
+    #         return resp.json()
+    #     except ValueError as e:
+    #         print("Invalid JSON from Flask:", e)
+    #         sys.exit(1)
+
 
 def send_to_lambda(samples):
     """
@@ -345,10 +398,10 @@ if __name__ == "__main__":
         json.dump(flask_result, f, indent=2)
     print("Flask response dumped to:", os.path.join(cwd, "flask_response.json"))
 
-    # 2) Send to your Lambda via API Gateway
-    lambda_result = send_to_lambda(samples)
-    print("Lambda response:")
-    print(json.dumps(lambda_result, indent=2))
-    with open(os.path.join(cwd, "lambda_response.json"), "w") as f:
-        json.dump(lambda_result, f, indent=2)
-    print("Lambda response dumped to:", os.path.join(cwd, "lambda_response.json"))
+    # # 2) Send to your Lambda via API Gateway
+    # lambda_result = send_to_lambda(samples)
+    # print("Lambda response:")
+    # print(json.dumps(lambda_result, indent=2))
+    # with open(os.path.join(cwd, "lambda_response.json"), "w") as f:
+    #     json.dump(lambda_result, f, indent=2)
+    # print("Lambda response dumped to:", os.path.join(cwd, "lambda_response.json"))
