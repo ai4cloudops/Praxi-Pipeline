@@ -4,6 +4,7 @@ import time
 import pickle
 import gzip
 import base64
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import numpy as np
 import xgboost as xgb
 import scipy.sparse
@@ -121,6 +122,35 @@ def merge_preds(base, new, idx_map=None):
             base[real_idx].extend(new.get(i, []))
     return base
 
+def _process_model(m_idx, m, tags_by_instance, labels_by_instance, tagset_files):
+    """Build matrix, predict, and one-hot decode for model `m_idx`."""
+    tfiles, feat_mat, lbl_mat, idx_map, cnt, ops = tagsets_to_matrix(
+        inference_flag=False,
+        input_size=input_size,
+        compact_factor=dim_compact_factor,
+        all_tags_l=m["all_tags_l"],
+        tag_index_mapping=m["tag_index_mapping"],
+        all_label_l=m["all_label_l"],
+        label_index_mapping=m["label_index_mapping"],
+        tags_by_instance_l=tags_by_instance,
+        labels_by_instance_l=labels_by_instance,
+        tagset_files=tagset_files,
+        feature_importance=np.array(list(m["feature_importance"].values()))
+    )
+    if feat_mat.size:
+        t0 = time.time()
+        preds = m["clf"].predict(feat_mat)
+        ops["predict_time"] = time.time() - t0
+        ops["feature_matrix_size"]  = feat_mat.size
+        ops["feature_matrix_xsize"] = feat_mat.shape[0]
+        ops["feature_matrix_ysize"] = feat_mat.shape[1]
+        names = one_hot_to_names(None, preds, mapping=m["mapping"])
+    else:
+        names = {}
+        idx_map = list(range(len(tags_by_instance)))
+    return m_idx, ops, idx_map, names
+
+
 # --- Global config & cold-start model loading ---
 
 dataset = "data_4"
@@ -232,43 +262,64 @@ def lambda_handler(event, context):
     merged = defaultdict(list)
     encoder_metrics = {}
 
-    for m_idx, m in enumerate(models):
-        tfiles, feat_mat, lbl_mat, idx_map, cnt, ops = tagsets_to_matrix(
-            inference_flag=False,
-            input_size=input_size,
-            compact_factor=dim_compact_factor,
-            all_tags_l=m["all_tags_l"],
-            tag_index_mapping=m["tag_index_mapping"],
-            all_label_l=m["all_label_l"],
-            label_index_mapping=m["label_index_mapping"],
-            tags_by_instance_l=tags_by_instance,
-            labels_by_instance_l=labels_by_instance,
-            tagset_files=tagset_files,
-            feature_importance=np.array(list(m["feature_importance"].values()))
-        )
+    # for m_idx, m in enumerate(models):
+    #     tfiles, feat_mat, lbl_mat, idx_map, cnt, ops = tagsets_to_matrix(
+    #         inference_flag=False,
+    #         input_size=input_size,
+    #         compact_factor=dim_compact_factor,
+    #         all_tags_l=m["all_tags_l"],
+    #         tag_index_mapping=m["tag_index_mapping"],
+    #         all_label_l=m["all_label_l"],
+    #         label_index_mapping=m["label_index_mapping"],
+    #         tags_by_instance_l=tags_by_instance,
+    #         labels_by_instance_l=labels_by_instance,
+    #         tagset_files=tagset_files,
+    #         feature_importance=np.array(list(m["feature_importance"].values()))
+    #     )
 
-        if feat_mat.size:
-            # np.set_printoptions(threshold=np.inf)  # disable truncation :contentReference[oaicite:5]{index=5}
-            # print(feature_matrix.toarray())
-            # dense_list = feat_mat.toarray().tolist()  # nested list :contentReference[oaicite:4]{index=4}
-            # print("Literal form :", m["all_label_l"], repr(dense_list))
+    #     if feat_mat.size:
+    #         # np.set_printoptions(threshold=np.inf)  # disable truncation :contentReference[oaicite:5]{index=5}
+    #         # print(feature_matrix.toarray())
+    #         # dense_list = feat_mat.toarray().tolist()  # nested list :contentReference[oaicite:4]{index=4}
+    #         # print("Literal form :", m["all_label_l"], repr(dense_list))
 
-            t0 = time.time()
-            preds = m["clf"].predict(feat_mat)
-            # print("preds", preds)
+    #         t0 = time.time()
+    #         preds = m["clf"].predict(feat_mat)
+    #         # print("preds", preds)
 
-            ops["predict_time"] = time.time() - t0
-            ops["feature_matrix_size"]  = feat_mat.size
-            ops["feature_matrix_xsize"] = feat_mat.shape[0]
-            ops["feature_matrix_ysize"] = feat_mat.shape[1]
-            names = one_hot_to_names(None, preds, mapping=m["mapping"])
+    #         ops["predict_time"] = time.time() - t0
+    #         ops["feature_matrix_size"]  = feat_mat.size
+    #         ops["feature_matrix_xsize"] = feat_mat.shape[0]
+    #         ops["feature_matrix_ysize"] = feat_mat.shape[1]
+    #         names = one_hot_to_names(None, preds, mapping=m["mapping"])
+    #         merged = merge_preds(merged, names, idx_map)
+    #         # print("merged", merged)
+    #     else:
+    #         for i in range(len(samples)):
+    #             merged.setdefault(i, [])
+
+    #     encoder_metrics[f"model_{m_idx}"] = ops
+
+
+    # 4) Parallel inference
+    max_workers = min(len(models), os.cpu_count() or 1)
+    print("max_workers:", max_workers)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [
+            executor.submit(
+                _process_model,
+                m_idx, m,
+                tags_by_instance,
+                labels_by_instance,
+                tagset_files
+            )
+            for m_idx, m in enumerate(models)
+        ]
+        for future in as_completed(futures):
+            m_idx, ops, idx_map, names = future.result()
+            encoder_metrics[f"model_{m_idx}"] = ops
             merged = merge_preds(merged, names, idx_map)
-            # print("merged", merged)
-        else:
-            for i in range(len(samples)):
-                merged.setdefault(i, [])
 
-        encoder_metrics[f"model_{m_idx}"] = ops
 
     # compute overall metrics if any true_labels were provided
     metrics = {}

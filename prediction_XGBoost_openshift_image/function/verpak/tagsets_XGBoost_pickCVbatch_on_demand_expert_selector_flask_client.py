@@ -1,29 +1,51 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import base64
 import os
 import sys
 import time
-import json
-import pickle
-import multiprocessing as mp
-from collections import defaultdict
-from pathlib import Path
-import requests
+import json, yaml
+import math
 import gzip
-from tqdm import tqdm
-import yaml
+import pickle
+import logging
+import boto3
+import requests
 import numpy as np
+from pathlib import Path
+from collections import defaultdict
+from botocore.exceptions import ClientError
+from concurrent.futures import ProcessPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
+import multiprocessing as mp
+
 import xgboost as xgb
+from tqdm import tqdm
+
+
+# -------------------------------------------------------------------
+# Configuration & Capacity Constants
+# -------------------------------------------------------------------
+FLASK_URL = "http://localhost:5000/predict"
+LAMBDA_URL = "https://ae2od52j3i.execute-api.us-east-2.amazonaws.com/Prod/predict"
+# LAMBDA_URL = "http://127.0.0.1:3000/predict"
+
+IAAS_CAPACITY = 400000     # how many samples one VM can handle per batch
+FAAS_CAPACITY = 400000     # how many samples one Lambda invocation can handle
+T = 1                   # threshold multiplier
+W = 1                 # EWMA weight for moving average & std-dev
+EPOCH_SLA = 100         # target seconds per epoch: max=9223372036
+T_CIP = 43 # Traffic CIP
+MAX_WORKERS = mp.cpu_count()
+
+AUTOSCALING_GROUP_NAME = "my-asg"
+
+# -------------------------------------------------------------------
+# (1) Existing Tag-Loading & Inference Helpers
+# -------------------------------------------------------------------
 
 # ------------------------
 # Global Variables
 # ------------------------
 # Define cwd once as a global variable.
-# Your Flask endpoint:
-# FLASK_URL = "http://18.119.115.230:5000/predict"
-FLASK_URL = "http://localhost:5000/predict"
-# New: your API Gateway / Lambda POST endpoint
-LAMBDA_URL = "https://ae2od52j3i.execute-api.us-east-2.amazonaws.com/Prod/predict"
 # Configuration parameters (adjust as needed)
 dataset = "data_4"
 n_models = 1000
@@ -188,10 +210,10 @@ def load_tagset_data(filtered_tags: set = None):
     """
     op_durations = defaultdict(int)
     t0 = time.time()
-    test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test_mini-1/"
+    # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test_mini-1/"
     # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test_mini/"
     # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test_mid/"
-    # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test/"
+    test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3_test/"
     # test_tags_path = "/home/cc/Praxi-Pipeline/data/data_4/tagset_ML_3/"
     step = None  # will be defined after getting the list of files
 
@@ -228,6 +250,13 @@ def load_tagset_data(filtered_tags: set = None):
             tags_by_instance_l.extend(data_instance['tags_by_instance_l'])
             all_label_set.update(data_instance['all_label_set'])
             labels_by_instance_l.extend(data_instance['labels_by_instance_l'])
+    # 2. Repeat via multiplication
+    REPS = 5
+    tagset_files        = tagset_files * REPS
+    tags_by_instance_l  = tags_by_instance_l * REPS
+    labels_by_instance_l= labels_by_instance_l * REPS
+    all_tags_set        = all_tags_set.copy()
+    all_label_set       = all_label_set.copy()
 
     t_data_t = time.time()
     op_durations["total_data_load_time"] = t_data_t - t_data_0
@@ -288,7 +317,7 @@ def send_request(samples):
             FLASK_URL,
             data=compressed_request,
             headers=headers,
-            timeout=60
+            timeout=EPOCH_SLA
         )
         resp.raise_for_status()
     except requests.exceptions.RequestException as e:
@@ -342,7 +371,7 @@ def send_to_lambda(samples):
             LAMBDA_URL,
             data=compressed_request,
             headers=headers,
-            timeout=60
+            timeout=EPOCH_SLA
         )
         resp.raise_for_status()
     except requests.RequestException as e:
@@ -376,32 +405,154 @@ def send_to_lambda(samples):
     # 6) Fallback: return whatever we got
     return response_envelope
 
+# -------------------------------------------------------------------
+# (2) VM Scaling Helpers
+# -------------------------------------------------------------------
+def get_target_group_arn(name, region="us-east-2"):
+    client = boto3.client('elbv2', region_name=region)
+    try:
+        resp = client.describe_target_groups(Names=[name])
+        return resp['TargetGroups'][0]['TargetGroupArn']
+    except ClientError as e:
+        logging.error("Error fetching TG ARN: %s", e)
+        return None
 
+def get_healthy_nodes(target_group_name="my-target-group", region="us-east-2"):
+    client = boto3.client('elbv2', region_name=region)
+    tg_arn = get_target_group_arn(target_group_name, region)
+    if not tg_arn:
+        return []
+    resp = client.describe_target_health(TargetGroupArn=tg_arn)
+    return [
+        desc['Target'] 
+        for desc in resp.get('TargetHealthDescriptions', [])
+        if desc.get('TargetHealth', {}).get('State') == 'healthy'
+    ]
+
+def scale_vms(epoch, vm_requests):
+    """Adjust ASG desired capacity based on vm_requests / IAAS_CAPACITY."""
+    needed = vm_requests // IAAS_CAPACITY
+    if vm_requests % IAAS_CAPACITY > T_CIP:
+        needed += 1
+    boto3.client('autoscaling') \
+         .update_auto_scaling_group(AutoScalingGroupName=AUTOSCALING_GROUP_NAME,
+                                    DesiredCapacity=needed)
+    logging.info("Epoch %d: scaled VMs to %d for %d reqs, with %d T_CIP", epoch, needed, vm_requests, T_CIP)
+    return needed
+
+# -------------------------------------------------------------------
+# (3) Load-Balancing Orchestration
+# -------------------------------------------------------------------
+def process_load(load_list, samples, scale_interval=3, dump_path=os.path.join(cwd, "responses.json")):
+    """
+    Processes each epoch:
+      1. EWMA moving_avg & std_dev
+      2. Threshold split into vm_samples vs lambda_samples
+      3. Batch & dispatch, collecting responses
+      4. Periodically scale VMs
+      5. Enforce epoch SLA pacing
+      6. At end, dump all collected responses
+    """
+    moving_avg = 0.0
+    std_dev = 0.0
+    ptr = 0
+    n_samples = len(samples)
+    collected = []  # store all responses
+
+    for epoch, cur_load in enumerate(load_list, start=1):
+        start_t = time.time()
+
+        # Wrap pointer
+        if ptr + cur_load > n_samples:
+            ptr = 0
+
+        batch = samples[ptr:ptr+cur_load]
+        print(len(batch), cur_load, ptr)
+        ptr += cur_load
+
+        # Update EWMA
+        moving_avg = (1 - W) * moving_avg + W * cur_load
+        deviation = abs(cur_load - moving_avg)
+        std_dev = (1 - W) * std_dev + W * deviation
+        threshold = moving_avg + T * std_dev
+
+        # Raw VM count based on threshold
+        raw_vm = int(cur_load * min(threshold / cur_load, 1.0))
+
+        # Cap by healthy VMs
+        healthy = len(get_healthy_nodes())
+        # healthy = 1
+        max_vm = healthy * IAAS_CAPACITY
+        vm_count = min(raw_vm, max_vm)
+        logging.info("Epoch %d: raw_vm=%d, healthy_nodes=%d → vm_count=%d", epoch, raw_vm, healthy, vm_count)
+
+        # Partition samples
+        vm_samples = batch[:vm_count]
+        lambda_samples = batch[vm_count:]
+
+        # Create batches
+        vm_batches = [vm_samples[i:i+IAAS_CAPACITY] for i in range(0, len(vm_samples), IAAS_CAPACITY)]
+        fn_batches = [lambda_samples[i:i+FAAS_CAPACITY] for i in range(0, len(lambda_samples), FAAS_CAPACITY)]
+        print("VM batches", len(vm_batches), "Lambda batches", len(fn_batches))
+
+        # Dispatch with tracking
+        tasks = []  # list of (future, mode)
+        with ProcessPoolExecutor(max_workers=MAX_WORKERS) as exe:
+            for b in vm_batches:
+                tasks.append((exe.submit(send_request, b), 'vm'))
+            for b in fn_batches:
+                tasks.append((exe.submit(send_to_lambda, b), 'lambda'))
+            print("Dispatching %d tasks", len(tasks))
+            
+            # Collect with SLA timeout
+            deadline = EPOCH_SLA
+            for fut, mode in tasks:
+                t0 = time.time()
+                try:
+                    resp = fut.result(timeout=deadline)
+                    collected.append({'epoch': epoch, 'mode': mode, 'response': resp})
+                except FuturesTimeoutError:
+                    logging.warning("Epoch %d: %s batch timed out", epoch, mode)
+                    collected.append({'epoch': epoch, 'mode': mode, 'error': 'timeout'})
+                except Exception as e:
+                    logging.error("Epoch %d: %s batch error %s", epoch, mode, e)
+                    collected.append({'epoch': epoch, 'mode': mode, 'error': str(e)})
+                elapsed = time.time() - t0
+                deadline = max(0, deadline - elapsed)
+
+        # # Scale VMs periodically
+        # if epoch % scale_interval == 0:
+        #     scale_vms(epoch, vm_count)
+
+        # SLA pacing
+        elapsed = time.time() - start_t
+        if elapsed < EPOCH_SLA:
+            time.sleep(EPOCH_SLA - elapsed)
+
+    # # Final scale-down
+    # scale_vms(-1, 0)
+
+    # Dump collected responses
+    Path(os.path.dirname(dump_path)).mkdir(parents=True, exist_ok=True)
+    with open(dump_path, 'w') as f:
+        json.dump(collected, f, indent=2)
+    logging.info("Dumped %d responses to %s", len(collected), dump_path)
+
+# -------------------------------------------------------------------
+# (4) Main Entry
+# -------------------------------------------------------------------
 if __name__ == "__main__":
-    used = load_all_used_tags(
-        cwd_clf, dataset, n_models, shuffle_idx,
-        test_sample_batch_idx, n_samples, clf_njobs,
-        n_estimators, depth, input_size,
-        dim_compact_factor, tree_method,
-        max_bin, with_filter, freq
-    )
+    # 1) Load and filter tagset samples
+    used = load_all_used_tags(cwd_clf, dataset, n_models, shuffle_idx,
+                              test_sample_batch_idx, n_samples, clf_njobs,
+                              n_estimators, depth, input_size,
+                              dim_compact_factor, tree_method,
+                              max_bin, with_filter, freq)
+    samples, _ = load_tagset_data(filtered_tags=used)
 
-    # pass it into your loaderf
-    samples, durations = load_tagset_data(filtered_tags=used)
-    print("Number of samples loaded:", len(samples))
+    # 2) Define a synthetic load pattern (replace with your real trace)
+    # load_distribution = [100, 200, 50, 150, 300, 100]  # e.g., samples per epoch
+    load_distribution = [IAAS_CAPACITY]  # e.g., samples per epoch
 
-    # 1) Send to your Flask app
-    flask_result = send_request(samples)
-    print("Flask response:")
-    print(json.dumps(flask_result, indent=2))
-    with open(os.path.join(cwd, "flask_response.json"), "w") as f:
-        json.dump(flask_result, f, indent=2)
-    print("Flask response dumped to:", os.path.join(cwd, "flask_response.json"))
-
-    # # 2) Send to your Lambda via API Gateway
-    # lambda_result = send_to_lambda(samples)
-    # print("Lambda response:")
-    # print(json.dumps(lambda_result, indent=2))
-    # with open(os.path.join(cwd, "lambda_response.json"), "w") as f:
-    #     json.dump(lambda_result, f, indent=2)
-    # print("Lambda response dumped to:", os.path.join(cwd, "lambda_response.json"))
+    # 3) Kick off the load-balancer
+    process_load(load_distribution, samples, scale_interval=4)
