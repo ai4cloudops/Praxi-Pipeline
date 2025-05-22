@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import base64
 import os
+import statistics
 import sys
 import time
 import json, yaml
@@ -17,6 +18,8 @@ from botocore.exceptions import ClientError
 from concurrent.futures import ProcessPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 import multiprocessing as mp
 
+from typing import Dict, Set, List
+
 import xgboost as xgb
 from tqdm import tqdm
 
@@ -24,19 +27,26 @@ from tqdm import tqdm
 # -------------------------------------------------------------------
 # Configuration & Capacity Constants
 # -------------------------------------------------------------------
-FLASK_URL = "http://localhost:5000/predict"
-LAMBDA_URL = "https://ae2od52j3i.execute-api.us-east-2.amazonaws.com/Prod/predict"
-# LAMBDA_URL = "http://127.0.0.1:3000/predict"
-
-IAAS_CAPACITY = 400000     # how many samples one VM can handle per batch
-FAAS_CAPACITY = 400000     # how many samples one Lambda invocation can handle
+IAAS_CAPACITY = 200000     # how many samples one VM can handle per batch
+FAAS_CAPACITY = 200000     # how many samples one Lambda invocation can handle
 T = 1                   # threshold multiplier
 W = 1                 # EWMA weight for moving average & std-dev
-EPOCH_SLA = 100         # target seconds per epoch: max=9223372036
+EPOCH_SLA = 900         # target seconds per epoch: max=9223372036
 T_CIP = 43 # Traffic CIP
 MAX_WORKERS = mp.cpu_count()
 
 AUTOSCALING_GROUP_NAME = "my-asg"
+ALB_NAME = "my-alb"
+
+FLASK_URL = "http://localhost:5000/predict"
+# def get_alb_dnsname():
+#     client = boto3.client('elbv2')
+#     response = client.describe_load_balancers(Names=[ALB_NAME])
+#     dns_name = response['LoadBalancers'][0]['DNSName']
+#     return dns_name
+# FLASK_URL = "http://{}:5000/predict".format(get_alb_dnsname())
+LAMBDA_URL = "https://localhost:5000/Prod/predict"
+# LAMBDA_URL = "http://127.0.0.1:3000/predict"
 
 # -------------------------------------------------------------------
 # (1) Existing Tag-Loading & Inference Helpers
@@ -169,10 +179,17 @@ def load_all_used_tags(
     max_bin: int,
     with_filter: bool,
     freq: int,
-) -> set:
-    used_tags = set()
+) -> Dict[int, Set[str]]:
+    """
+    Returns a dict mapping each model index (0..n_models-1) to the set of tags
+    with non-zero importance for that model.
+    """
+    tags_by_model: Dict[int, Set[str]] = {}
+
     for i in range(n_models):
-        # build the same path template you use in Lambda
+        local_tags: Set[str] = set()
+
+        # build the directory for model i
         mdir = (
             f"{models_base_dir}/cwd_ML_with_{dataset}_{n_models}_{i}_train_"
             f"{shuffle_idx}shuffleidx_{test_sample_batch_idx}testsamplebatchidx_"
@@ -184,26 +201,45 @@ def load_all_used_tags(
         model_json = os.path.join(mdir, "model_init.json")
         idx2tag = os.path.join(mdir, "index_tag_mapping")
 
+        # if files missing, record empty set
         if not os.path.isfile(model_json) or not os.path.isfile(idx2tag):
+            tags_by_model[i] = local_tags
             continue
 
-        # load model & feature importances
-        clf = xgb.XGBClassifier(max_depth=10, learning_rate=0.1,silent=False, objective='binary:logistic', \
-                booster='gbtree', n_jobs=8, nthread=None, gamma=0, min_child_weight=1, max_delta_step=0, \
-                subsample=0.8, colsample_bytree=0.8, colsample_bylevel=0.8, reg_alpha=0, reg_lambda=1)
+        # load model
+        clf = xgb.XGBClassifier(
+            max_depth=10,
+            learning_rate=0.1,
+            objective='binary:logistic',
+            booster='gbtree',
+            n_jobs=clf_njobs,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            colsample_bylevel=0.8,
+            reg_alpha=0,
+            reg_lambda=1,
+            gamma=0,
+            min_child_weight=1,
+            max_delta_step=0,
+        )
         clf.load_model(model_json)
         feats = clf.feature_importances_
-        # load the index→tag list
+
+        # load the index→tag mapping
         with open(idx2tag, "rb") as fp:
             all_tags_list = pickle.load(fp)
 
-        # any feature with importance > 0
+        # collect tags with importance > 0
         for idx in np.where(feats > 0)[0]:
             if idx < len(all_tags_list):
-                used_tags.add(all_tags_list[idx])
-    return used_tags
+                local_tags.add(all_tags_list[idx])
 
-def load_tagset_data(filtered_tags: set = None):
+        tags_by_model[i] = local_tags
+
+    return tags_by_model
+
+
+def load_tagset_data(tags_by_model: Dict[int, Set[str]]):
     """
     Loads tagset data from a directory using the early version logic.
     Returns a list of sample dictionaries and operation durations.
@@ -251,7 +287,7 @@ def load_tagset_data(filtered_tags: set = None):
             all_label_set.update(data_instance['all_label_set'])
             labels_by_instance_l.extend(data_instance['labels_by_instance_l'])
     # 2. Repeat via multiplication
-    REPS = 5
+    REPS = 100
     tagset_files        = tagset_files * REPS
     tags_by_instance_l  = tags_by_instance_l * REPS
     labels_by_instance_l= labels_by_instance_l * REPS
@@ -265,36 +301,20 @@ def load_tagset_data(filtered_tags: set = None):
     print("Data loading completed in {:.2f} seconds".format(total_time))
     print("DEBUG: Loaded {} instances".format(len(tags_by_instance_l)))
 
-    samples = []
-    for idx, instance_tags in enumerate(tags_by_instance_l):
-        if filtered_tags is not None:
-            instance_tags = {
-                tag: cnt
-                for tag, cnt in instance_tags.items()
-                if tag in filtered_tags
-            }
-        sample = {"instance_id": idx, "tags": instance_tags}
-        if idx < len(labels_by_instance_l) and labels_by_instance_l[idx]:
-            sample["true_labels"] = labels_by_instance_l[idx]
-        samples.append(sample)
+    # ─── 3. build samples_by_model ────────────────────────────────────────────
+    samples_by_model: Dict[int, List[dict]] = {}
+    for model_idx, used_tags in tags_by_model.items():
+        model_samples: List[dict] = []
+        for idx, inst_tags in enumerate(tags_by_instance_l):
+            # keep only this model’s used tags
+            filtered = {t: c for t, c in inst_tags.items() if t in used_tags}
+            sample = {"instance_id": idx, "tags": filtered}
+            if idx < len(labels_by_instance_l) and labels_by_instance_l[idx]:
+                sample["true_labels"] = labels_by_instance_l[idx]
+            model_samples.append(sample)
+        samples_by_model[model_idx] = model_samples
 
-    return samples, op_durations
-
-# def send_request(samples):
-#     """
-#     Sends samples to the Flask server.
-#     """
-#     payload = {"samples": samples}
-#     headers = {"Content-Type": "application/json"}
-
-#     try:
-#         resp = requests.post(FLASK_URL, json=payload, headers=headers)
-#         resp.raise_for_status()
-#     except requests.exceptions.RequestException as e:
-#         print("Error sending request to Flask:", e)
-#         sys.exit(1)
-
-#     return resp.json()
+    return samples_by_model, op_durations
 
 def send_request(samples):
     """
@@ -440,71 +460,87 @@ def scale_vms(epoch, vm_requests):
     logging.info("Epoch %d: scaled VMs to %d for %d reqs, with %d T_CIP", epoch, needed, vm_requests, T_CIP)
     return needed
 
-# -------------------------------------------------------------------
-# (3) Load-Balancing Orchestration
-# -------------------------------------------------------------------
-def process_load(load_list, samples, scale_interval=3, dump_path=os.path.join(cwd, "responses.json")):
+def process_load(
+    load_list: List[int],
+    samples_by_model: Dict[int, List[dict]],
+    scale_interval: int = 3,
+    dump_path: str = os.path.join(cwd, "responses.json")
+):
     """
-    Processes each epoch:
-      1. EWMA moving_avg & std_dev
-      2. Threshold split into vm_samples vs lambda_samples
-      3. Batch & dispatch, collecting responses
-      4. Periodically scale VMs
-      5. Enforce epoch SLA pacing
-      6. At end, dump all collected responses
+    1. Compute mean/std-dev of sample counts per model.
+    2. Partition model_idx → VM vs. FaaS.
+    3. Flatten those two sample‐lists.
+    4. For each epoch:
+       - EWMA moving_avg/std_dev on total load (unchanged).
+       - Compute how many of the *VM‐side samples* to send to VM vs FaaS, based on threshold.
+       - Dispatch in batches.
+       - SLA pacing + scaling as before.
+    5. Dump collected responses.
     """
+    # ─── 0. Prep: mean/std & partition models ─────────────────────────────
+    counts = {mid: len(samps) for mid, samps in samples_by_model.items()}
+    mean_count = statistics.mean(counts.values())
+    std_count  = statistics.pstdev(counts.values())
+
+    # heavy models → VM, light models → FaaS
+    vm_model_ids     = [mid for mid, c in counts.items() if c > mean_count + std_count]
+    lambda_model_ids = [mid for mid in counts if mid not in vm_model_ids]
+
+    # flatten once
+    vm_all_samples     = [s for mid in vm_model_ids     for s in samples_by_model[mid]]
+    lambda_all_samples = [s for mid in lambda_model_ids for s in samples_by_model[mid]]
+
+    logging.info(
+        "Partitioned %d heavy models (%.1f±%.1f samples) → VM, %d models → FaaS",
+        len(vm_model_ids), mean_count, std_count, len(lambda_model_ids)
+    )
+
+    # ─── 1. Begin epoch loop ───────────────────────────────────────────────
     moving_avg = 0.0
-    std_dev = 0.0
-    ptr = 0
-    n_samples = len(samples)
-    collected = []  # store all responses
+    std_dev    = 0.0
+    collected  = []
+    total_vm_samples     = len(vm_all_samples)
+    total_lambda_samples = len(lambda_all_samples)
 
     for epoch, cur_load in enumerate(load_list, start=1):
         start_t = time.time()
 
-        # Wrap pointer
-        if ptr + cur_load > n_samples:
-            ptr = 0
-
-        batch = samples[ptr:ptr+cur_load]
-        print(len(batch), cur_load, ptr)
-        ptr += cur_load
-
-        # Update EWMA
+        # Update EWMA on the *total* cur_load
         moving_avg = (1 - W) * moving_avg + W * cur_load
-        deviation = abs(cur_load - moving_avg)
-        std_dev = (1 - W) * std_dev + W * deviation
-        threshold = moving_avg + T * std_dev
+        deviation  = abs(cur_load - moving_avg)
+        std_dev    = (1 - W) * std_dev + W * deviation
+        threshold  = moving_avg + T * std_dev
 
-        # Raw VM count based on threshold
+        # how many of this epoch's cur_load go to VM?
         raw_vm = int(cur_load * min(threshold / cur_load, 1.0))
-
-        # Cap by healthy VMs
         healthy = len(get_healthy_nodes())
-        # healthy = 1
-        max_vm = healthy * IAAS_CAPACITY
+        max_vm  = healthy * IAAS_CAPACITY
         vm_count = min(raw_vm, max_vm)
-        logging.info("Epoch %d: raw_vm=%d, healthy_nodes=%d → vm_count=%d", epoch, raw_vm, healthy, vm_count)
+        logging.info(
+            "Epoch %d: cur_load=%d → raw_vm=%d, healthy_nodes=%d, vm_count=%d",
+            epoch, cur_load, raw_vm, healthy, vm_count
+        )
 
-        # Partition samples
-        vm_samples = batch[:vm_count]
-        lambda_samples = batch[vm_count:]
+        # slice off the first vm_count from vm_all_samples; remainder of cur_load from lambda_all_samples
+        vm_batch     = vm_all_samples[:vm_count]
+        lambda_batch = lambda_all_samples[: max(0, cur_load - vm_count) ]
 
-        # Create batches
-        vm_batches = [vm_samples[i:i+IAAS_CAPACITY] for i in range(0, len(vm_samples), IAAS_CAPACITY)]
-        fn_batches = [lambda_samples[i:i+FAAS_CAPACITY] for i in range(0, len(lambda_samples), FAAS_CAPACITY)]
-        print("VM batches", len(vm_batches), "Lambda batches", len(fn_batches))
+        # rotate the lists so next epoch uses fresh samples
+        vm_all_samples     = vm_all_samples[vm_count:]     + vm_batch
+        lambda_all_samples = lambda_all_samples[len(lambda_batch):] + lambda_batch
 
-        # Dispatch with tracking
-        tasks = []  # list of (future, mode)
+        # batch into IAAS_CAPACITY / FAAS_CAPACITY
+        vm_batches     = [vm_batch    [i:i+IAAS_CAPACITY] for i in range(0, len(vm_batch), IAAS_CAPACITY)]
+        fn_batches     = [lambda_batch[i:i+FAAS_CAPACITY] for i in range(0, len(lambda_batch), FAAS_CAPACITY)]
+
+        # dispatch
+        tasks = []
         with ProcessPoolExecutor(max_workers=MAX_WORKERS) as exe:
             for b in vm_batches:
-                tasks.append((exe.submit(send_request, b), 'vm'))
+                tasks.append((exe.submit(send_request,      b), 'vm'))
             for b in fn_batches:
-                tasks.append((exe.submit(send_to_lambda, b), 'lambda'))
-            print("Dispatching %d tasks", len(tasks))
-            
-            # Collect with SLA timeout
+                tasks.append((exe.submit(send_to_lambda,    b), 'lambda'))
+
             deadline = EPOCH_SLA
             for fut, mode in tasks:
                 t0 = time.time()
@@ -512,27 +548,27 @@ def process_load(load_list, samples, scale_interval=3, dump_path=os.path.join(cw
                     resp = fut.result(timeout=deadline)
                     collected.append({'epoch': epoch, 'mode': mode, 'response': resp})
                 except FuturesTimeoutError:
-                    logging.warning("Epoch %d: %s batch timed out", epoch, mode)
+                    logging.warning("Epoch %d: %s timed out", epoch, mode)
                     collected.append({'epoch': epoch, 'mode': mode, 'error': 'timeout'})
                 except Exception as e:
-                    logging.error("Epoch %d: %s batch error %s", epoch, mode, e)
+                    logging.error("Epoch %d: %s error %s", epoch, mode, e)
                     collected.append({'epoch': epoch, 'mode': mode, 'error': str(e)})
-                elapsed = time.time() - t0
+                elapsed  = time.time() - t0
                 deadline = max(0, deadline - elapsed)
 
-        # # Scale VMs periodically
-        # if epoch % scale_interval == 0:
-        #     scale_vms(epoch, vm_count)
+        # scale VMs periodically
+        if epoch % scale_interval == 0:
+            scale_vms(epoch, vm_count)
 
         # SLA pacing
         elapsed = time.time() - start_t
         if elapsed < EPOCH_SLA:
             time.sleep(EPOCH_SLA - elapsed)
 
-    # # Final scale-down
-    # scale_vms(-1, 0)
+    # final scale-down
+    scale_vms(-1, 0)
 
-    # Dump collected responses
+    # dump
     Path(os.path.dirname(dump_path)).mkdir(parents=True, exist_ok=True)
     with open(dump_path, 'w') as f:
         json.dump(collected, f, indent=2)
@@ -543,16 +579,18 @@ def process_load(load_list, samples, scale_interval=3, dump_path=os.path.join(cw
 # -------------------------------------------------------------------
 if __name__ == "__main__":
     # 1) Load and filter tagset samples
-    used = load_all_used_tags(cwd_clf, dataset, n_models, shuffle_idx,
+    tags_by_model = load_all_used_tags(cwd_clf, dataset, n_models, shuffle_idx,
                               test_sample_batch_idx, n_samples, clf_njobs,
                               n_estimators, depth, input_size,
                               dim_compact_factor, tree_method,
                               max_bin, with_filter, freq)
-    samples, _ = load_tagset_data(filtered_tags=used)
+    samples_by_model, _ = load_tagset_data(tags_by_model=tags_by_model)
 
     # 2) Define a synthetic load pattern (replace with your real trace)
     # load_distribution = [100, 200, 50, 150, 300, 100]  # e.g., samples per epoch
     load_distribution = [IAAS_CAPACITY]  # e.g., samples per epoch
 
-    # 3) Kick off the load-balancer
-    process_load(load_distribution, samples, scale_interval=4)
+    for i in range(1, 100):
+
+        # 3) Kick off the load-balancer
+        process_load(load_distribution, samples_by_model, scale_interval=4, dump_path=os.path.join(cwd, f"responses-{i}.json"))
