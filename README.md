@@ -29,49 +29,60 @@ Second, we generate the installation fingerprint by tokenize pathnames of file c
 
 Third, we generate predictions by feeding fingerprints to our pretrained Mixture of Expert motivated model
 
-The detailed steps are shown in `Praxi-study/Praxi-Pipeline/Praxi-Pipeline-xgb.py`.
+The detailed steps are shown in `Praxi-Pipeline/Praxi-Pipeline-xgb.py`.
 
 ## Running
 
 Installing dependencies
 ```
-pip install -r Praxi-study/Praxi-Pipeline/requirements.txt
+pip install -r Praxi-Pipeline/requirements.txt
 ```
 
-### Openshift Data Science Deployment
+### Openshift AI Deployment
 
 
 
-In `Praxi-study/Praxi-Pipeline/Praxi-Pipeline-xgb.py`,
+In `Praxi-Pipeline/Praxi-Pipeline-xgb.py`,
 
-Configure `kubeflow_endpoint` and `bearer_token` to access the Openshift Data Science Pipeline endpoint.
+Configure `kubeflow_endpoint` and `bearer_token` to access the Openshift AI endpoint.
 
 Configure `aws_access_key_id` and `aws_secret_access_key` to save predictions.
 
 Run 
 ```
-python3 Praxi-study/Praxi-Pipeline/Praxi-Pipeline-xgb.py
+python3 Praxi-Pipeline/Praxi-Pipeline-xgb.py
 ```
 
 ### Model Training and Testing Scripts
 
-In `Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/function`, model training and testing scripts are categorized by different package routing methods, i.e., random assignment (nover), cosin similarity based assignment (clustering) and package version clustering (verpak).
+In `Praxi-Pipeline/prediction_XGBoost_openshift_image/function`, model training and testing scripts are categorized by different package routing methods, i.e., random assignment (`nover`), cosin similarity based assignment (`clustering`) and package version clustering (`verpak`).
+
+The packages used for model training as in the paper is listed in 
+```
+Praxi-Pipeline/data/data4/index_label_mapping
+```
+We also have the trained models with `1` or `1000` submodels in NERC object storge.
 
 Examples:
 
 To train package version clustering based model,
 ```
-python Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/function/verpak/tagsets_XGBoost_pickCVbatch.py
+python Praxi-Pipeline/prediction_XGBoost_openshift_image/function/verpak/tagsets_XGBoost_pickCVbatch.py
 ```
 
 For package version clustering based model, to test with expert selection,
 ```
-python Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/function/verpak/tagsets_XGBoost_pickCVbatch_on_demand_expert_selector.py
+python Praxi-Pipeline/prediction_XGBoost_openshift_image/function/verpak/tagsets_XGBoost_pickCVbatch_on_demand_expert_selector.py
+```
+
+For package version clustering based model, to test with a hybrid FaaS and IaaS Flask setup with expert selection,
+```
+python Praxi-Pipeline/prediction_XGBoost_openshift_image/function/verpak/tagsets_XGBoost_pickCVbatch_on_demand_expert_selector_flask_client.py
 ```
 
 To calculate the cosine similarity of packages in submodels,
 ```
-python Praxi-study/Praxi-Pipeline/prediction_XGBoost_openshift_image/function/verpak/tagsets_XGBoost_pickCVbatch_model_share_token_verpak.py
+python Praxi-Pipeline/prediction_XGBoost_openshift_image/function/verpak/tagsets_XGBoost_pickCVbatch_model_share_token_verpak.py
 ```
 
 
